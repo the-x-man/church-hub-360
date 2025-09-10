@@ -1,12 +1,7 @@
-import { Button } from './components/ui/button';
+import { AppRouter } from './router/AppRouter';
 
 function App() {
-  return (
-    <>
-      <h1 className="text-3xl">FMT Template 1</h1>
-      <Button>Click me</Button>
-    </>
-  );
+  return <AppRouter />;
 }
 
 export default App;
