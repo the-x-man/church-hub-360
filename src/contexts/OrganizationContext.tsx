@@ -96,19 +96,8 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       user_role: 'owner' as OrganizationRole,
     };
 
-    // Directly set the current organization and store selection
-    console.log(
-      'Creating organization, setting selection:',
-      newOrganization.id
-    );
     setSelectedOrgId(newOrganization.id);
     setCurrentOrganization(newOrganizationWithRole);
-    console.log(
-      'New organization created and selected, localStorage should be updated'
-    );
-
-    // Note: React Query mutation already handles cache invalidation via onSuccess callback
-    // No need to manually refresh here as it can cause race conditions
 
     return newOrganization;
   };

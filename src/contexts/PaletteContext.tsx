@@ -1,100 +1,26 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { useTheme } from 'next-themes';
-import type { BrandColors } from '@/types/organizations';
+import type { CompleteTheme } from '@/types/theme';
 import { useOrganization } from './OrganizationContext';
-import { hexToOklch } from '@/lib/utils';
-
-// Predefined color palettes
-export const PREDEFINED_PALETTES: Record<string, BrandColors> = {
-  default: {
-    light: {
-      primary: '#3b82f6',
-      secondary: '#64748b',
-      accent: '#06b6d4',
-    },
-    dark: {
-      primary: '#60a5fa',
-      secondary: '#94a3b8',
-      accent: '#22d3ee',
-    },
-  },
-  emerald: {
-    light: {
-      primary: '#059669',
-      secondary: '#64748b',
-      accent: '#10b981',
-    },
-    dark: {
-      primary: '#34d399',
-      secondary: '#94a3b8',
-      accent: '#6ee7b7',
-    },
-  },
-  purple: {
-    light: {
-      primary: '#7c3aed',
-      secondary: '#64748b',
-      accent: '#8b5cf6',
-    },
-    dark: {
-      primary: '#a78bfa',
-      secondary: '#94a3b8',
-      accent: '#c4b5fd',
-    },
-  },
-  rose: {
-    light: {
-      primary: '#e11d48',
-      secondary: '#64748b',
-      accent: '#f43f5e',
-    },
-    dark: {
-      primary: '#fb7185',
-      secondary: '#94a3b8',
-      accent: '#fda4af',
-    },
-  },
-  orange: {
-    light: {
-      primary: '#ea580c',
-      secondary: '#64748b',
-      accent: '#f97316',
-    },
-    dark: {
-      primary: '#fb923c',
-      secondary: '#94a3b8',
-      accent: '#fdba74',
-    },
-  },
-  indigo: {
-    light: {
-      primary: '#4f46e5',
-      secondary: '#64748b',
-      accent: '#6366f1',
-    },
-    dark: {
-      primary: '#818cf8',
-      secondary: '#94a3b8',
-      accent: '#a5b4fc',
-    },
-  },
-};
+import { PREDEFINED_PALETTES } from '@/data/predefined-palettes';
+import { themeMap } from '@/themes';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { applyTheme, batchUpdateThemeProperties } from '@/utils/theme-util';
 
 export interface PaletteContextType {
-  themeColors: BrandColors;
-  currentPalette: string;
-  setThemeColors: (colors: BrandColors) => void;
-  setPredefinedPalette: (paletteName: string) => void;
-  resetToDefault: () => void;
+  selectedTheme: CompleteTheme | null;
+  selectedThemeKey: string;
+  applySelectedTheme: (themeKey: string) => void;
+  updateThemeColor: (colorKey: string, value: string, mode: 'light' | 'dark') => void;
+  resetToOrganizationTheme: () => void;
+  allThemes: Record<string, CompleteTheme>;
 }
 
 const PaletteContext = createContext<PaletteContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  THEME_COLORS: 'fmt-theme-colors',
-  SELECTED_PALETTE: 'fmt-selected-palette',
-  ORG_THEME_PREFIX: 'fmt-org-theme-',
+  ORG_SELECTED_THEME_PREFIX: 'fmt-org-theme-',
+  SELECTED_THEME_KEY: 'fmt-org-theme-key-',
 };
 
 interface PaletteProviderProps {
@@ -102,158 +28,124 @@ interface PaletteProviderProps {
 }
 
 export function PaletteProvider({ children }: PaletteProviderProps) {
-  const { currentOrganization, updateOrganization } = useOrganization();
-  const { resolvedTheme } = useTheme();
-  const [themeColors, setThemeColors] = useState<BrandColors>(PREDEFINED_PALETTES.default);
-  const [currentPalette, setCurrentPalette] = useState<string>('default');
-  
-  // Determine if we're in dark mode based on next-themes
-  const isDarkMode = resolvedTheme === 'dark';
+  const { selectedOrgId, currentOrganization } = useOrganization();
+  const orgTheme = `${STORAGE_KEYS.ORG_SELECTED_THEME_PREFIX}${selectedOrgId}`;
+  const orgThemeKey = `${STORAGE_KEYS.SELECTED_THEME_KEY}${selectedOrgId}`;
 
-  // Load theme from localStorage or organization on mount
+  const [
+    selectedTheme,
+    setSelectedTheme,
+  ] = useLocalStorage<CompleteTheme | null>(orgTheme, null);
+  const [selectedThemeKey, setSelectedThemeKey] = useLocalStorage<string>(
+    orgThemeKey,
+    ''
+  );
+
+  // Combine predefined palettes with themes from themes folder
+  const allThemes = useMemo(() => {
+    const combined: Record<string, CompleteTheme> = { ...PREDEFINED_PALETTES };
+
+    // Add themes from themes folder
+    themeMap.forEach((theme, key) => {
+      combined[key] = theme;
+    });
+
+    return combined;
+  }, []);
+
+  // Load and apply theme from localStorage or organization on mount
   useEffect(() => {
     const loadTheme = () => {
-      // Dark mode is handled by next-themes, no localStorage needed
+      if (selectedOrgId || currentOrganization) {
+        const savedOrgTheme = localStorage.getItem(orgTheme);
 
-      if (currentOrganization) {
-        // Load organization-specific theme
-        const orgThemeKey = `${STORAGE_KEYS.ORG_THEME_PREFIX}${currentOrganization.id}`;
-        const savedOrgTheme = localStorage.getItem(orgThemeKey);
-        
         if (savedOrgTheme) {
+          const parsedTheme: CompleteTheme = JSON.parse(savedOrgTheme);
           try {
-            const parsedTheme = JSON.parse(savedOrgTheme);
-            setThemeColors(parsedTheme.colors);
-            setCurrentPalette(parsedTheme.palette);
+            setSelectedTheme(parsedTheme);
+            setSelectedThemeKey(parsedTheme.id);
+            applyTheme(parsedTheme);
           } catch (error) {
-            console.error('Error parsing saved organization theme:', error);
+            console.error('Error parsing saved organization palette:', error);
             // Fallback to organization's brand colors
-            if (currentOrganization.brand_colors) {
-              setThemeColors(currentOrganization.brand_colors);
-              setCurrentPalette('custom');
+            if (currentOrganization?.brand_colors) {
+              setSelectedTheme(currentOrganization.brand_colors);
+              setSelectedThemeKey(currentOrganization.brand_colors.id);
+              applyTheme(currentOrganization.brand_colors);
             }
           }
-        } else if (currentOrganization.brand_colors) {
+        } else if (currentOrganization?.brand_colors) {
           // Use organization's brand colors
-          setThemeColors(currentOrganization.brand_colors);
-          setCurrentPalette('custom');
+          setSelectedTheme(currentOrganization.brand_colors);
+          setSelectedThemeKey(currentOrganization.brand_colors.id);
+          applyTheme(currentOrganization.brand_colors);
         }
       } else {
-        // Load global theme for login screens
-        const savedColors = localStorage.getItem(STORAGE_KEYS.THEME_COLORS);
-        const savedPalette = localStorage.getItem(STORAGE_KEYS.SELECTED_PALETTE);
-        
-        if (savedColors && savedPalette) {
-          try {
-            setThemeColors(JSON.parse(savedColors));
-            setCurrentPalette(savedPalette);
-          } catch (error) {
-            console.error('Error parsing saved theme:', error);
-          }
-        }
+        // use default theme
+        const defaultTheme = PREDEFINED_PALETTES['default'];
+        setSelectedTheme(defaultTheme);
+        setSelectedThemeKey('default');
+        applyTheme(defaultTheme);
       }
     };
 
     loadTheme();
-  }, [currentOrganization]);
+  }, [selectedOrgId]);
 
-  // Apply CSS variables when theme changes
-  useEffect(() => {
-    const root = document.documentElement;
-    const colors = isDarkMode ? themeColors.dark : themeColors.light;
-    
-    // Convert hex colors to OKLCH format and apply to CSS variables
-    root.style.setProperty('--primary', hexToOklch(colors.primary));
-    root.style.setProperty('--secondary', hexToOklch(colors.secondary));
-    root.style.setProperty('--accent', hexToOklch(colors.accent));
-    
-    // Don't manually manage dark class - let next-themes handle it
-  }, [themeColors, isDarkMode]);
+  const applySelectedTheme = (themeKey: string) => {
+    const selectedTheme = allThemes[themeKey];
 
-  const saveThemeToStorage = (colors: BrandColors, palette: string) => {
-    if (currentOrganization) {
-      // Save organization-specific theme
-      const orgThemeKey = `${STORAGE_KEYS.ORG_THEME_PREFIX}${currentOrganization.id}`;
-      localStorage.setItem(orgThemeKey, JSON.stringify({ colors, palette }));
-    } else {
-      // Save global theme
-      localStorage.setItem(STORAGE_KEYS.THEME_COLORS, JSON.stringify(colors));
-      localStorage.setItem(STORAGE_KEYS.SELECTED_PALETTE, palette);
+    if (selectedTheme) {
+      setSelectedTheme(selectedTheme);
+      setSelectedThemeKey(themeKey);
+      applyTheme(selectedTheme);
     }
   };
 
-  const handleSetThemeColors = async (colors: BrandColors) => {
-    setThemeColors(colors);
-    setCurrentPalette('custom');
-    saveThemeToStorage(colors, 'custom');
-    
-    // Update organization in database if logged in
-    if (currentOrganization && updateOrganization) {
-      try {
-        await updateOrganization({
-          id: currentOrganization.id,
-          brand_colors: colors,
-        });
-      } catch (error) {
-        console.error('Error updating organization brand colors:', error);
+  const updateThemeColor = (colorKey: string, value: string, mode: 'light' | 'dark') => {
+    if (!selectedTheme) return;
+
+    // Create updated theme with new color and change name to "custom"
+    const updatedTheme = {
+      ...selectedTheme,
+      id: 'custom',
+      name: 'Custom',
+      [mode]: {
+        ...selectedTheme[mode],
+        [colorKey]: value
       }
-    }
+    };
+
+    // Update local state
+    setSelectedTheme(updatedTheme);
+    setSelectedThemeKey('custom');
+
+    // Update DOM with the specific color change
+    batchUpdateThemeProperties({
+      colors: { [colorKey]: value },
+      isDark: mode === 'dark'
+    });
   };
 
-  const setPredefinedPalette = async (paletteName: string) => {
-    const palette = PREDEFINED_PALETTES[paletteName];
-    if (palette) {
-      setThemeColors(palette);
-      setCurrentPalette(paletteName);
-      saveThemeToStorage(palette, paletteName);
-      
-      // Update organization in database if logged in
-      if (currentOrganization && updateOrganization) {
-        try {
-          await updateOrganization({
-            id: currentOrganization.id,
-            brand_colors: palette,
-          });
-        } catch (error) {
-          console.error('Error updating organization brand colors:', error);
-        }
-      }
-    }
-  };
-
-  // Remove toggleDarkMode - use ThemeSwitcher component instead
-
-  const resetToDefault = async () => {
-    const defaultColors = PREDEFINED_PALETTES.default;
-    setThemeColors(defaultColors);
-    setCurrentPalette('default');
-    saveThemeToStorage(defaultColors, 'default');
-    
-    // Update organization in database if logged in
-    if (currentOrganization && updateOrganization) {
-      try {
-        await updateOrganization({
-          id: currentOrganization.id,
-          brand_colors: defaultColors,
-        });
-      } catch (error) {
-        console.error('Error updating organization brand colors:', error);
-      }
+  const resetToOrganizationTheme = () => {
+    if (currentOrganization?.brand_colors) {
+      setSelectedTheme(currentOrganization.brand_colors);
+      setSelectedThemeKey(currentOrganization.brand_colors.id);
+      applyTheme(currentOrganization.brand_colors);
     }
   };
 
   const value: PaletteContextType = {
-    themeColors,
-    currentPalette,
-    setThemeColors: handleSetThemeColors,
-    setPredefinedPalette,
-    resetToDefault,
+    selectedTheme,
+    selectedThemeKey,
+    allThemes,
+    applySelectedTheme,
+    updateThemeColor,
+    resetToOrganizationTheme,
   };
 
   return (
-    <PaletteContext.Provider value={value}>
-      {children}
-    </PaletteContext.Provider>
+    <PaletteContext.Provider value={value}>{children}</PaletteContext.Provider>
   );
 }
 
@@ -263,18 +155,4 @@ export function usePalette(): PaletteContextType {
     throw new Error('usePalette must be used within a PaletteProvider');
   }
   return context;
-}
-
-// Helper function to get palette display name
-export function getPaletteDisplayName(paletteName: string): string {
-  const displayNames: Record<string, string> = {
-    default: 'Default Blue',
-    emerald: 'Emerald Green',
-    purple: 'Royal Purple',
-    rose: 'Rose Pink',
-    orange: 'Vibrant Orange',
-    indigo: 'Deep Indigo',
-    custom: 'Custom Colors',
-  };
-  return displayNames[paletteName] || paletteName;
 }

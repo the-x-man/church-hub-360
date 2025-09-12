@@ -1,3 +1,5 @@
+import type { CompleteTheme } from "./theme";
+
 // Organization role types
 export type OrganizationRole = 'owner' | 'admin' | 'write' | 'read';
 
@@ -43,8 +45,9 @@ export interface Organization {
   updated_at: string;
   currency: string;
   logo_settings: LogoSettings;
-  brand_colors: BrandColors;
+  brand_colors: CompleteTheme;
   notification_settings: NotificationSettings;
+  theme_name?: string;
   is_active: boolean;
 }
 
@@ -73,8 +76,9 @@ export interface CreateOrganizationData {
   address?: string;
   currency?: string;
   logo_settings?: LogoSettings;
-  brand_colors?: BrandColors;
+  brand_colors?: CompleteTheme | null;
   notification_settings?: NotificationSettings;
+  theme_name?: string;
   is_active: boolean;
 }
 

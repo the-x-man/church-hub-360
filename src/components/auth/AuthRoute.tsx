@@ -14,7 +14,6 @@ export function AuthRoute({ children }: AuthRouteProps) {
 
   // Handle /new-password - requires session for password reset flow
   if (currentPath === '/new-password') {
-    console.log(session);
     if (!session) {
       return <Navigate to="/login" replace />;
     }

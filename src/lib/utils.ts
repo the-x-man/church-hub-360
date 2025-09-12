@@ -101,3 +101,54 @@ export function hexToOklch(hex: string): string {
   // Format as OKLCH string with reasonable precision
   return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} ${hue.toFixed(3)})`;
 }
+
+// Convert OKLCH color to hex format
+export function oklchToHex(oklch: string): string {
+  // Parse OKLCH string like "oklch(0.628 0.258 29.234)"
+  const match = oklch.match(/oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)\)/);
+  if (!match) return '#000000';
+  
+  const lightness = parseFloat(match[1]);
+  const chroma = parseFloat(match[2]);
+  const hue = parseFloat(match[3]) * Math.PI / 180; // Convert to radians
+  
+  // Convert OKLCH to OKLab
+  const a = chroma * Math.cos(hue);
+  const b_lab = chroma * Math.sin(hue);
+  
+  // Convert OKLab to XYZ
+  const l_ = lightness + 0.3963377774 * a + 0.2158037573 * b_lab;
+  const m_ = lightness - 0.1055613458 * a - 0.0638541728 * b_lab;
+  const s_ = lightness - 0.0894841775 * a - 1.2914855480 * b_lab;
+  
+  const l_cubed = l_ * l_ * l_;
+  const m_cubed = m_ * m_ * m_;
+  const s_cubed = s_ * s_ * s_;
+  
+  const x = 1.2270138511 * l_cubed - 0.5577999807 * m_cubed + 0.2812561490 * s_cubed;
+  const y = -0.0405801784 * l_cubed + 1.1122568696 * m_cubed - 0.0716766787 * s_cubed;
+  const z = -0.0763812845 * l_cubed - 0.4214819784 * m_cubed + 1.5861632204 * s_cubed;
+  
+  // Convert XYZ to linear RGB
+  const rLinear = 3.2404542 * x - 1.5371385 * y - 0.4985314 * z;
+  const gLinear = -0.9692660 * x + 1.8760108 * y + 0.0415560 * z;
+  const bLinear = 0.0556434 * x - 0.2040259 * y + 1.0572252 * z;
+  
+  // Convert linear RGB to sRGB
+  const toSRGB = (c: number) => {
+    c = Math.max(0, Math.min(1, c)); // Clamp to [0, 1]
+    return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  };
+  
+  const r = Math.round(toSRGB(rLinear) * 255);
+  const g = Math.round(toSRGB(gLinear) * 255);
+  const b = Math.round(toSRGB(bLinear) * 255);
+  
+  // Convert to hex
+  const toHex = (c: number) => {
+    const hex = Math.max(0, Math.min(255, c)).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}

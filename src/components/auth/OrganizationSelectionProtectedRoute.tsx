@@ -9,8 +9,6 @@ export const OrganizationSelectionProtectedRoute = ({
 }) => {
   const { userOrganizations, selectedOrgId } = useOrganization();
 
-  console.log(userOrganizations);
-
   if (userOrganizations.length === 0) {
     return <Navigate to="/select-organization" replace />;
   }

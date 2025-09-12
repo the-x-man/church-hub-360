@@ -1,5 +1,3 @@
-import React from 'react';
-import type { LogoBackgroundSize, LogoOrientation } from '@/types/organizations';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,17 +7,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type {
+  LogoBackgroundSize,
+  LogoOrientation,
+} from '@/types/organizations';
 import {
-  Settings,
-  Square,
-  RectangleVertical,
-  RectangleHorizontal,
   Maximize,
   Maximize2,
+  RectangleHorizontal,
+  RectangleVertical,
+  Settings,
+  Square,
   StretchHorizontal,
 } from 'lucide-react';
-import { usePalette } from '@/contexts/PaletteContext';
-import { cn, getContrastTextColor } from '@/lib/utils';
+import React from 'react';
 
 interface LogoSettingsMenuProps {
   logoOrientation: LogoOrientation;
@@ -70,9 +72,6 @@ export const LogoSettingsMenu: React.FC<LogoSettingsMenuProps> = ({
   setOrientation,
   setBackgroundSize,
 }) => {
-  const { themeColors } = usePalette();
-  const accentColor = themeColors.light.accent;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted">
@@ -96,12 +95,6 @@ export const LogoSettingsMenu: React.FC<LogoSettingsMenuProps> = ({
                   ? 'bg-accent focus:bg-accent/90'
                   : 'focus:bg-muted'
               )}
-              style={{
-                color:
-                  logoOrientation === value
-                    ? getContrastTextColor(accentColor)
-                    : '',
-              }}
             >
               <Icon className="h-4 w-4 mr-2" />
               <span>{label}</span>
@@ -125,12 +118,6 @@ export const LogoSettingsMenu: React.FC<LogoSettingsMenuProps> = ({
                   ? 'bg-accent focus:bg-accent/90'
                   : 'focus:bg-muted'
               )}
-              style={{
-                color:
-                  logoBackgroundSize === value
-                    ? getContrastTextColor(accentColor)
-                    : '',
-              }}
             >
               <Icon className="h-4 w-4 mr-2" />
               <span>{label}</span>
