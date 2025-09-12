@@ -11,7 +11,11 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, session, setSession, initializeUser } = useAuth();
-  const { userOrganizations, isLoading: orgLoading } = useOrganization();
+  const {
+    userOrganizations,
+    isLoading: orgLoading,
+    selectedOrgId,
+  } = useOrganization();
 
   const location = useLocation();
   const [initializing, setInitializing] = useState(true);
@@ -73,6 +77,14 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     location.pathname === '/select-organization'
   ) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (
+    userOrganizations.length > 1 &&
+    !userOrganizations.some((org) => org.id === selectedOrgId) &&
+    location.pathname !== '/select-organization'
+  ) {
+    return <Navigate to="/select-organization" replace />;
   }
 
   // User is authenticated and active, allow access

@@ -5,7 +5,8 @@ import { ThemeSwitcher } from '../components/shared/ThemeSwitcher';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useOrganization } from '../contexts/OrganizationContext';
-import { hexToOklch } from '../lib/utils';
+import { oklchToHex } from '../lib/utils';
+import { useTheme } from 'next-themes';
 
 export function OrganizationSelection() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export function OrganizationSelection() {
     isLoading,
     selectOrganization,
   } = useOrganization();
+  const { resolvedTheme } = useTheme();
 
   const handleSelectOrganization = async (organizationId: string) => {
     await selectOrganization(organizationId);
@@ -99,16 +101,22 @@ export function OrganizationSelection() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {userOrganizations.map((org) => {
-             
               // Apply organization's brand colors as CSS variables with fallbacks
-               const primaryHex = org.brand_colors?.light?.primary || '#3b82f6'; // fallback blue
-               const secondaryHex = org.brand_colors?.light?.secondary || '#6366f1'; // fallback
-               const accentHex = org.brand_colors?.light?.accent || '#8b5cf6'; // fallback
-               
-               const primaryColor = hexToOklch(primaryHex);
-               const secondaryColor = hexToOklch(secondaryHex);
-               const accentColor = hexToOklch(accentHex);
-               
+              const primaryColor =
+                resolvedTheme === 'dark'
+                  ? org.brand_colors?.dark?.primary
+                  : org.brand_colors?.light?.primary;
+              const secondaryColor =
+                resolvedTheme === 'dark'
+                  ? org.brand_colors?.dark?.secondary
+                  : org.brand_colors?.light?.secondary;
+              const accentColor =
+                resolvedTheme === 'dark'
+                  ? org.brand_colors?.dark?.accent
+                  : org.brand_colors?.light?.accent;
+
+              const primaryHex = oklchToHex(primaryColor);
+
               const orgStyle: React.CSSProperties = {
                 '--org-primary': primaryColor,
                 '--org-secondary': secondaryColor,
@@ -119,10 +127,12 @@ export function OrganizationSelection() {
                 <Card
                   key={org.id}
                   className="px-6 py-4 hover:shadow-lg transition-all cursor-pointer border-2 hover:scale-105"
-                  style={{
-                    ...orgStyle,
-                    '--hover-border-color': `oklch(${primaryColor} / 0.4)`,
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      ...orgStyle,
+                      '--hover-border-color': `oklch(${primaryColor} / 0.4)`,
+                    } as React.CSSProperties
+                  }
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = primaryHex + '66'; // Add alpha for 40% opacity
                   }}
@@ -139,14 +149,14 @@ export function OrganizationSelection() {
                         className="h-16 w-16 rounded-lg object-cover mx-auto mb-4"
                       />
                     ) : (
-                      <div 
+                      <div
                         className="h-14 w-14 rounded-lg flex items-center justify-center mx-auto mb-4"
                         style={{
                           backgroundColor: primaryHex + '1A', // Add alpha for 10% opacity
                         }}
                       >
-                        <Building2 
-                          className="h-8 w-8" 
+                        <Building2
+                          className="h-8 w-8"
                           style={{
                             color: primaryHex,
                           }}

@@ -87,7 +87,7 @@ const commonThemeProps = {
 export const PREDEFINED_PALETTES: Record<string, CompleteTheme> = {
   default: {
     id: 'default',
-    name: 'Default Blue',
+    name: 'Default Neutral',
     description: 'Classic blue theme with professional appearance',
     light: {
       ...baseLightColors,

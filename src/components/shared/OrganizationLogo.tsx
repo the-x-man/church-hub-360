@@ -1,16 +1,12 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type {
-  LogoBackgroundSize,
-  LogoOrientation,
-} from '@/types/organizations';
 
 export interface OrganizationLogoProps {
   src?: string | null;
   fallback?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | number;
-  orientation?: LogoOrientation;
-  backgroundSize?: LogoBackgroundSize;
+  orientation?: 'square' | 'portrait' | 'landscape';
+  backgroundSize?: 'contain' | 'cover';
   className?: string;
   onClick?: () => void;
 }
@@ -29,7 +25,7 @@ const getSizeValue = (size: OrganizationLogoProps['size']): number => {
   return sizeMap[size || 'md'] || sizeMap.md;
 };
 
-const getAspectRatio = (orientation?: LogoOrientation): string => {
+const getAspectRatio = (orientation?: 'square' | 'portrait' | 'landscape'): string => {
   switch (orientation) {
     case 'portrait':
       return 'aspect-[3/4]';
@@ -54,14 +50,7 @@ export function OrganizationLogo({
   const aspectRatio = getAspectRatio(orientation);
 
   // Map custom values to CSS-compatible values
-  let bgSizeValue: string;
-  switch (backgroundSize) {
-    case 'fill':
-      bgSizeValue = '100% 100%'; // Stretch to fill
-      break;
-    default:
-      bgSizeValue = backgroundSize; // cover and contain work as-is
-  }
+  const bgSizeValue = backgroundSize; // cover and contain work as-is
 
   const bgStyles: React.CSSProperties = {
     backgroundImage: src ? `url(${src})` : 'none',

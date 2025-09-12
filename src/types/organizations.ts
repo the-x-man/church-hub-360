@@ -3,14 +3,9 @@ import type { CompleteTheme } from "./theme";
 // Organization role types
 export type OrganizationRole = 'owner' | 'admin' | 'write' | 'read';
 
-// Logo orientation and background size enums
-export type LogoOrientation = 'square' | 'portrait' | 'landscape';
-export type LogoBackgroundSize = 'contain' | 'cover' | 'fill';
-
-// JSON field types
+// Logo settings simplified - always square orientation
 export interface LogoSettings {
-  orientation?: LogoOrientation;
-  backgroundSize?: LogoBackgroundSize;
+  // Reserved for future logo-related settings if needed
 }
 
 export interface NotificationSettings {
@@ -125,8 +120,7 @@ export const DEFAULT_BRAND_COLORS: BrandColors = {
 };
 
 export const DEFAULT_LOGO_SETTINGS: LogoSettings = {
-  orientation: 'square',
-  backgroundSize: 'contain',
+  // No default settings needed - always square orientation
 };
 
 // Role hierarchy for permission checking

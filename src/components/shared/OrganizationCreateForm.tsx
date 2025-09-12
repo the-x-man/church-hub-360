@@ -14,6 +14,7 @@ import { Label } from '../ui/label';
 import { Plus } from 'lucide-react';
 import type { CreateOrganizationData } from '../../types/organizations';
 import { useOrganization } from '../../contexts/OrganizationContext';
+import { PREDEFINED_PALETTES } from '@/data/predefined-palettes';
 
 interface OrganizationCreateFormProps {
   trigger?: React.ReactNode;
@@ -49,6 +50,7 @@ export function OrganizationCreateForm({
       await createOrganization({
         ...createForm,
         name: createForm.name.trim(),
+        brand_colors: PREDEFINED_PALETTES['default'],
       });
       setIsOpen(false);
       setCreateForm({

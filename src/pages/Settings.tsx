@@ -26,16 +26,19 @@ import {
 } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
 import { useOrganization } from '../contexts/OrganizationContext';
+import {
+  uploadLogo,
+  deleteLogo,
+  extractFilePathFromUrl,
+  validateLogoFile,
+} from '../utils/logo-upload';
 
-import { LogoSettingsMenu } from '../components/shared/LogoSettingsMenu';
+import { LogoCropper } from '../components/shared/LogoCropper';
+import { ModernFileUpload } from '../components/shared/ModernFileUpload';
 import { OrganizationLogo } from '../components/shared/OrganizationLogo';
 import { ThemeSelector } from '../components/shared/ThemeSelector';
 import { ThemeSwitcher } from '../components/shared/ThemeSwitcher';
-import type {
-  LogoBackgroundSize,
-  LogoOrientation,
-  UpdateOrganizationData,
-} from '../types/organizations';
+import type { UpdateOrganizationData } from '../types/organizations';
 
 export function Settings() {
   const { currentOrganization, updateOrganization } = useOrganization();
@@ -47,10 +50,8 @@ export function Settings() {
     address: '',
     currency: 'GHS',
   });
-  const [logoSettings, setLogoSettings] = useState({
-    orientation: 'square' as LogoOrientation,
-    backgroundSize: 'contain' as LogoBackgroundSize,
-  });
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [notificationSettings, setNotificationSettings] = useState({
     roleChanges: true,
     securityAlerts: true,
@@ -58,6 +59,8 @@ export function Settings() {
     newUserAdded: true,
   });
   const [isSavingOrgData, setIsSavingOrgData] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
 
   // Load organization data on mount
   useEffect(() => {
@@ -69,11 +72,7 @@ export function Settings() {
         address: currentOrganization.address || '',
         currency: currentOrganization.currency || 'GHS',
       });
-      setLogoSettings({
-        orientation: currentOrganization.logo_settings?.orientation || 'square',
-        backgroundSize:
-          currentOrganization.logo_settings?.backgroundSize || 'contain',
-      });
+      // Logo settings are no longer needed - always square orientation
       setNotificationSettings({
         roleChanges:
           currentOrganization.notification_settings?.roleChanges ?? true,
@@ -95,7 +94,6 @@ export function Settings() {
       const updateData: UpdateOrganizationData = {
         id: currentOrganization.id,
         ...orgData,
-        logo_settings: logoSettings,
       };
 
       await updateOrganization(updateData);
@@ -106,39 +104,94 @@ export function Settings() {
     }
   };
 
-  const handleLogoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file || !currentOrganization || !updateOrganization) return;
+  const handleLogoFileSelect = (file: File) => {
+    // Clear previous errors
+    setLogoError(null);
 
-    // In a real app, you would upload to a file storage service
-    // For now, we'll just create a data URL
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const logoUrl = e.target?.result as string;
-      try {
-        await updateOrganization({
-          id: currentOrganization.id,
-          logo: logoUrl,
-        });
-      } catch (error) {
-        console.error('Error updating logo:', error);
+    // Validate file
+    const validation = validateLogoFile(file);
+    if (!validation.isValid) {
+      setLogoError(validation.error || 'Invalid file');
+      return;
+    }
+
+    // Set the selected file and open cropper
+    setSelectedImageFile(file);
+    setIsCropperOpen(true);
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
+    if (!currentOrganization || !updateOrganization) return;
+
+    setIsUploadingLogo(true);
+    setLogoError(null);
+
+    try {
+      // Delete existing logo if it exists
+      if (currentOrganization.logo) {
+        const filePath = extractFilePathFromUrl(currentOrganization.logo);
+        if (filePath) {
+          try {
+            await deleteLogo(filePath);
+          } catch (deleteError) {
+            console.warn('Failed to delete existing logo:', deleteError);
+            // Continue with upload even if deletion fails
+          }
+        }
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Upload cropped image to Supabase storage
+      const uploadResult = await uploadLogo(
+        croppedFile,
+        currentOrganization.id
+      );
+
+      // Update organization with new logo URL
+      await updateOrganization({
+        id: currentOrganization.id,
+        logo: uploadResult.url,
+      });
+
+      // Close cropper
+      setIsCropperOpen(false);
+      setSelectedImageFile(null);
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      setLogoError(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleCropperClose = () => {
+    setIsCropperOpen(false);
+    setSelectedImageFile(null);
   };
 
   const handleRemoveLogo = async () => {
     if (!currentOrganization || !updateOrganization) return;
 
+    setLogoError(null);
+
     try {
+      // If there's a logo URL, try to delete it from storage
+      if (currentOrganization.logo) {
+        const filePath = extractFilePathFromUrl(currentOrganization.logo);
+        if (filePath) {
+          await deleteLogo(filePath);
+        }
+      }
+
+      // Update organization to remove logo
       await updateOrganization({
         id: currentOrganization.id,
         logo: undefined,
       });
     } catch (error) {
       console.error('Error removing logo:', error);
+      setLogoError(
+        error instanceof Error ? error.message : 'Failed to remove logo'
+      );
     }
   };
   return (
@@ -254,6 +307,15 @@ export function Settings() {
             </CardContent>
           </Card>
 
+          {/* Logo Cropper Dialog */}
+          <LogoCropper
+            isOpen={isCropperOpen}
+            onClose={handleCropperClose}
+            onCropComplete={handleCropComplete}
+            imageFile={selectedImageFile}
+            isUploading={isUploadingLogo}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>Organization Logo</CardTitle>
@@ -268,48 +330,41 @@ export function Settings() {
                     src={currentOrganization?.logo}
                     fallback={currentOrganization?.name.substring(0, 3)}
                     size="xl"
-                    orientation={logoSettings.orientation}
-                    backgroundSize={logoSettings.backgroundSize}
+                    orientation="square"
+                    backgroundSize="contain"
                     className="border-2 border-dashed border-border"
                   />
-                  <div className="flex items-center space-x-2">
-                    <LogoSettingsMenu
-                      logoOrientation={logoSettings.orientation}
-                      logoBackgroundSize={logoSettings.backgroundSize}
-                      setOrientation={(orientation) =>
-                        setLogoSettings((prev) => ({ ...prev, orientation }))
-                      }
-                      setBackgroundSize={(backgroundSize) =>
-                        setLogoSettings((prev) => ({ ...prev, backgroundSize }))
-                      }
-                    />
-                  </div>
                 </div>
                 <div className="flex-1 space-y-4">
                   <div>
-                    <Label
-                      htmlFor="logo-upload"
-                      className="text-base font-medium"
+                    <ModernFileUpload
+                      onFileSelect={handleLogoFileSelect}
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                      disabled={isUploadingLogo}
+                      maxSize={2}
+                      className="mt-2 max-w-[300px]"
+                      variant="compact"
                     >
-                      Upload Logo
-                    </Label>
-                    <div className="mt-2">
-                      <Input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Recommended: PNG or SVG format, max 2MB
-                    </p>
+                      {isUploadingLogo && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                          <div className="text-sm text-primary font-medium">
+                            Uploading logo...
+                          </div>
+                        </div>
+                      )}
+                    </ModernFileUpload>
+
+                    {logoError && (
+                      <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md mt-2">
+                        {logoError}
+                      </div>
+                    )}
                   </div>
                   {currentOrganization?.logo && (
                     <Button
                       variant="outline"
                       onClick={handleRemoveLogo}
+                      disabled={isUploadingLogo}
                       className="flex items-center space-x-2"
                     >
                       <Trash2 className="h-4 w-4" />
