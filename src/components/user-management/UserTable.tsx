@@ -32,8 +32,8 @@ export function UserTable({
   onUserAction,
   branches = [],
 }: UserTableProps) {
-  const { canManageAllData } = useRoleCheck();
-  const isAdmin = canManageAllData();
+  const { canManageUserData, canManageAllData } = useRoleCheck();
+  const isAdmin = canManageUserData();
 
   const handleAction = (action: UserAction, user: UserWithRelations) => {
     onUserAction?.(action, user);
@@ -236,6 +236,7 @@ export function UserTable({
                         user={user}
                         isAdmin={isAdmin}
                         onAction={handleAction}
+                        canDelete={canManageAllData()}
                       />
                     )}
                   </TableCell>

@@ -122,7 +122,7 @@ export function useUpdateBranch() {
   });
 }
 
-// Hook to delete a branch
+// Hook to remove a branch
 export function useDeleteBranch() {
   const queryClient = useQueryClient();
 

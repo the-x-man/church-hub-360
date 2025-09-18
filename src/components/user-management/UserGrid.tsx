@@ -25,8 +25,8 @@ export function UserGrid({
   onUserAction,
   branches = [],
 }: UserGridProps) {
-  const { canManageAllData } = useRoleCheck();
-  const isAdmin = canManageAllData();
+  const { canManageUserData, canManageAllData } = useRoleCheck();
+  const isAdmin = canManageUserData();
 
   const handleAction = (action: UserAction, user: UserWithRelations) => {
     onUserAction?.(action, user);
@@ -149,6 +149,7 @@ export function UserGrid({
                       user={user}
                       isAdmin={isAdmin}
                       onAction={handleAction}
+                      canDelete={canManageAllData()}
                     />
                   )}
                 </div>

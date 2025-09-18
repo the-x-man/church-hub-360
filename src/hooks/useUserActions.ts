@@ -8,87 +8,6 @@ import type { UserWithRelations } from '@/types/user-management';
 export function useUserActions() {
   const queryClient = useQueryClient();
 
-  // Deactivate user mutation
-  const deactivateUser = useMutation({
-    mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.access_token) throw new Error('No access token');
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deactivate-user`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, organizationId }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to deactivate user from organization');
-      }
-
-      // Activity logging would be handled by edge function
-
-      return response.json();
-    },
-    onMutate: () => {
-      toast.loading('Deactivating user...', { id: 'deactivate-user' });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['inactive-users'] });
-      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
-      toast.success('User deactivated successfully', { id: 'deactivate-user' });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to deactivate user', { id: 'deactivate-user' });
-    },
-  });
-
-  // Reactivate user mutation
-  const reactivateUser = useMutation({
-    mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.access_token) throw new Error('No access token');
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reactivate-user`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, organizationId }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to reactivate user');
-      }
-
-      // Activity logging would be handled by edge function
-
-      return response.json();
-    },
-    onMutate: () => {
-      toast.loading('Reactivating user...', { id: 'reactivate-user' });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['inactive-users'] });
-      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
-      toast.success('User reactivated successfully', { id: 'reactivate-user' });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to reactivate user', { id: 'reactivate-user' });
-    },
-  });
 
   // Regenerate password mutation
   const regeneratePassword = useMutation({
@@ -132,32 +51,45 @@ export function useUserActions() {
     },
   });
 
-  // Delete user permanently mutation
+  // Remove user permanently mutation
   const deleteUser = useMutation({
     mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.access_token) throw new Error('No access token');
+      // Get branch IDs for this organization first
+      const { data: branchIds, error: branchIdsError } = await supabase
+        .from('branches')
+        .select('id')
+        .eq('organization_id', organizationId);
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-organization-user`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, organizationId }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete user permanently');
+      if (branchIdsError) {
+        throw new Error('Failed to fetch organization branches');
       }
 
-      // Activity logging would be handled by edge function
+      // Remove user from all branches in this organization
+      const branchIdArray = branchIds?.map(branch => branch.id) || [];
+      if (branchIdArray.length > 0) {
+        const { error: userBranchesError } = await supabase
+          .from('user_branches')
+          .delete()
+          .eq('user_id', userId)
+          .in('branch_id', branchIdArray);
 
-      return response.json();
+        if (userBranchesError) {
+          throw new Error('Failed to remove user from branches');
+        }
+      }
+
+      // Remove user from organization
+      const { error: userOrgError } = await supabase
+        .from('user_organizations')
+        .delete()
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId);
+
+      if (userOrgError) {
+        throw new Error('Failed to remove user from organization');
+      }
+
+      return { userId, organizationId };
     },
     onMutate: () => {
       toast.loading('Deleting user...', { id: 'delete-user' });
@@ -177,16 +109,12 @@ export function useUserActions() {
     try {
       switch (action) {
         case 'deactivate':
-          if (!organizationId) {
-            throw new Error('Organization ID is required for deactivation');
-          }
-          await deactivateUser.mutateAsync({ userId: user.id, organizationId });
+          // Deactivate functionality moved to useUserQueries
+          console.warn('Deactivate action should be handled by useUserQueries');
           break;
         case 'reactivate':
-          if (!organizationId) {
-            throw new Error('Organization ID is required for reactivation');
-          }
-          await reactivateUser.mutateAsync({ userId: user.id, organizationId });
+          // Reactivate functionality moved to useUserQueries
+          console.warn('Reactivate action should be handled by useUserQueries');
           break;
         case 'regenerate-password':
           await regeneratePassword.mutateAsync(user.id);
@@ -207,8 +135,6 @@ export function useUserActions() {
 
   return {
     handleUserAction,
-    deactivateUser,
-    reactivateUser,
     regeneratePassword,
     deleteUser,
   };

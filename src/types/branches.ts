@@ -17,7 +17,7 @@ export interface Branch {
 export interface UserBranch {
   id: string;
   user_id: string;
-  branch_id?: string;
+  branch_id: string;
   organization_id: string;
   created_at: string;
   updated_at: string;
@@ -47,7 +47,7 @@ export interface UpdateBranchData extends Partial<Omit<CreateBranchData, 'organi
 // User branch assignment types
 export interface CreateUserBranchData {
   user_id: string;
-  branch_id?: string;
+  branch_id: string;
   organization_id: string;
 }
 

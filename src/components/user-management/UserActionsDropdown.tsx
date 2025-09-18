@@ -17,12 +17,14 @@ import type { UserWithRelations, UserAction } from '@/types/user-management';
 interface UserActionsDropdownProps {
   user: UserWithRelations;
   isAdmin: boolean;
+  canDelete: boolean;
   onAction: (action: UserAction, user: UserWithRelations) => void;
 }
 
 export function UserActionsDropdown({
   user,
   isAdmin,
+  canDelete,
   onAction,
 }: UserActionsDropdownProps) {
   if (!isAdmin) {
@@ -79,14 +81,18 @@ export function UserActionsDropdown({
             Reactivate
           </DropdownMenuItem>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => onAction('delete', user)}
-          className="text-red-600"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Permanently
-        </DropdownMenuItem>
+        {canDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onAction('delete', user)}
+              className="text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

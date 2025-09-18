@@ -1,4 +1,5 @@
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Branch } from '@/types/branches';
 import type { UserWithRelations } from '@/types/user-management';
 import { supabase } from '@/utils/supabase';
@@ -33,6 +34,7 @@ interface UpdateUserData {
 
 export function useUserQueries() {
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch users in the current organization
@@ -312,6 +314,8 @@ export function useUserQueries() {
           const branchInserts = branchesToAdd.map(branchId => ({
             user_id: authUserId,
             branch_id: branchId,
+            organization_id: currentOrganization.id,
+            created_by: user?.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }));
@@ -346,12 +350,176 @@ export function useUserQueries() {
       },
   });
 
+  // Fetch inactive users in the current organization
+  const {
+    data: inactiveUsers = [],
+    isLoading: inactiveUsersLoading,
+    error: inactiveUsersError,
+  } = useQuery({
+    queryKey: ['inactive-users', currentOrganization?.id],
+    queryFn: async (): Promise<any[]> => {
+      if (!currentOrganization) throw new Error('No organization selected');
+
+      // Get inactive users with their profile data
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_organizations')
+        .select(
+          `
+          id,
+          user_id,
+          role,
+          is_active,
+          organization_id,
+          created_at,
+          updated_at,
+          profiles!user_organizations_user_id_fkey1(
+            id,
+            email,
+            first_name,
+            last_name,
+            avatar,
+            phone,
+            created_at,
+            updated_at
+          )
+        `
+        )
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_active', false)
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Get user branches separately
+      const userIds = profilesData?.map(user => user.user_id) || [];
+      let userBranchesData: any[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: branchesData, error: branchesError } = await supabase
+          .from('user_branches')
+          .select(`
+            user_id,
+            branch_id,
+            branches(
+              name
+            )
+          `)
+          .in('user_id', userIds);
+
+        if (branchesError) throw branchesError;
+        userBranchesData = branchesData || [];
+      }
+
+      // Map user branches by user_id
+      const userBranchesMap = userBranchesData.reduce((acc, ub) => {
+        if (!acc[ub.user_id]) acc[ub.user_id] = [];
+        acc[ub.user_id].push({
+          branch_id: ub.branch_id,
+          branches: ub.branches
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Combine the data
+      const combinedData = profilesData?.map(user => {
+        const profile = Array.isArray(user.profiles) ? user.profiles[0] : user.profiles;
+        return {
+          ...user,
+          profiles: profile,
+          user_branches: userBranchesMap[user.user_id] || []
+        };
+      }) || [];
+ 
+      return combinedData;
+    },
+    enabled: !!currentOrganization,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Reactivate user mutation
+  const reactivateUser = useMutation({
+    mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      
+      // Update user_organizations to set is_active = true
+      const { data, error } = await supabase
+        .from('user_organizations')
+        .update({ 
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .select();
+
+      if (error) {
+        throw new Error(error.message || 'Failed to reactivate user');
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('User not found in organization');
+      }
+
+      return { userId, organizationId, data };
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: userKeys.organizationUsers(currentOrganization?.id || '') });
+      queryClient.invalidateQueries({ queryKey: ['inactive-users', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
+    },
+    onError: () => {
+      // Error handling in component
+    },
+  });
+
+  const deactivateUser = useMutation({
+    mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      
+      // Update user_organizations to set is_active = false
+      const { data, error } = await supabase
+        .from('user_organizations')
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .select();
+
+      if (error) {
+        throw new Error(error.message || 'Failed to deactivate user');
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('User not found in organization');
+      }
+
+      return { userId, organizationId, data };
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: userKeys.organizationUsers(currentOrganization?.id || '') });
+      queryClient.invalidateQueries({ queryKey: ['inactive-users', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
+    },
+    onError: () => {
+      // Error handling in component
+    },
+  });
+
   return {
     users,
     branches,
+    inactiveUsers,
     isLoading: usersLoading || branchesLoading,
+    inactiveUsersLoading,
     error: usersError || branchesError,
+    inactiveUsersError,
     createUser,
     updateUser,
+    reactivateUser,
+    deactivateUser,
   };
 }

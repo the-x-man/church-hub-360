@@ -25,6 +25,7 @@ import {
 import { Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useDebounceValue } from '@/hooks/useDebounce';
 
 export default function UserManagement() {
   const { canManageUserData, isBranchAdmin, canManageAllData } = useRoleCheck();
@@ -38,6 +39,7 @@ export default function UserManagement() {
     null
   );
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounceValue(searchTerm, 1000);
 
   // User preferences and filters
   const {
@@ -191,7 +193,7 @@ export default function UserManagement() {
       },
       onError: (error) => {
         console.error('Error creating user:', error);
-        toast.error('Failed to create user');
+        toast.error(error.message || 'Failed to create user');
       },
     });
   };
@@ -232,7 +234,7 @@ export default function UserManagement() {
         },
         onError: (error) => {
           console.error('Error updating user:', error);
-          toast.error('Failed to update user');
+          toast.error(error.message || 'Failed to update user');
         },
       }
     );
@@ -245,7 +247,7 @@ export default function UserManagement() {
     totalPages,
   } = useUserFiltering({
     users,
-    searchTerm,
+    searchTerm: debouncedSearchTerm,
     filters,
     sortBy,
     sortOrder,
@@ -323,44 +325,52 @@ export default function UserManagement() {
         />
       </div>
 
-      {/* User Display */}
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading users...</p>
-        </div>
-      ) : (
-        <>
-          {displayMode === 'table' ? (
-            <UserTable
-              users={paginatedUsers}
-              currentUserId={user?.id}
-              onUserAction={handleUserActionLocal}
-              branches={branches || []}
-            />
-          ) : (
-            <UserGrid
-              users={paginatedUsers}
-              currentUserId={user?.id}
-              onUserAction={handleUserActionLocal}
-              branches={branches || []}
-            />
-          )}
+      {/* User Display - Hide when status filter is 'inactive' */}
+      {filters.status !== 'inactive' && (
+        isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading users...</p>
+          </div>
+        ) : (
+          <>
+            {displayMode === 'table' ? (
+              <UserTable
+                users={paginatedUsers}
+                currentUserId={user?.id}
+                onUserAction={handleUserActionLocal}
+                branches={branches || []}
+              />
+            ) : (
+              <UserGrid
+                users={paginatedUsers}
+                currentUserId={user?.id}
+                onUserAction={handleUserActionLocal}
+                branches={branches || []}
+              />
+            )}
 
-          {/* Pagination */}
-          <UserPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalUsers}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
-        </>
+            {/* Pagination */}
+            <UserPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalUsers}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
+        )
       )}
 
-      {/* Inactive Users Section */}
-      <InactiveUsersSection />
+      {/* Inactive Users Section - Show based on status filter */}
+      {(filters.status === 'all' || filters.status === 'inactive') && (
+        <InactiveUsersSection 
+          filters={filters}
+          searchTerm={debouncedSearchTerm}
+          isDefaultOpen={filters.status === 'inactive'}
+        />
+      )}
 
       {/* Edit User Dialog */}
       <UserEditDialog

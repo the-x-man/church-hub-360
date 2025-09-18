@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../utils/supabase';
 import { useUserActions } from '@/hooks/useUserActions';
+import { useUserQueries } from '@/hooks/useUserQueries';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
 import {
@@ -48,6 +49,7 @@ export function UserActionDialogs({
 }: UserActionDialogsProps) {
   const queryClient = useQueryClient();
   const userActions = useUserActions();
+  const { deactivateUser } = useUserQueries();
   const { currentOrganization } = useOrganization();
 
   // Expose functions to parent component
@@ -89,12 +91,15 @@ export function UserActionDialogs({
   ] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // State for permanent delete user dialog
+  // State for  remove user dialog
   const [
     selectedUserForPermanentDelete,
     setSelectedUserForPermanentDelete,
   ] = useState<User | null>(null);
-  const [isDeletePermanentlyDialogOpen, setIsDeletePermanentlyDialogOpen] = useState(false);
+  const [
+    isDeletePermanentlyDialogOpen,
+    setIsDeletePermanentlyDialogOpen,
+  ] = useState(false);
 
   // Regenerate password mutation
   const regeneratePasswordMutation = useMutation({
@@ -137,18 +142,21 @@ export function UserActionDialogs({
     },
   });
 
-  // Use the deactivate user action from useUserActions
+  // Use the deactivate user action from useUserQueries
   const handleDeactivateUser = async () => {
     if (selectedUserForDelete && currentOrganization) {
       try {
-        await userActions.deactivateUser.mutateAsync({
+        await deactivateUser.mutateAsync({
           userId: selectedUserForDelete.id,
           organizationId: currentOrganization.id,
         });
         setIsDeleteDialogOpen(false);
         setSelectedUserForDelete(null);
+        toast.success('User deactivated successfully!');
       } catch (error) {
-        // Error handling is done by the mutation
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to deactivate user'
+        );
       }
     }
   };
@@ -159,7 +167,7 @@ export function UserActionDialogs({
     }
   };
 
-  // Handle permanent delete user
+  // Handle remove user
   const handleDeleteUserPermanently = async () => {
     if (selectedUserForPermanentDelete && currentOrganization) {
       try {
@@ -208,7 +216,7 @@ export function UserActionDialogs({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete/Deactivate User Dialog */}
+      {/* Remove/Deactivate User Dialog */}
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -241,17 +249,19 @@ export function UserActionDialogs({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete User Permanently Dialog */}
+      {/* Remove User from organization Dialog */}
       <AlertDialog
         open={isDeletePermanentlyDialogOpen}
         onOpenChange={setIsDeletePermanentlyDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete User Permanently</AlertDialogTitle>
+            <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete user "
-              {selectedUserForPermanentDelete?.full_name}"? This will remove them from this organization and delete all their branches. This action cannot be undone.
+              Are you sure you want to remove user "
+              {selectedUserForPermanentDelete?.full_name}"? This will remove
+              them from this organization and remove all their branches. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -267,7 +277,7 @@ export function UserActionDialogs({
               onClick={handleDeleteUserPermanently}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Permanently
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

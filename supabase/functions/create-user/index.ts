@@ -256,9 +256,12 @@ serve(async (req) => {
     }
 
     const { email, firstName, lastName, role, branchIds, organizationId } = requestBody
+    
+    console.log(`Creating user: ${email}, role: ${role}, organization: ${organizationId}, branches: ${branchIds?.join(', ') || 'none'}`)
 
     // Validate organizationId is provided
     if (!organizationId) {
+      console.error('Missing required field: organizationId')
       return new Response(
         JSON.stringify({ error: 'Missing required field: organizationId' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -352,6 +355,7 @@ serve(async (req) => {
       tempPassword = Math.random().toString(36).slice(-10)
 
       // Create the user in Supabase Auth
+      console.log(`Creating new auth user for: ${email}`)
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password: tempPassword,
@@ -364,11 +368,14 @@ serve(async (req) => {
       })
 
       if (createError) {
+        console.error(`Failed to create auth user for ${email}:`, createError)
         return new Response(
           JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+      
+      console.log(`Successfully created auth user: ${newUser?.user?.id}`)
 
       if (!newUser?.user?.id) {
         return new Response(
@@ -433,16 +440,19 @@ serve(async (req) => {
     }
 
     // Add user to organization with RLS bypass
+    console.log(`Assigning user ${userId} to organization ${organizationId} with role ${role}`)
     const { error: orgError } = await supabaseAdmin
       .from('user_organizations')
       .insert({
         user_id: userId,
         organization_id: organizationId,
         role: role,
-        is_active: true
+        is_active: true,
+        created_by: user.id
       })
 
     if (orgError) {
+      console.error(`Failed to assign user ${userId} to organization ${organizationId}:`, orgError)
       // If organization assignment fails, clean up only if it's a new user
       if (isNewUser) {
         try {
@@ -456,14 +466,18 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    console.log(`Successfully assigned user ${userId} to organization ${organizationId}`)
 
     // If branchIds are provided and user is not admin/owner, add user to multiple branches
     // Admin and owner users get access to all branches automatically, so no specific branch assignment needed
     if (branchIds && branchIds.length > 0 && !['admin', 'owner'].includes(role)) {
+      console.log(`Assigning user ${userId} to branches: ${branchIds.join(', ')}`)
       const branchInserts = branchIds.map(branchId => ({
         user_id: userId,
         branch_id: branchId,
-        is_active: true
+        organization_id: organizationId,
+        created_by: user.id
       }))
 
       const { error: branchError } = await supabaseAdmin
@@ -471,9 +485,25 @@ serve(async (req) => {
         .insert(branchInserts)
 
       if (branchError) {
-        console.error('Failed to assign user to branches:', branchError)
-        // Don't fail the entire operation for branch assignment, but log the error
+        console.error(`Failed to assign user ${userId} to branches ${branchIds.join(', ')}:`, branchError)
+        // If branch assignment fails, clean up and fail the entire operation
+        if (isNewUser) {
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(userId)
+            console.log(`Cleaned up auth user ${userId} due to branch assignment failure`)
+          } catch (deleteError) {
+            console.error('Failed to cleanup auth user:', deleteError)
+          }
+        }
+        return new Response(
+          JSON.stringify({ error: `Failed to assign user to branches: ${branchError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
+      
+      console.log(`Successfully assigned user ${userId} to branches: ${branchIds.join(', ')}`)
+    } else if (['admin', 'owner'].includes(role)) {
+      console.log(`User ${userId} has ${role} role - skipping branch assignment (gets access to all branches)`)
     }
 
     // Fetch organization details for email template
@@ -527,6 +557,8 @@ serve(async (req) => {
       }
     }
 
+    console.log(`Successfully created user ${userId} (${email}) with role ${role} in organization ${organizationId}${isNewUser ? ' - new user' : ' - existing user'}${tempPassword ? ` - temp password: ${tempPassword}` : ''}`)
+    
     return new Response(
       JSON.stringify({
         success: true,

@@ -16,19 +16,38 @@ CREATE TABLE organizations (
 );
 
 -- Create user_organizations table
-CREATE TABLE user_organizations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'branch_admin' 'write', 'read')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  is_active BOOLEAN DEFAULT TRUE,
-  UNIQUE(user_id, organization_id),
-  CONSTRAINT user_organizations_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-  CONSTRAINT user_organizations_user_id_fkey1 FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL,
-  CONSTRAINT user_organizations_user_id_fkey2 FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE SET NULL
-);
+create table public.user_organizations (
+  id uuid not null default gen_random_uuid (),
+  user_id uuid not null,
+  organization_id uuid not null,
+  role text not null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  is_active boolean null default true,
+  created_by uuid null,
+  constraint user_organizations_pkey primary key (id),
+  constraint user_organizations_user_id_organization_id_key unique (user_id, organization_id),
+  constraint user_organizations_created_by_fkey2 foreign KEY (created_by) references profiles (id) on delete set null,
+  constraint user_organizations_organization_id_fkey foreign KEY (organization_id) references organizations (id) on delete CASCADE,
+  constraint user_organizations_user_id_fkey foreign KEY (user_id) references auth.users (id) on delete CASCADE,
+  constraint user_organizations_user_id_fkey1 foreign KEY (user_id) references profiles (id) on delete set null,
+  constraint user_organizations_user_id_fkey2 foreign KEY (user_id) references auth_users (id) on delete set null,
+  constraint user_organizations_created_by_fkey foreign KEY (created_by) references auth.users (id) on delete set null,
+  constraint user_organizations_created_by_fkey1 foreign KEY (created_by) references auth_users (id) on delete set null,
+  constraint user_organizations_role_check check (
+    (
+      role = any (
+        array[
+          'owner'::text,
+          'admin'::text,
+          'branch_admin'::text,
+          'write'::text,
+          'read'::text
+        ]
+      )
+    )
+  )
+) TABLESPACE pg_default;
 
 -- Create indexes for better performance
 CREATE INDEX idx_user_organizations_user_id ON user_organizations(user_id);
