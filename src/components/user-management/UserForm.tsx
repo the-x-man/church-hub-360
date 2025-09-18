@@ -48,7 +48,7 @@ export function UserForm({
   branches,
   isLoading = false,
 }: UserFormProps) {
-  const { canManageAllData, canManageBranchData, isOwner } = useRoleCheck();
+  const { canManageAllData, canManageUserData, isOwner } = useRoleCheck();
   const [formData, setFormData] = useState<UserFormData>({
     email: '',
     firstName: '',
@@ -108,7 +108,7 @@ export function UserForm({
 
   const requiresBranch = ['write', 'read', 'branch_admin'].includes(formData.role) && !formData.assignAllBranches;
   
-  const canAssignAllBranches = ['branch_admin', 'write', 'read'].includes(formData.role);
+  const canBeAssignedAllBranches = ['branch_admin', 'write', 'read'].includes(formData.role);
   
   const handleAssignAllBranchesChange = (checked: boolean) => {
     const activeBranchIds = branches.filter(b => b.is_active).map(b => b.id);
@@ -181,15 +181,15 @@ export function UserForm({
                 <SelectItem value="read">Read</SelectItem>
               </>
             )}
-            {!canManageAllData() && canManageBranchData() && (
+            {!canManageAllData() && canManageUserData() && (
               <>
-                <SelectItem value="branch_admin">Branch Admin</SelectItem>
-                <SelectItem value="write">Write</SelectItem>
-                <SelectItem value="read">Read</SelectItem>
+                {/* Branch admins can only assign write and read roles to others */}
+                <SelectItem value="write">Editor</SelectItem>
+                <SelectItem value="read">Viewer</SelectItem>
               </>
             )}
             {/* Fallback: Show current user's role if it's not in the available options */}
-            {mode === 'edit' && user && !canManageAllData() && !canManageBranchData() && (
+            {mode === 'edit' && user && !canManageAllData() && !canManageUserData() && (
               <SelectItem value={formData.role} disabled>
                 {formData.role.charAt(0).toUpperCase() + formData.role.slice(1).replace('_', ' ')}
               </SelectItem>
@@ -198,7 +198,7 @@ export function UserForm({
         </Select>
       </div>
 
-      {canAssignAllBranches && (
+      {canBeAssignedAllBranches && canManageAllData() && (
         <div className="space-y-4">
           <div className="flex items-center space-x-2 text-sm">
             <Checkbox

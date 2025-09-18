@@ -8,12 +8,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  TooltipProvider,
-} from '@/components/ui/tooltip';
-import {
-  Lock,
-} from 'lucide-react';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Lock } from 'lucide-react';
 import { UserActionsDropdown } from './UserActionsDropdown';
 import { format } from 'date-fns';
 import { useRoleCheck } from '@/components/auth/RoleGuard';
@@ -23,6 +19,7 @@ import { getFullName } from '@/types/user-management';
 
 interface UserTableProps {
   users: UserWithRelations[];
+  currentUserId?: string;
   isLoading?: boolean;
   onUserAction?: (action: UserAction, user: UserWithRelations) => void;
   branches?: any[]; // Available branches for comparison
@@ -30,6 +27,7 @@ interface UserTableProps {
 
 export function UserTable({
   users,
+  currentUserId,
   isLoading,
   onUserAction,
   branches = [],
@@ -220,21 +218,26 @@ export function UserTable({
                   </TableCell>
                   <TableCell>
                     <span
-                      className={`text-sm ${
+                      className={`text-[12px] ${
                         isInactive ? 'text-gray-400' : 'text-muted-foreground'
                       }`}
                     >
                       {user.last_login
-                        ? format(new Date(user.last_login), 'MMM d, yyyy')
+                        ? format(
+                            new Date(user.last_login),
+                            'MMM d, yyyy h:mm a'
+                          )
                         : 'Never'}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <UserActionsDropdown
-                      user={user}
-                      isAdmin={isAdmin}
-                      onAction={handleAction}
-                    />
+                    {userRole !== 'owner' && currentUserId !== user.id && (
+                      <UserActionsDropdown
+                        user={user}
+                        isAdmin={isAdmin}
+                        onAction={handleAction}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               );

@@ -134,19 +134,19 @@ export function useUserActions() {
 
   // Delete user permanently mutation
   const deleteUser = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, organizationId }: { userId: string; organizationId: string }) => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.access_token) throw new Error('No access token');
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user-permanent`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-organization-user`,
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({ userId, organizationId }),
         }
       );
 
@@ -192,7 +192,10 @@ export function useUserActions() {
           await regeneratePassword.mutateAsync(user.id);
           break;
         case 'delete':
-          await deleteUser.mutateAsync(user.id);
+          if (!organizationId) {
+            throw new Error('Organization ID is required for deletion');
+          }
+          await deleteUser.mutateAsync({ userId: user.id, organizationId });
           break;
         default:
           console.warn(`Unhandled user action: ${action}`);

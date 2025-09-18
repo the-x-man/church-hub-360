@@ -40,6 +40,7 @@ interface UserActionDialogsProps {
 export interface UserActionDialogsRef {
   openPasswordDialog: (user: User) => void;
   openDeactivateDialog: (user: User) => void;
+  openDeleteDialog: (user: User) => void;
 }
 
 export function UserActionDialogs({
@@ -60,11 +61,17 @@ export function UserActionDialogs({
     setIsDeleteDialogOpen(true);
   };
 
+  const openDeleteDialog = (user: User) => {
+    setSelectedUserForPermanentDelete(user);
+    setIsDeletePermanentlyDialogOpen(true);
+  };
+
   // Expose these functions via a ref or callback
   if (typeof window !== 'undefined') {
     (window as any).userActionDialogs = {
       openPasswordDialog,
       openDeactivateDialog,
+      openDeleteDialog,
     };
   }
 
@@ -81,6 +88,13 @@ export function UserActionDialogs({
     setSelectedUserForDelete,
   ] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // State for permanent delete user dialog
+  const [
+    selectedUserForPermanentDelete,
+    setSelectedUserForPermanentDelete,
+  ] = useState<User | null>(null);
+  const [isDeletePermanentlyDialogOpen, setIsDeletePermanentlyDialogOpen] = useState(false);
 
   // Regenerate password mutation
   const regeneratePasswordMutation = useMutation({
@@ -145,6 +159,22 @@ export function UserActionDialogs({
     }
   };
 
+  // Handle permanent delete user
+  const handleDeleteUserPermanently = async () => {
+    if (selectedUserForPermanentDelete && currentOrganization) {
+      try {
+        await userActions.deleteUser.mutateAsync({
+          userId: selectedUserForPermanentDelete.id,
+          organizationId: currentOrganization.id,
+        });
+        setIsDeletePermanentlyDialogOpen(false);
+        setSelectedUserForPermanentDelete(null);
+      } catch (error) {
+        // Error handling is done by the mutation
+      }
+    }
+  };
+
   return (
     <>
       {/* Regenerate Password Dialog */}
@@ -206,6 +236,38 @@ export function UserActionDialogs({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Permanently Dialog */}
+      <AlertDialog
+        open={isDeletePermanentlyDialogOpen}
+        onOpenChange={setIsDeletePermanentlyDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User Permanently</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete user "
+              {selectedUserForPermanentDelete?.full_name}"? This will remove them from this organization and delete all their branches. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setIsDeletePermanentlyDialogOpen(false);
+                setSelectedUserForPermanentDelete(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUserPermanently}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

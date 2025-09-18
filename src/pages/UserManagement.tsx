@@ -1,34 +1,35 @@
 import { useRoleCheck } from '@/components/auth/RoleGuard';
-import { toast } from 'sonner';
-import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Search, UserPlus } from 'lucide-react';
+import { useUserFiltering } from '@/components/user-management/hooks/useUserFiltering';
 import InactiveUsersSection from '@/components/user-management/InactiveUsersSection';
-import { UserTable } from '@/components/user-management/UserTable';
-import { UserGrid } from '@/components/user-management/UserGrid';
-import { UserDisplayControls } from '@/components/user-management/UserDisplayControls';
-import { UserPagination } from '@/components/user-management/UserPagination';
-import { UserForm } from '@/components/user-management/UserForm';
 import { UserActionDialogs } from '@/components/user-management/UserActionDialogs';
-import { useUsersPreferences } from '@/hooks/useUsersPreferences';
-import { useUserQueries } from '@/hooks/useUserQueries';
-import { useUserActions } from '@/hooks/useUserActions';
+import { UserAddDialog } from '@/components/user-management/UserAddDialog';
+import { UserDisplayControls } from '@/components/user-management/UserDisplayControls';
+import { UserFiltersControls } from '@/components/user-management/UserFiltersControls';
+import { UserEditDialog } from '@/components/user-management/UserEditDialog';
+import { UserGrid } from '@/components/user-management/UserGrid';
+import { UserPagination } from '@/components/user-management/UserPagination';
+import { UserTable } from '@/components/user-management/UserTable';
+import { useAuth } from '@/contexts/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { detectUserChanges, transformUserUpdateData, logUserChanges } from '@/utils/user-update-utils';
+import { useUserBranches } from '@/hooks/useBranchQueries';
+import { useUserActions } from '@/hooks/useUserActions';
+import { useUserQueries } from '@/hooks/useUserQueries';
+import { useUsersPreferences } from '@/hooks/useUsersPreferences';
 import type { UserAction, UserWithRelations } from '@/types/user-management';
+import {
+  detectUserChanges,
+  logUserChanges,
+  transformUserUpdateData,
+} from '@/utils/user-update-utils';
+import { Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 export default function UserManagement() {
-  const { canManageBranchData } = useRoleCheck();
+  const { canManageUserData, isBranchAdmin, canManageAllData } = useRoleCheck();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
 
   // State for dialogs and forms
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -49,6 +50,10 @@ export default function UserManagement() {
     filters,
     sortBy,
     sortOrder,
+    setSortBy,
+    setSortOrder,
+    updateFilters,
+    resetFilters,
   } = useUsersPreferences();
 
   // Data fetching
@@ -60,11 +65,56 @@ export default function UserManagement() {
     updateUser,
   } = useUserQueries();
 
+  // Fetch current user's branch assignments for branch admin restrictions
+  const { data: userBranches } = useUserBranches(
+    user?.id,
+    currentOrganization?.id
+  );
+
   // User actions
   const userActions = useUserActions();
 
+  // Get user's assigned branch IDs for branch admin restrictions
+  const userAssignedBranchIds = useMemo(() => {
+    if (!isBranchAdmin() || !userBranches) return [];
+    return userBranches.map((ub) => ub.branch_id).filter(Boolean) as string[];
+  }, [userBranches, isBranchAdmin]);
+
+  // Filter branches based on user role - branch admins only see their assigned branches
+  const availableBranches = useMemo(() => {
+    if (!branches) return [];
+    if (canManageAllData()) return branches; // Owners and admins see all branches
+    if (isBranchAdmin()) {
+      // Branch admins only see their assigned branches
+      return branches.filter((branch) =>
+        userAssignedBranchIds.includes(branch.id)
+      );
+    }
+    return branches; // Other roles see all branches
+  }, [branches, canManageAllData, isBranchAdmin, userAssignedBranchIds]);
+
+  // Check if branch admin can perform action on user
+  const canPerformUserAction = (user: any) => {
+    if (canManageAllData()) return true; // Owners and admins can act on all users
+    if (isBranchAdmin() && userAssignedBranchIds.length > 0) {
+      // Branch admins can only act on users from their assigned branches
+      const userBranches = user.user_branches || [];
+      return userBranches.some(
+        (ub: any) =>
+          ub.branch_id && userAssignedBranchIds.includes(ub.branch_id)
+      );
+    }
+    return true; // Other roles can act on users they can see
+  };
+
   // Event handlers
   const handleUserActionLocal = (action: UserAction, user: any) => {
+    // Check if user can perform this action
+    if (!canPerformUserAction(user)) {
+      toast.error('You can only manage users from your assigned branches.');
+      return;
+    }
+
     switch (action) {
       case 'edit':
         setEditingUser(user);
@@ -76,9 +126,28 @@ export default function UserManagement() {
           (window as any).userActionDialogs.openDeactivateDialog({
             id: user.id,
             email: user.profile?.email || '',
-            full_name: `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim(),
+            full_name: `${user.profile?.first_name || ''} ${
+              user.profile?.last_name || ''
+            }`.trim(),
             role: user.user_organizations?.[0]?.role || 'read',
-            is_active: user.is_active
+            is_active: user.is_active,
+          });
+        } else {
+          // Fallback to direct action if dialog not available
+          userActions.handleUserAction(action, user, currentOrganization?.id);
+        }
+        break;
+      case 'delete':
+        // Show confirmation dialog for permanent deletion
+        if ((window as any).userActionDialogs) {
+          (window as any).userActionDialogs.openDeleteDialog({
+            id: user.id,
+            email: user.profile?.email || '',
+            full_name: `${user.profile?.first_name || ''} ${
+              user.profile?.last_name || ''
+            }`.trim(),
+            role: user.user_organizations?.[0]?.role || 'read',
+            is_active: user.is_active,
           });
         } else {
           // Fallback to direct action if dialog not available
@@ -92,14 +161,24 @@ export default function UserManagement() {
   };
 
   const handleCreateUser = (userData: any) => {
+    // For branch admins, restrict branch assignments to only their assigned branches
+    let allowedBranchIds = userData.selectedBranchIds || [];
+    if (isBranchAdmin() && userAssignedBranchIds.length > 0) {
+      // Filter selected branches to only include those the branch admin is assigned to
+      allowedBranchIds = allowedBranchIds.filter((branchId: string) =>
+        userAssignedBranchIds.includes(branchId)
+      );
+    }
+
     // Transform the form data to include branch assignments
     const transformedData = {
       ...userData,
       // Handle branch assignments based on role and form data
       branchIds: userData.assignAllBranches
-        ? branches?.filter((b) => b.is_active).map((b) => b.id) || []
-        : userData.selectedBranchIds ||
-          (userData.branchId ? [userData.branchId] : []),
+        ? isBranchAdmin()
+          ? userAssignedBranchIds
+          : availableBranches?.filter((b: any) => b.is_active).map((b: any) => b.id) || []
+        : allowedBranchIds || (userData.branchId ? [userData.branchId] : []),
       // Remove the form-specific fields
       assignAllBranches: undefined,
       selectedBranchIds: undefined,
@@ -121,11 +200,12 @@ export default function UserManagement() {
     if (!editingUser) return;
 
     // Get active branch IDs for change detection
-    const activeBranchIds = branches?.filter((b) => b.is_active).map((b) => b.id) || [];
+    const activeBranchIds =
+      branches?.filter((b) => b.is_active).map((b) => b.id) || [];
 
     // Detect what has actually changed
     const changes = detectUserChanges(editingUser, userData, activeBranchIds);
-    
+
     // Log changes for debugging
     logUserChanges(changes, editingUser.id);
 
@@ -158,98 +238,27 @@ export default function UserManagement() {
     );
   };
 
-  // Filter and search users
-  const filteredUsers = useMemo(() => {
-    if (!users) return [];
-
-    return users.filter((user: any) => {
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const fullName = `${user.profile.first_name || ''} ${
-          user.profile.last_name || ''
-        }`.toLowerCase();
-        const email = user.profile.email?.toLowerCase() || '';
-
-        if (!fullName.includes(searchLower) && !email.includes(searchLower)) {
-          return false;
-        }
-      }
-
-      // Status filter
-      if (filters.status === 'active' && !user.is_active) return false;
-      if (filters.status === 'inactive' && user.is_active) return false;
-
-      // Role filter
-      if (filters.role) {
-        const userRole = user.user_organizations?.[0]?.role;
-        if (userRole !== filters.role) return false;
-      }
-
-      // Branch filter
-      if (filters.branchId) {
-        const userBranches = user.user_branches || [];
-        const hasBranch = userBranches.some(
-          (ub: any) => ub.branch_id === filters.branchId
-        );
-        if (!hasBranch) return false;
-      }
-
-      return true;
-    });
-  }, [users, searchTerm, filters]);
-
-  // Sort users
-  const sortedUsers = useMemo(() => {
-    if (!filteredUsers.length) return [];
-
-    return [...filteredUsers].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortBy) {
-        case 'full_name':
-          aValue = `${a.profile.first_name || ''} ${
-            a.profile.last_name || ''
-          }`.toLowerCase();
-          bValue = `${b.profile.first_name || ''} ${
-            b.profile.last_name || ''
-          }`.toLowerCase();
-          break;
-        case 'email':
-          aValue = a.profile.email?.toLowerCase() || '';
-          bValue = b.profile.email?.toLowerCase() || '';
-          break;
-
-        case 'created_at':
-          aValue = new Date(a.created_at || 0);
-          bValue = new Date(b.created_at || 0);
-          break;
-        case 'last_login':
-          aValue = new Date(a.last_login || 0);
-          bValue = new Date(b.last_login || 0);
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredUsers, sortBy, sortOrder]);
-
-  // Paginate users
-  const totalUsers = sortedUsers.length;
-  const totalPages = Math.ceil(totalUsers / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+  // Use custom hook for filtering, sorting, and pagination
+  const {
+    paginatedUsers,
+    totalUsers,
+    totalPages,
+  } = useUserFiltering({
+    users,
+    searchTerm,
+    filters,
+    sortBy,
+    sortOrder,
+    currentPage,
+    pageSize,
+    isBranchAdmin,
+    userAssignedBranchIds,
+  });
 
   // Event handlers
 
   // Access control check
-  if (!canManageBranchData()) {
+  if (!canManageUserData()) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -272,34 +281,17 @@ export default function UserManagement() {
             Manage users and their permissions
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="mt-4 md:mt-0">
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-              <DialogDescription>
-                Add a new user to the platform. They will receive login
-                credentials via email.
-              </DialogDescription>
-            </DialogHeader>
-            <UserForm
-              mode="create"
-              onSubmit={handleCreateUser}
-              onCancel={() => setIsCreateDialogOpen(false)}
-              branches={branches || []}
-              isLoading={createUser.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        <UserAddDialog
+          isOpen={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          onSubmit={handleCreateUser}
+          branches={availableBranches || []}
+          isLoading={createUser.isPending}
+        />
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {/* Search and Display Controls */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
@@ -315,6 +307,22 @@ export default function UserManagement() {
         />
       </div>
 
+      {/* Filters and Sorting */}
+      <div className="mb-6">
+        <UserFiltersControls
+          filters={filters}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          branches={availableBranches || []}
+          onFiltersChange={updateFilters}
+          onSortChange={(newSortBy, newSortOrder) => {
+            setSortBy(newSortBy);
+            setSortOrder(newSortOrder);
+          }}
+          onResetFilters={resetFilters}
+        />
+      </div>
+
       {/* User Display */}
       {isLoading ? (
         <div className="text-center py-8">
@@ -326,14 +334,16 @@ export default function UserManagement() {
           {displayMode === 'table' ? (
             <UserTable
               users={paginatedUsers}
+              currentUserId={user?.id}
               onUserAction={handleUserActionLocal}
-              branches={branches}
+              branches={branches || []}
             />
           ) : (
             <UserGrid
               users={paginatedUsers}
+              currentUserId={user?.id}
               onUserAction={handleUserActionLocal}
-              branches={branches}
+              branches={branches || []}
             />
           )}
 
@@ -353,29 +363,19 @@ export default function UserManagement() {
       <InactiveUsersSection />
 
       {/* Edit User Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user information and permissions.
-            </DialogDescription>
-          </DialogHeader>
-          {editingUser && (
-            <UserForm
-              mode="edit"
-              user={editingUser}
-              onSubmit={handleUpdateUser}
-              onCancel={() => {
-                setIsEditDialogOpen(false);
-                setEditingUser(null);
-              }}
-              branches={branches || []}
-              isLoading={updateUser.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserEditDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditingUser(null);
+          }
+        }}
+        user={editingUser}
+        onSubmit={handleUpdateUser}
+        branches={availableBranches || []}
+        isLoading={updateUser.isPending}
+      />
 
       {/* User Action Dialogs */}
       <UserActionDialogs

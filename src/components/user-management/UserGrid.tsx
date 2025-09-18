@@ -2,23 +2,17 @@ import { useRoleCheck } from '@/components/auth/RoleGuard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  TooltipProvider,
-} from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { ROLE_DISPLAY_NAMES } from '@/types/organizations';
 import type { UserAction, UserWithRelations } from '@/types/user-management';
 import { getFullName } from '@/types/user-management';
 import { format } from 'date-fns';
-import {
-  Calendar,
-  Lock,
-  Mail,
-  MapPin,
-} from 'lucide-react';
+import { Calendar, Lock, Mail, MapPin } from 'lucide-react';
 import { UserActionsDropdown } from './UserActionsDropdown';
 
 interface UserGridProps {
   users: UserWithRelations[];
+  currentUserId?: string;
   isLoading?: boolean;
   onUserAction?: (action: UserAction, user: UserWithRelations) => void;
   branches?: any[]; // Available branches for comparison
@@ -26,6 +20,7 @@ interface UserGridProps {
 
 export function UserGrid({
   users,
+  currentUserId,
   isLoading,
   onUserAction,
   branches = [],
@@ -149,11 +144,13 @@ export function UserGrid({
                       </Badge>
                     </div>
                   </div>
-                  <UserActionsDropdown
-                    user={user}
-                    isAdmin={isAdmin}
-                    onAction={handleAction}
-                  />
+                  {currentUserId !== user.id && (
+                    <UserActionsDropdown
+                      user={user}
+                      isAdmin={isAdmin}
+                      onAction={handleAction}
+                    />
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">

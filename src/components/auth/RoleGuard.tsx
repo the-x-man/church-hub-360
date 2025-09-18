@@ -38,10 +38,14 @@ export function useRoleCheck() {
   };
 
   const canManageAllData = () => hasRole(['owner', 'admin']);
-  const canViewAllData = () => hasRole(['owner', 'admin', 'branch_admin', 'write']);
-  const canManageBranchData = () => hasRole(['owner', 'admin', 'branch_admin', 'write']);
+  const canViewAllData = () =>
+    hasRole(['owner', 'admin', 'branch_admin', 'write']);
+  const canManageBranchData = () =>
+    hasRole(['owner', 'admin', 'branch_admin', 'write']);
+  const canManageUserData = () => hasRole(['owner', 'admin', 'branch_admin']);
   const canWrite = () => hasRole(['owner', 'admin', 'branch_admin', 'write']);
-  const canRead = () => hasRole(['owner', 'admin', 'branch_admin', 'write', 'read']);
+  const canRead = () =>
+    hasRole(['owner', 'admin', 'branch_admin', 'write', 'read']);
   const isOwner = () => hasRole(['owner']);
   const isAdmin = () => hasRole(['admin']);
   const isBranchAdmin = () => hasRole(['branch_admin']);
@@ -51,6 +55,7 @@ export function useRoleCheck() {
     canManageAllData,
     canViewAllData,
     canManageBranchData,
+    canManageUserData,
     canWrite,
     canRead,
     isOwner,
