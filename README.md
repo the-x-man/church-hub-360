@@ -42,13 +42,7 @@ cd fmt-template-1
 node scripts/setup.js
 ```
 
-This script will:
-
-- Prompt you for your project name
-- Ask for a project description
-- Update `package.json` with your project name
-- Update `index.html` with your project title and description
-- Customize the template for your specific project
+This script will automatically update all template references across the codebase with your project details. See the [Template Customization](#-template-customization) section below for detailed information about what gets updated.
 
 ### 3. Install Dependencies
 
@@ -456,6 +450,96 @@ The auto-update system can be configured through:
 - **App.tsx**: Initializes auto-update checking
 - **Header**: Displays update button when updates are available
 - **Settings**: Provides update management interface
+
+## 🎨 Template Customization
+
+When using this template for a new application, several files contain template-specific references that need to be updated. The `scripts/setup.js` script automatically handles all these updates, but here's a comprehensive list of what gets changed:
+
+### Automated Updates (via setup.js)
+
+The setup script will prompt you for:
+- **Project Name**: Your application's display name
+- **Project Description**: A brief description of your application
+
+It will then automatically update the following files:
+
+#### 1. Package Configuration
+- **`package.json`**:
+  - `name`: Updated to kebab-case version of your project name
+  - `description`: Updated with your project description
+
+#### 2. Web Application Files
+- **`index.html`**:
+  - `<title>`: Updated with your project name
+  - `<meta name="description">`: Updated with your project description
+
+#### 3. Electron Configuration
+- **`electron-builder.yml`**:
+  - `productName`: Updated with your project name
+  - `appId`: Updated to `com.fmtsoftware.{your-project-kebab-case}`
+  - `artifactName`: Updated to `{your-project-kebab-case}-setup-${version}.${ext}`
+  - `shortcutName`: Updated with your project name
+  - `menuCategory`: Updated with your project name
+
+#### 4. Application UI
+- **`src/components/shared/HelpDrawer.tsx`**:
+  - Application title in the help drawer
+  - Application description text
+
+#### 5. Error Pages
+- **`electron-app/error.html`**:
+  - Page title updated to `{Your Project Name} - Error`
+  - Error message updated to reference your project name
+
+#### 6. Electron Main Process
+- **`electron-app/main.ts`**:
+  - Temporary directory name for updates changed from `fmt-template-updates` to `{your-project-kebab-case}-updates`
+
+#### 7. Documentation
+- **`README.md`**:
+  - Main title updated from "FMT Template 1" to your project name
+  - Project description in the first paragraph
+  - Clone directory reference updated to your project's kebab-case name
+
+### Name Format Conversions
+
+The setup script automatically generates different name formats from your input:
+
+- **Original**: "My Awesome App"
+- **kebab-case**: "my-awesome-app" (for package.json, URLs, file names)
+- **camelCase**: "myAwesomeApp" (for JavaScript variables)
+- **PascalCase**: "MyAwesomeApp" (for component names)
+- **Title Case**: "My Awesome App" (for display names)
+
+### Files NOT Modified
+
+The following files are intentionally **NOT** modified by the setup script:
+
+- **Email templates** in `supabase/functions/`
+- **Database migration files**
+- **Environment configuration files** (`.env.example`, etc.)
+- **Source code logic** and **component implementations**
+- **Styling and theme files**
+- **Asset files** (icons, images, etc.)
+
+### Manual Updates Required
+
+After running the setup script, you may want to manually update:
+
+1. **Icons and Favicons**: Replace `public/favicon.ico` and `public/icon.png` with your app's icons
+2. **App Icons**: Update Electron app icons referenced in `electron-builder.yml`
+3. **Branding Colors**: Customize the color scheme in your CSS/Tailwind configuration
+4. **About/Help Content**: Update any additional help or about content specific to your app
+5. **License Information**: Update license details if different from the template
+
+### Verification
+
+After running the setup script, verify the changes by:
+
+1. Checking that `package.json` has your project name and description
+2. Opening `index.html` to see your project title
+3. Running `bun run build` to ensure all references are updated correctly
+4. Testing both web and Electron builds
 
 ## 🚀 Deployment
 
