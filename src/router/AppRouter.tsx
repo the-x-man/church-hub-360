@@ -15,19 +15,14 @@ import { PasswordReset } from '../pages/auth/PasswordReset';
 import { OrganizationSelection } from '../pages/OrganizationSelection';
 
 // Protected pages
-import { AppVersions } from '../pages/AppVersions';
 import { Branches } from '../pages/Branches';
 import { Dashboard } from '../pages/Dashboard';
 import { Profile } from '../pages/Profile';
 import { Settings } from '../pages/Settings';
-import { TestRoutes } from '../pages/TestRoutes';
-// import { Users } from '../pages/Users';
 import { OrganizationSelectionProtectedRoute } from '@/components/auth/OrganizationSelectionProtectedRoute';
 import UserManagement from '@/pages/UserManagement';
 
 function AppRoutes() {
-  const isDev = import.meta.env.DEV;
-
   return (
     <Routes>
       {/* Public/Auth routes */}
@@ -83,13 +78,9 @@ function AppRoutes() {
 
         {/* Main application routes */}
         <Route path="branches" element={<Branches />} />
-        <Route path="app-versions" element={<AppVersions />} />
         <Route path="profile" element={<Profile />} />
         <Route path="user-management" element={<UserManagement />} />
         <Route path="settings" element={<Settings />} />
-
-        {/* Development-only test routes */}
-        {isDev && <Route path="test" element={<TestRoutes />} />}
       </Route>
 
       {/* Catch-all route - redirect to dashboard if authenticated, login if not */}

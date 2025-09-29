@@ -129,14 +129,26 @@ export function useUpdateOrganization() {
   return useMutation({
     mutationFn: async (data: UpdateOrganizationData): Promise<Organization> => {
       const { id, ...updateData } = data;
+      
+      // Filter out undefined values and convert them to null for proper database handling
+      const cleanedUpdateData = Object.fromEntries(
+        Object.entries(updateData).map(([key, value]) => [
+          key,
+          value === undefined ? null : value
+        ])
+      );
+
       const { data: updatedOrg, error: updateError } = await supabase
         .from('organizations')
-        .update(updateData)
+        .update(cleanedUpdateData)
         .eq('id', id)
         .select()
         .single();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Organization update error:', updateError);
+        throw updateError;
+      }
 
       return updatedOrg;
     },

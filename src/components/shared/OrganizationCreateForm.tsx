@@ -113,7 +113,7 @@ export function OrganizationCreateForm({
               <Input
                 id="email"
                 type="email"
-                value={createForm.email}
+                value={createForm.email || ''}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className="col-span-3"
                 placeholder="contact@organization.com"
@@ -125,7 +125,7 @@ export function OrganizationCreateForm({
               </Label>
               <Input
                 id="phone"
-                value={createForm.phone}
+                value={createForm.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 className="col-span-3"
                 placeholder="+233 (0) 551234567"

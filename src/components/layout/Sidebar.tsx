@@ -1,14 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  Home,
-  Settings,
-  Users,
-  Package,
-  TestTube,
-  LogOut,
-  MapPin,
-} from 'lucide-react';
+import { Home, Settings, Users, LogOut, MapPin } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,11 +24,6 @@ const navItems: NavItem[] = [
     label: 'Branches',
   },
   {
-    to: '/app-versions',
-    icon: Package,
-    label: 'App Versions',
-  },
-  {
     to: '/user-management',
     icon: Users,
     label: 'Users',
@@ -45,12 +32,6 @@ const navItems: NavItem[] = [
     to: '/settings',
     icon: Settings,
     label: 'Settings',
-  },
-  {
-    to: '/test',
-    icon: TestTube,
-    label: 'Test Routes',
-    devOnly: true,
   },
 ];
 

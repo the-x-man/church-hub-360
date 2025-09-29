@@ -35,17 +35,17 @@ export interface BrandColors {
 export interface Organization {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
-  logo?: string;
-  address?: string;
+  email?: string | null;
+  phone?: string | null;
+  logo?: string | null;
+  address?: string | null;
   created_at: string;
   updated_at: string;
   currency: string;
   logo_settings: LogoSettings;
   brand_colors: CompleteTheme;
   notification_settings: NotificationSettings;
-  theme_name?: string;
+  theme_name?: string | null;
   is_active: boolean;
 }
 
@@ -68,15 +68,15 @@ export interface OrganizationWithRole extends Organization {
 // Organization creation/update types
 export interface CreateOrganizationData {
   name: string;
-  email?: string;
-  phone?: string;
-  logo?: string;
-  address?: string;
+  email?: string | null;
+  phone?: string | null;
+  logo?: string | null;
+  address?: string | null;
   currency?: string;
   logo_settings?: LogoSettings;
   brand_colors?: CompleteTheme | null;
   notification_settings?: NotificationSettings;
-  theme_name?: string;
+  theme_name?: string | null;
   is_active: boolean;
 }
 

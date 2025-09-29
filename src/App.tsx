@@ -1,6 +1,7 @@
 import { ThemeProvider } from 'next-themes';
 import { AppRouter } from './router/AppRouter';
 import { Toaster } from './components/ui/sonner';
+import { ConnectionStatus } from './modules/connection-status-detector/ConnectionStatus';
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       disableTransitionOnChange
     >
       <AppRouter />
+      <ConnectionStatus />
       <Toaster />
     </ThemeProvider>
   );

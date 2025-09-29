@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export interface OrganizationLogoProps {
   src?: string | null;
-  fallback?: string;
+  fallback?: string | React.ReactNode;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | number;
   orientation?: 'square' | 'portrait' | 'landscape';
   backgroundSize?: 'contain' | 'cover';
@@ -25,7 +25,9 @@ const getSizeValue = (size: OrganizationLogoProps['size']): number => {
   return sizeMap[size || 'md'] || sizeMap.md;
 };
 
-const getAspectRatio = (orientation?: 'square' | 'portrait' | 'landscape'): string => {
+const getAspectRatio = (
+  orientation?: 'square' | 'portrait' | 'landscape'
+): string => {
   switch (orientation) {
     case 'portrait':
       return 'aspect-[3/4]';

@@ -90,7 +90,7 @@ export function Settings() {
   // Helper function to compare organization data
   const hasOrganizationDataChanged = () => {
     if (!currentOrganization) return false;
-    
+
     return (
       orgData.name !== (currentOrganization.name || '') ||
       orgData.email !== (currentOrganization.email || '') ||
@@ -103,11 +103,12 @@ export function Settings() {
   // Helper function to compare notification settings
   const hasNotificationSettingsChanged = () => {
     if (!currentOrganization?.notification_settings) return true;
-    
+
     const current = currentOrganization.notification_settings;
     return (
       notificationSettings.roleChanges !== (current.roleChanges ?? true) ||
-      notificationSettings.securityAlerts !== (current.securityAlerts ?? true) ||
+      notificationSettings.securityAlerts !==
+        (current.securityAlerts ?? true) ||
       notificationSettings.appUpdates !== (current.appUpdates ?? true) ||
       notificationSettings.newUserAdded !== (current.newUserAdded ?? true)
     );
@@ -182,7 +183,10 @@ export function Settings() {
   };
 
   const handleCropComplete = async (croppedFile: File) => {
-    if (!currentOrganization || !updateOrganization) return;
+    if (!currentOrganization || !updateOrganization) {
+      setLogoError('No organization selected');
+      return;
+    }
 
     setIsUploadingLogo(true);
     setLogoError(null);
@@ -213,12 +217,17 @@ export function Settings() {
         logo: uploadResult.url,
       });
 
+      toast.success('Logo uploaded successfully');
+
       // Close cropper
       setIsCropperOpen(false);
       setSelectedImageFile(null);
     } catch (error) {
       console.error('Error uploading logo:', error);
-      setLogoError(error instanceof Error ? error.message : 'Upload failed');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Upload failed';
+      setLogoError(errorMessage);
+      toast.error(`Failed to upload logo: ${errorMessage}`);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -230,29 +239,46 @@ export function Settings() {
   };
 
   const handleRemoveLogo = async () => {
-    if (!currentOrganization || !updateOrganization) return;
+    if (!currentOrganization || !updateOrganization) {
+      setLogoError('No organization selected');
+      return;
+    }
 
     setLogoError(null);
+    setIsUploadingLogo(true);
 
     try {
       // If there's a logo URL, try to delete it from storage
       if (currentOrganization.logo) {
         const filePath = extractFilePathFromUrl(currentOrganization.logo);
         if (filePath) {
-          await deleteLogo(filePath);
+          try {
+            await deleteLogo(filePath);
+          } catch (deleteError) {
+            console.warn(
+              'Failed to delete logo file from storage:',
+              deleteError
+            );
+            // Continue with database update even if file deletion fails
+          }
         }
       }
 
       // Update organization to remove logo
       await updateOrganization({
         id: currentOrganization.id,
-        logo: undefined,
+        logo: null,
       });
+
+      toast.success('Logo removed successfully');
     } catch (error) {
       console.error('Error removing logo:', error);
-      setLogoError(
-        error instanceof Error ? error.message : 'Failed to remove logo'
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to remove logo';
+      setLogoError(errorMessage);
+      toast.error(`Failed to remove logo: ${errorMessage}`);
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
   return (
@@ -389,7 +415,7 @@ export function Settings() {
                 <div className="flex flex-col items-center space-y-4">
                   <OrganizationLogo
                     src={currentOrganization?.logo}
-                    fallback={currentOrganization?.name.substring(0, 3)}
+                    fallback={<Building2 />}
                     size="xl"
                     orientation="square"
                     backgroundSize="contain"

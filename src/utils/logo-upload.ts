@@ -47,9 +47,17 @@ export function validateLogoFile(file: File): { isValid: boolean; error?: string
  * @returns Unique file path
  */
 function generateLogoPath(organizationId: string, fileName: string): string {
+  // Ensure organizationId is valid and clean
+  if (!organizationId || organizationId.trim() === '') {
+    throw new Error('Organization ID is required for logo upload');
+  }
+  
+  const cleanOrgId = organizationId.trim();
   const timestamp = Date.now();
-  const extension = fileName.split('.').pop();
-  return `${organizationId}/${timestamp}.${extension}`;
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'png';
+  
+  // Use a consistent naming pattern: org-{orgId}/logo-{timestamp}.{ext}
+  return `org-${cleanOrgId}/logo-${timestamp}.${extension}`;
 }
 
 /**
@@ -62,6 +70,11 @@ export async function uploadLogo(
   file: File,
   organizationId: string
 ): Promise<LogoUploadResult> {
+  // Validate inputs
+  if (!organizationId || organizationId.trim() === '') {
+    throw new Error('Organization ID is required for logo upload');
+  }
+
   // Validate file first
   const validation = validateLogoFile(file);
   if (!validation.isValid) {
@@ -71,17 +84,31 @@ export async function uploadLogo(
   try {
     // Generate unique file path
     const filePath = generateLogoPath(organizationId, file.name);
-
+    
     // Upload file to Supabase storage
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false // Don't overwrite existing files
       });
 
     if (error) {
-      throw new Error(`Upload failed: ${error.message}`);
+      // If file already exists, try with upsert
+      if (error.message.includes('already exists')) {
+        const { error: upsertError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (upsertError) {
+          throw new Error(`Upload failed: ${upsertError.message}`);
+        }
+      } else {
+        throw new Error(`Upload failed: ${error.message}`);
+      }
     }
 
     // Get public URL
@@ -89,6 +116,7 @@ export async function uploadLogo(
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
 
+    
     return {
       url: urlData.publicUrl,
       path: filePath
@@ -105,16 +133,49 @@ export async function uploadLogo(
  * @returns Promise that resolves when deletion is complete
  */
 export async function deleteLogo(filePath: string): Promise<void> {
+  if (!filePath || filePath.trim() === '') {
+    console.warn('No file path provided for deletion');
+    return;
+  }
+
   try {
+    // First check if the file exists
+    const { error: listError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(filePath.split('/').slice(0, -1).join('/'), {
+        limit: 100,
+        search: filePath.split('/').pop()
+      });
+
+    if (listError) {
+      console.warn(`Could not list files for deletion check: ${listError.message}`);
+      // Continue with deletion attempt anyway
+    }
+
+    // Attempt to delete the file
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .remove([filePath]);
 
     if (error) {
+      // Log the error but don't throw for certain expected errors
+      if (error.message.includes('not found') || error.message.includes('does not exist')) {
+        console.warn(`File not found for deletion: ${filePath}`);
+        return; // File doesn't exist, consider it successfully "deleted"
+      }
       throw new Error(`Delete failed: ${error.message}`);
     }
+
   } catch (error) {
     console.error('Logo deletion error:', error);
+    // Don't throw for file not found errors
+    if (error instanceof Error && 
+        (error.message.includes('not found') || 
+         error.message.includes('does not exist') ||
+         error.message.includes('PGRST116'))) {
+      console.warn(`File deletion completed with warning: ${error.message}`);
+      return;
+    }
     throw error instanceof Error ? error : new Error('Deletion failed');
   }
 }
@@ -125,17 +186,25 @@ export async function deleteLogo(filePath: string): Promise<void> {
  * @returns The file path or null if invalid URL
  */
 export function extractFilePathFromUrl(url: string): string | null {
+  if (!url || url.trim() === '') {
+    return null;
+  }
+
   try {
     const urlObj = new URL(url);
-    const pathParts = urlObj.pathname.split('/');
+    const pathParts = urlObj.pathname.split('/').filter(part => part !== '');
     const bucketIndex = pathParts.findIndex(part => part === BUCKET_NAME);
     
     if (bucketIndex === -1 || bucketIndex === pathParts.length - 1) {
+      console.warn(`Could not find bucket ${BUCKET_NAME} in URL: ${url}`);
       return null;
     }
     
-    return pathParts.slice(bucketIndex + 1).join('/');
-  } catch {
+    const filePath = pathParts.slice(bucketIndex + 1).join('/');
+    
+    return filePath;
+  } catch (error) {
+    console.error(`Error extracting file path from URL: ${url}`, error);
     return null;
   }
 }

@@ -98,7 +98,7 @@ export function useUserActions() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['inactive-users'] });
       queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
-      toast.success('User deleted successfully', { id: 'delete-user' });
+      toast.success('User removed successfully', { id: 'delete-user' });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete user', { id: 'delete-user' });
