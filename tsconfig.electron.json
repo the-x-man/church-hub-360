@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "outDir": "electron-app/dist",
+    "lib": ["ES2022"],
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "auto"
+  },
+  "include": [
+    "electron-app/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "electron-app/dist"
+  ]
+}

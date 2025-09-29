@@ -1,12 +1,11 @@
 import { Building2, Plus } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { OrganizationCreateForm } from '../components/shared/OrganizationCreateForm';
-import { ThemeSwitcher } from '../components/shared/ThemeSwitcher';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { oklchToHex } from '../lib/utils';
-import { useTheme } from 'next-themes';
 
 export function OrganizationSelection() {
   const navigate = useNavigate();
@@ -79,12 +78,14 @@ export function OrganizationSelection() {
             </h1>
           </div>
           <div className="flex items-center space-x-3">
-            <ThemeSwitcher />
             <OrganizationCreateForm
               trigger={
                 <Button variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Organization
+                  <Plus className="h-4 w-4 mr-1" />
+                  <span className="hidden md:inline">
+                    Create New Organization
+                  </span>
+                  <span className="md:hidden">Create New</span>
                 </Button>
               }
               onSuccess={handleCreateSuccess}

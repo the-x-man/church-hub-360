@@ -1,4 +1,4 @@
-import { Bell, Building2, Palette, Save, Trash2 } from 'lucide-react';
+import { Bell, Building2, Download, Palette, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
 import {
@@ -38,6 +38,7 @@ import { ModernFileUpload } from '../components/shared/ModernFileUpload';
 import { OrganizationLogo } from '../components/shared/OrganizationLogo';
 import { ThemeSelector } from '../components/shared/ThemeSelector';
 import { ThemeSwitcher } from '../components/shared/ThemeSwitcher';
+import { UpdateSettings } from '../modules/auto-update/UpdateSettings';
 import type { UpdateOrganizationData } from '../types/organizations';
 import { toast } from 'sonner';
 
@@ -293,7 +294,7 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="organization" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger
             value="organization"
             className="flex items-center space-x-2"
@@ -314,6 +315,10 @@ export function Settings() {
           >
             <Bell className="h-4 w-4" />
             <span>Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="updates" className="flex items-center space-x-2">
+            <Download className="h-4 w-4" />
+            <span>Updates</span>
           </TabsTrigger>
         </TabsList>
 
@@ -613,6 +618,20 @@ export function Settings() {
                   </span>
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="updates" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Software Updates</CardTitle>
+              <CardDescription>
+                Check for application updates and install new versions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <UpdateSettings />
             </CardContent>
           </Card>
         </TabsContent>

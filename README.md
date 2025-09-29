@@ -11,6 +11,7 @@ A comprehensive React application template for FMT Software Solutions that can b
 - **Supabase** integration for backend services
 - **User Management System** with authentication and profiles
 - **App Versioning System** for release management
+- **Auto-Update System** for seamless application updates
 - **Row Level Security (RLS)** policies for data protection
 - **Tailwind CSS v4** for styling
 - **shadcn/ui** component library
@@ -64,10 +65,11 @@ bun install
    ```
 
 2. Update `.env` with your Supabase credentials:
+
    ```env
    VITE_SUPABASE_URL=your_supabase_project_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_EDGE_FUNCTION_SECRET=your_edge_function_secret_here
+   VITE_DOWNLOADS_PAGE_URL=https://your-website.com/downloads
    ```
 
 ### 5. Database Setup
@@ -152,7 +154,50 @@ Edge functions in this template use **Supabase Auth tokens** for security:
 - Authenticated users get full access, anonymous users get limited access
 - No secrets exposed to the frontend bundle
 
-### 7. Development
+### 7. Cloudinary Configuration (Optional)
+
+**For Image Upload Functionality:** The template includes a secure server-side image upload system using Cloudinary for the issue reporting feature.
+
+#### Setup Steps:
+
+1. **Create a Cloudinary Account:**
+   - Sign up at [Cloudinary.com](https://cloudinary.com)
+   - Get your Cloud Name, API Key, and API Secret from the dashboard
+
+2. **Configure Edge Function Secrets:**
+   
+   In your Supabase project dashboard, go to Edge Functions → Settings and add these secrets:
+   
+   ```
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   ```
+
+3. **Deploy the submit-issue Function:**
+   
+   ```bash
+   supabase functions deploy submit-issue
+   ```
+
+#### Security Features:
+
+- **Server-Side Uploads:** Images are uploaded securely from the edge function
+- **Signed Authentication:** Uses Cloudinary's signed upload API for security
+- **No Client Secrets:** API secrets are never exposed to the frontend
+- **Organized Storage:** Images are automatically organized in folders
+
+#### How It Works:
+
+- Users can attach screenshots when reporting issues
+- Images are sent to the edge function via FormData
+- Edge function generates signed upload parameters
+- Images are uploaded to Cloudinary with proper authentication
+- Secure URLs are stored in the database
+
+**Note:** Image upload is optional. The issue reporting system works without Cloudinary configuration, but users won't be able to attach screenshots.
+
+### 8. Development
 
 ```bash
 # Start development server
@@ -306,18 +351,26 @@ Manages organization-specific display preferences for the Branches page:
 import { useBranchesPreferences } from '@/hooks/useBranchesPreferences';
 
 function BranchesPage() {
-  const { displayMode, setDisplayMode, pageSize, setPageSize } = useBranchesPreferences();
-  
+  const {
+    displayMode,
+    setDisplayMode,
+    pageSize,
+    setPageSize,
+  } = useBranchesPreferences();
+
   // Preferences are automatically:
   // - Loaded when organization changes
   // - Saved to localStorage with organization-specific keys
   // - Synced across browser sessions
-  
+
   return (
     <div>
       <button onClick={() => setDisplayMode('grid')}>Grid View</button>
       <button onClick={() => setDisplayMode('table')}>Table View</button>
-      <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+      <select
+        value={pageSize}
+        onChange={(e) => setPageSize(Number(e.target.value))}
+      >
         <option value={10}>10 per page</option>
         <option value={25}>25 per page</option>
         <option value={50}>50 per page</option>
@@ -369,6 +422,40 @@ const newVersion: CreateAppVersionInput = {
   ],
 };
 ```
+
+## 🔄 Auto-Update System
+
+The template includes a complete auto-update system for seamless application updates:
+
+### Features
+
+- **Automatic Update Checking**: Periodic checks for new versions
+- **Download Progress Tracking**: Real-time download progress with visual indicators
+- **User-Controlled Updates**: Users can enable/disable automatic checking
+- **Manual Update Checks**: On-demand update checking
+- **Restart to Update**: One-click update installation with app restart
+
+### Components
+
+- **UpdateSettings**: Manage auto-update preferences in the Settings page
+- **RestartToUpdateButton**: Header button for update installation
+- **useAutoUpdateCheck**: Hook for automatic update checking logic
+- **updateStore**: Zustand store for update state management
+
+### Configuration
+
+The auto-update system can be configured through:
+
+- Settings page → Updates tab
+- Enable/disable automatic checking
+- View current version and last check time
+- Manual update checks
+
+### Integration Points
+
+- **App.tsx**: Initializes auto-update checking
+- **Header**: Displays update button when updates are available
+- **Settings**: Provides update management interface
 
 ## 🚀 Deployment
 

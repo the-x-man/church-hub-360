@@ -1,5 +1,4 @@
 import { OrganizationSelector } from '../shared/OrganizationSelector';
-import { ThemeSwitcher } from '../shared/ThemeSwitcher';
 import { UserProfileDropdown } from '../shared/UserProfileDropdown';
 
 export function Header() {
@@ -12,7 +11,6 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <ThemeSwitcher />
           <UserProfileDropdown />
         </div>
       </div>
