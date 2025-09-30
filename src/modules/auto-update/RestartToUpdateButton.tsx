@@ -5,6 +5,7 @@ import { useUpdateStore } from './stores/updateStore';
 import type { AutoUpdateResult, DownloadProgress } from '@/types/electron';
 import { Download } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { openExternalUrl } from '@/utils/external-url';
 type InstallType = 'appimage' | 'package';
 
 import { toast } from 'sonner';
@@ -269,9 +270,16 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
 
   // For .deb/.rpm (installType === 'package'), show Download from Website bustton
   if (installType === 'package' && hasUpdate) {
+    const handleDownloadClick = () => {
+      const downloadUrl = import.meta.env.VITE_DOWNLOADS_PAGE_URL || '';
+      if (downloadUrl) {
+        openExternalUrl(downloadUrl);
+      }
+    };
+
     return (
       <Button
-        asChild
+        onClick={handleDownloadClick}
         size="sm"
         className={cn(
           'border border-blue-600 hover:border-blue-700 text-blue-600 bg-white hover:bg-blue-50/60 text-[11px] rounded-full py-0 h-7',
@@ -279,14 +287,8 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
         )}
         title="Go to the download page to get the latest version"
       >
-        <a
-          href={import.meta.env.VITE_DOWNLOADS_PAGE_URL || ''}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Download className="h-3 w-3 mr-2" />
-          Download from Website
-        </a>
+        <Download className="h-3 w-3 mr-2" />
+        Download from Website
       </Button>
     );
   }

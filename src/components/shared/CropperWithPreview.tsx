@@ -161,22 +161,6 @@ export default function Component() {
           </div>
         </div>
       </div>
-
-      <p
-        aria-live="polite"
-        role="region"
-        className="text-muted-foreground mt-2 text-xs"
-      >
-        Cropper with image preview ∙{' '}
-        <a
-          href="https://github.com/origin-space/image-cropper"
-          className="hover:text-foreground underline"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          API
-        </a>
-      </p>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useUpdateStore } from './stores/updateStore';
+import { openExternalUrl } from '@/utils/external-url';
 
 interface UpdateSettingsProps {
   className?: string;
@@ -470,19 +471,21 @@ export function UpdateSettings({ className }: UpdateSettingsProps) {
                   {/* Show different buttons based on Linux installation type */}
                   {platformInfo?.platform === 'linux' &&
                   platformInfo.installType === 'package' ? (
-                    <a
-                      href={import.meta.env.VITE_DOWNLOADS_PAGE_URL || ''}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Button
+                      onClick={() => {
+                        const downloadUrl = import.meta.env.VITE_DOWNLOADS_PAGE_URL || '';
+                        if (downloadUrl) {
+                          openExternalUrl(downloadUrl);
+                        }
+                      }}
                       className={cn(
-                        'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
                         'h-9 px-3',
                         'bg-blue-600 text-primary-foreground hover:bg-blue-700'
                       )}
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Download from Website
-                    </a>
+                    </Button>
                   ) : (
                     <Button
                       onClick={() => installUpdate(updateInfo)}

@@ -1,5 +1,6 @@
 import { OrganizationSelector } from '../shared/OrganizationSelector';
 import { UserProfileDropdown } from '../shared/UserProfileDropdown';
+import { RestartToUpdateButton } from '../../modules/auto-update/RestartToUpdateButton';
 
 export function Header() {
 
@@ -8,6 +9,10 @@ export function Header() {
       <div className="flex items-center justify-between h-full px-6">
         <div className="flex items-center space-x-4">
           <OrganizationSelector />
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <RestartToUpdateButton />
         </div>
 
         <div className="flex items-center space-x-4">
