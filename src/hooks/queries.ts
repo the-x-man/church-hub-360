@@ -3,3 +3,5 @@
 
 export * from './useOrganizationQueries';
 export * from './useBranchQueries';
+export * from './usePeopleConfigurationQueries';
+export * from './useSeedingOperations';
