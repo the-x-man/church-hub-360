@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTagsManagement } from './usePeopleConfigurationQueries';
 import { detectSchemaChanges, hasSchemaChanges, type SchemaChanges } from '../utils/schema-change-detection';
+import { validateTagsSchema } from '../utils/people-configurations-validation';
 import type { TagsSchema, TagCategory, TagItem } from '../types/people-configurations';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
@@ -19,7 +20,9 @@ export interface LocalTagsSchemaState {
   syncChangesToServer: () => Promise<void>;
   
   // Category management
-  addCategory: (category: Omit<TagCategory, 'id' | 'items'>) => void;
+  addCategory: (category: Omit<TagCategory, 'items'> | TagCategory) => void;
+  addCategoryWithKey: (categoryKey: string, category: TagCategory) => void;
+  addMultipleCategories: (categories: Record<string, TagCategory>) => void;
   updateCategory: (categoryKey: string, updates: Partial<TagCategory>) => void;
   deleteCategory: (categoryKey: string) => void;
   
@@ -98,6 +101,14 @@ export function useLocalTagsSchema(): LocalTagsSchemaState {
   const syncChangesToServer = useCallback(async () => {
     if (!localSchema || !hasUnsavedChanges) return;
 
+    // Validate schema before syncing
+    const validationResult = validateTagsSchema(localSchema);
+    if (!validationResult.isValid) {
+      const error = new Error(`Validation failed: ${validationResult.errors.join(', ')}`);
+      error.name = 'ValidationError';
+      throw error;
+    }
+
     try {
       await updateTagsSchema(localSchema);
       // The useEffect above will handle resetting the local state after successful update
@@ -113,12 +124,20 @@ export function useLocalTagsSchema(): LocalTagsSchemaState {
   }, []);
 
   // Category management functions
-  const addCategory = useCallback((categoryData: Omit<TagCategory, 'items'>) => {
+  const addCategory = useCallback((categoryData: Omit<TagCategory, 'items'> | TagCategory) => {
     if (!localSchema) return;
 
+    // Check if categoryData has items (template) or not (new blank tag)
+    const hasItems = 'items' in categoryData && Array.isArray(categoryData.items);
+    
     const newCategory: TagCategory = {
       ...categoryData,
-      items: [],
+      items: hasItems 
+        ? categoryData.items.map(item => ({
+            ...item,
+            id: generateId(),
+          }))
+        : [],
     };
 
     const categoryKey = newCategory.name.toLowerCase().replace(/\s+/g, '_');
@@ -128,6 +147,56 @@ export function useLocalTagsSchema(): LocalTagsSchemaState {
       categories: {
         ...localSchema.categories,
         [categoryKey]: newCategory,
+      },
+    };
+
+    setLocalSchema(updatedSchema);
+  }, [localSchema, generateId]);
+
+  const addCategoryWithKey = useCallback((categoryKey: string, categoryData: TagCategory) => {
+    if (!localSchema) return;
+
+    // Generate new IDs for all items to avoid conflicts
+    const newCategory: TagCategory = {
+      ...categoryData,
+      items: categoryData.items.map(item => ({
+        ...item,
+        id: generateId(),
+      })),
+    };
+    
+    const updatedSchema = {
+      ...localSchema,
+      categories: {
+        ...localSchema.categories,
+        [categoryKey]: newCategory,
+      },
+    };
+
+    setLocalSchema(updatedSchema);
+  }, [localSchema, generateId]);
+
+  const addMultipleCategories = useCallback((categories: Record<string, TagCategory>) => {
+    if (!localSchema) return;
+
+    // Process all categories and generate new IDs for their items
+    const processedCategories: Record<string, TagCategory> = {};
+    
+    Object.entries(categories).forEach(([categoryKey, categoryData]) => {
+      processedCategories[categoryKey] = {
+        ...categoryData,
+        items: categoryData.items.map(item => ({
+          ...item,
+          id: generateId(),
+        })),
+      };
+    });
+    
+    const updatedSchema = {
+      ...localSchema,
+      categories: {
+        ...localSchema.categories,
+        ...processedCategories,
       },
     };
 
@@ -255,6 +324,8 @@ export function useLocalTagsSchema(): LocalTagsSchemaState {
     
     // Category management
     addCategory,
+    addCategoryWithKey,
+    addMultipleCategories,
     updateCategory,
     deleteCategory,
     

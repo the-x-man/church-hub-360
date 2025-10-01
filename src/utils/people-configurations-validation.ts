@@ -24,9 +24,15 @@ export function validateTagsSchema(schema: TagsSchema): ValidationResult {
     errors.push(`Duplicate category names found: ${duplicateCategories.join(', ')}`);
   }
 
-  // Check for duplicate item names within each category
+  // Check for duplicate item names within each category and empty items
   for (const [, category] of Object.entries(categories)) {
     const typedCategory = category as TagCategory;
+    
+    // Check for empty items in required categories
+    if (typedCategory.is_required && typedCategory.items.length === 0) {
+      errors.push(`Required category "${typedCategory.name}" cannot have empty items`);
+    }
+    
     const itemNames = typedCategory.items.map(item => item.name.toLowerCase());
     const duplicateItems = itemNames.filter(
       (name, index) => itemNames.indexOf(name) !== index

@@ -12,7 +12,9 @@ import {
 } from '../../components/people/configurations';
 import { TagModal } from '../../components/people/TagModal';
 import { TagItemModal } from '../../components/people/TagItemModal';
+import { TagTemplateModal } from '../../components/people/TagTemplateModal';
 import { DeleteConfirmationDialog } from '../../components/shared/DeleteConfirmationDialog';
+
 import type {
   TagCategory,
   TagItem,
@@ -31,6 +33,7 @@ export function PeopleConfigurations() {
     error,
     isUpdating,
     addCategory,
+    addMultipleCategories,
     updateCategory,
     deleteCategory,
     addItem,
@@ -83,6 +86,8 @@ export function PeopleConfigurations() {
     itemName: '',
   });
 
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+
   // Reset forms
   const resetTagForm = () => {
     setTagForm({
@@ -113,6 +118,8 @@ export function PeopleConfigurations() {
   };
 
   const handleUpdateTag = async (tagKey: string) => {
+    if (!tagForm.name.trim()) return;
+
     updateCategory(tagKey, tagForm);
     setEditingTag(null);
     resetTagForm();
@@ -152,7 +159,6 @@ export function PeopleConfigurations() {
     updateItem(selectedTag, itemId, itemForm);
     setEditingItem(null);
     resetItemForm();
-    toast.success('Item updated successfully');
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -197,6 +203,15 @@ export function PeopleConfigurations() {
     setEditingItem(item.id);
   };
 
+  // Handle template operations
+  const handleAddTemplates = (selectedTemplates: Record<string, TagCategory>) => {
+    // Add all templates in a single state update to prevent race conditions
+    addMultipleCategories(selectedTemplates);
+    
+    const templateCount = Object.keys(selectedTemplates).length;
+    toast.success(`Added ${templateCount} template${templateCount !== 1 ? 's' : ''}`);
+  };
+
   // Show loading if organization is not available yet
   if (!currentOrganization) {
     return (
@@ -214,9 +229,15 @@ export function PeopleConfigurations() {
     try {
       await syncChangesToServer();
       toast.success('Changes saved successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to sync changes:', err);
-      toast.error('Failed to save changes. Please try again.');
+      
+      // Handle validation errors specifically
+      if (err.name === 'ValidationError') {
+        toast.error(`Validation Error: ${err.message.replace('Validation failed: ', '')}`);
+      } else {
+        toast.error('Failed to save changes. Please try again.');
+      }
     }
   };
 
@@ -268,6 +289,7 @@ export function PeopleConfigurations() {
             editingTag={editingTag}
             onSelectTag={setSelectedTag}
             onAddTag={() => setShowAddTag(true)}
+            onAddFromTemplate={() => setShowTemplateModal(true)}
             onEditTag={startEditingTag}
             onDeleteTag={handleDeleteTag}
           />
@@ -327,6 +349,14 @@ export function PeopleConfigurations() {
         isEditing={editingItem !== null}
         tagName={selectedTagData?.name}
         loading={isUpdating}
+      />
+
+      {/* Tag Template Modal */}
+      <TagTemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onAddTemplates={handleAddTemplates}
+        existingTags={tags}
       />
 
       {/* Delete Tag Confirmation Dialog */}

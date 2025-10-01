@@ -1,7 +1,9 @@
 import {
   Briefcase,
   Building,
+  ChevronDown,
   Edit,
+  FileText,
   Heart,
   Plus,
   Shield,
@@ -21,6 +23,12 @@ import {
   CardHeader,
   CardTitle,
 } from '../../ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../ui/dropdown-menu';
 
 // Tag icons mapping
 const tagIcons: Record<string, React.ComponentType<any>> = {
@@ -39,6 +47,7 @@ interface TagsListPanelProps {
   editingTag: string | null;
   onSelectTag: (tagKey: string) => void;
   onAddTag: () => void;
+  onAddFromTemplate: () => void;
   onEditTag: (tagKey: string, tag: TagCategory) => void;
   onDeleteTag: (tagKey: string) => void;
 }
@@ -49,6 +58,7 @@ export function TagsListPanel({
   editingTag,
   onSelectTag,
   onAddTag,
+  onAddFromTemplate,
   onEditTag,
   onDeleteTag,
 }: TagsListPanelProps) {
@@ -60,14 +70,28 @@ export function TagsListPanel({
             <Tag className="h-5 w-5" />
             Tags
           </div>
-          <Button
-            onClick={onAddTag}
-            className="flex items-center gap-2"
-            size="sm"
-          >
-            <Plus className="h-4 w-4" />
-            Add Tag
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add Tag
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onAddTag}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add new blank tag
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onAddFromTemplate}>
+                <FileText className="h-4 w-4 mr-2" />
+                Add from templates
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardTitle>
         <CardDescription>
           Organize members with customizable tags
