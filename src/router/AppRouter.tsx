@@ -22,6 +22,26 @@ import { Settings } from '../pages/Settings';
 import { OrganizationSelectionProtectedRoute } from '@/components/auth/OrganizationSelectionProtectedRoute';
 import UserManagement from '@/pages/UserManagement';
 
+// Main section pages
+import { Communication } from '../pages/Communication';
+import { Events } from '../pages/Events';
+import { Reports } from '../pages/Reports';
+import { ActivityLogs } from '../pages/ActivityLogs';
+
+// People section pages
+import { People } from '../pages/people';
+import { PeopleConfigurations } from '../pages/people/Configurations';
+import { Membership } from '../pages/people/Membership';
+import { Attendance } from '../pages/people/Attendance';
+
+// Finance section pages
+import { Finance } from '../pages/finance';
+import { Income } from '../pages/finance/Income';
+import { Expenses } from '../pages/finance/Expenses';
+import { Contributions } from '../pages/finance/Contributions';
+import { Pledges } from '../pages/finance/Pledges';
+import { BudgetPlanning } from '../pages/finance/BudgetPlanning';
+
 function AppRoutes() {
   return (
     <Routes>
@@ -81,6 +101,28 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="user-management" element={<UserManagement />} />
         <Route path="settings" element={<Settings />} />
+
+        {/* People section with nested routes */}
+        <Route path="people" element={<People />}>
+          <Route path="configurations" element={<PeopleConfigurations />} />
+          <Route path="membership" element={<Membership />} />
+          <Route path="attendance" element={<Attendance />} />
+        </Route>
+
+        {/* Finance section with nested routes */}
+        <Route path="finance" element={<Finance />}>
+          <Route path="income" element={<Income />} />
+          <Route path="expenses" element={<Expenses />} />
+          <Route path="contributions" element={<Contributions />} />
+          <Route path="pledges" element={<Pledges />} />
+          <Route path="budget-planning" element={<BudgetPlanning />} />
+        </Route>
+
+        {/* Other main pages */}
+        <Route path="communication" element={<Communication />} />
+        <Route path="events" element={<Events />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="activity-logs" element={<ActivityLogs />} />
       </Route>
 
       {/* Catch-all route - redirect to dashboard if authenticated, login if not */}
