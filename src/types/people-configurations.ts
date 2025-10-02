@@ -32,6 +32,11 @@ export interface TagCategory {
   items: TagItem[];
 }
 
+// Interface for tag categories with id (for component usage)
+export interface TagCategoryWithId extends TagCategory {
+  id: string;
+}
+
 // Tags schema structure
 export interface TagsSchema {
   categories: {
@@ -62,25 +67,7 @@ export interface CommitteesSchema {
   };
 }
 
-// Membership form schema structure (for future use)
-export interface MembershipFormSchema {
-  fields: {
-    [fieldKey: string]: {
-      label: string;
-      type: 'text' | 'email' | 'phone' | 'date' | 'select' | 'multiselect' | 'textarea';
-      required: boolean;
-      placeholder?: string;
-      options?: string[];
-      validation?: {
-        min_length?: number;
-        max_length?: number;
-        pattern?: string;
-      };
-      display_order: number;
-      is_active: boolean;
-    };
-  };
-}
+
 
 // Main people configurations database record
 export interface PeopleConfiguration {
@@ -150,7 +137,69 @@ export interface TagCategoryWithKey extends TagCategory {
 }
 
 export interface TagItemWithKey extends TagItem {
+  key: string;
   categoryKey: string;
+}
+
+// Membership Form Builder Types
+export type ColumnLayout = 1 | 2 | 3;
+
+export interface FormColumn {
+  id: string;
+  component: FormComponent | null;
+}
+
+export interface FormRow {
+  id: string;
+  layout: ColumnLayout;
+  columns: FormColumn[];
+}
+
+export interface FormComponent {
+  id: string;
+  type: FormComponentType;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[]; // For select, radio, checkbox
+  validation?: FormValidation;
+  tagReference?: string; // For tag-based components
+}
+
+export type FormComponentType = 
+  | 'text'
+  | 'email'
+  | 'phone'
+  | 'number'
+  | 'date'
+  | 'textarea'
+  | 'select'
+  | 'radio'
+  | 'checkbox'
+  | 'file';
+
+export interface FormValidation {
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  min?: number;
+  max?: number;
+}
+
+export interface MembershipFormSchema {
+  id: string;
+  name: string;
+  description?: string;
+  rows: FormRow[];
+  is_active: boolean;
+  created_date: string;
+  updated_date?: string;
+}
+
+export interface MembershipFormData {
+  name: string;
+  description?: string;
+  is_active: boolean;
 }
 
 // Default tag categories for easy reference

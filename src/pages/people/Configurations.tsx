@@ -14,6 +14,7 @@ import {
 } from '../../components/people/configurations';
 import { CommitteesListPanel } from '../../components/people/configurations/CommitteesListPanel';
 import { CommitteeDetailsPanel } from '../../components/people/configurations/CommitteeDetailsPanel';
+import { MembershipFormBuilder } from '../../components/people/configurations/MembershipFormBuilder';
 import { TagModal } from '../../components/people/TagModal';
 import { TagItemModal } from '../../components/people/TagItemModal';
 import { TagTemplateModal } from '../../components/people/TagTemplateModal';
@@ -27,6 +28,7 @@ import type {
   TagItemFormData,
   Committee,
   CommitteeFormData,
+  MembershipFormSchema,
 } from '../../types/people-configurations';
 
 export function PeopleConfigurations() {
@@ -68,6 +70,16 @@ export function PeopleConfigurations() {
 
   // UI state
   const [activeTab, setActiveTab] = useState('tags');
+  
+  // Membership form state
+  const [membershipFormSchema, setMembershipFormSchema] = useState<MembershipFormSchema>({
+    id: 'default-membership-form',
+    name: 'Membership Form',
+    description: 'Default membership form configuration',
+    rows: [],
+    is_active: true,
+    created_date: new Date().toISOString(),
+  });
   
   // Tags state
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -394,9 +406,10 @@ export function PeopleConfigurations() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="committees">Committees</TabsTrigger>
+          <TabsTrigger value="membership-form">Membership Form</TabsTrigger>
         </TabsList>
 
         {/* Tags Tab */}
@@ -458,6 +471,14 @@ export function PeopleConfigurations() {
               />
             </div>
           </div>
+        </TabsContent>
+
+        {/* Membership Form Tab */}
+        <TabsContent value="membership-form" className="space-y-6">
+          <MembershipFormBuilder
+            schema={membershipFormSchema}
+            onSchemaChange={setMembershipFormSchema}
+          />
         </TabsContent>
       </Tabs>
 
