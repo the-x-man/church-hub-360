@@ -9,9 +9,11 @@ import { useCreateMember } from '@/hooks/useMemberQueries';
 import { useMembershipFormManagement, useTagsManagement } from '@/hooks/usePeopleConfigurationQueries';
 import type { CreateMemberData } from '@/types/members';
 import { ArrowLeft, Save, X, Tags } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { BranchSelector } from '@/components/shared/BranchSelector';
+import { Label } from '@/components/ui/label';
 
 export function AddMember() {
   const navigate = useNavigate();
@@ -22,6 +24,8 @@ export function AddMember() {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [tagValues, setTagValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [branchId, setBranchId] = useState<string | string[]>('');
+  const [branchError, setBranchError] = useState<string>('');
   
   const createMemberMutation = useCreateMember();
   const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
@@ -29,7 +33,14 @@ export function AddMember() {
   
   const organizationId = currentOrganization?.id;
 
+  useEffect(() => {
+    setBranchError('');
+  }, [branchId]);
+
+  
+
   const handleFormDataChange = useCallback((data: DefaultMembershipFormData) => {
+    console.log("trigger onChange");
     setFormData(data);
   }, []);
 
@@ -50,9 +61,14 @@ export function AddMember() {
       return;
     }
 
+    // Validate branch selection
+    if (!branchId || (typeof branchId === 'string' && branchId.trim() === '')) {
+      setBranchError('Please select a branch');
+    }
+
     // Validate the form
-    const isValid = formRef.current?.validateForm();
-    if (!isValid) {
+    const validationResult = formRef.current?.validateForm();
+    if (!validationResult || !validationResult.isValid || !branchId || (typeof branchId === 'string' && branchId.trim() === '')) {
       toast.error('Please fix the validation errors');
       return;
     }
@@ -63,6 +79,7 @@ export function AddMember() {
       // Convert DefaultMembershipFormData to CreateMemberData
       const createData: CreateMemberData = {
         organization_id: organizationId,
+        branch_id: branchId as string,
         first_name: formData.first_name,
         middle_name: formData.middle_name || undefined,
         last_name: formData.last_name,
@@ -82,7 +99,6 @@ export function AddMember() {
         baptism_date: formData.baptism_date ? formData.baptism_date.toISOString().split('T')[0] : undefined,
         notes: formData.notes || undefined,
         profile_image_url: formData.profile_image_url || undefined,
-        branch_id: undefined, // Will be set based on organization structure
         form_data: Object.keys(customFieldValues).length > 0 || Object.keys(tagValues).length > 0 
           ? { 
               ...customFieldValues, 
@@ -160,6 +176,7 @@ export function AddMember() {
         <div className="lg:col-span-2">
           <Card>
             <CardContent>
+             
               <DefaultMembershipForm
                 ref={formRef}
                 onFormDataChange={handleFormDataChange}
@@ -191,6 +208,18 @@ export function AddMember() {
         {/* Tags Section - Right Sidebar */}
         <div className="lg:col-span-1">
           <Card>
+            <div className='px-4 py-2'>
+              <Label className='mb-1'>Branch</Label>
+              <BranchSelector 
+                variant="single" 
+                value={typeof branchId === 'string' ? branchId : undefined}
+                onValueChange={(value) => setBranchId(value || '')} 
+                allowClear={true}
+                placeholder="Select a branch..."
+              />
+              {branchError && <p className="text-sm text-red-500">{branchError}</p>}
+            </div>
+
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tags className="h-5 w-5" />

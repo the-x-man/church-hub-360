@@ -9,7 +9,8 @@ export type ComponentStyle =
   | 'multiselect' 
   | 'checkbox' 
   | 'radio' 
-  | 'list';
+  | 'list'
+  | 'badge';
 
 // Base interface for tag items
 export interface TagItem {
@@ -133,7 +134,9 @@ export interface Committee {
 
 // Utility types for tag management
 export interface TagCategoryWithKey extends TagCategory {
+  id: string;
   key: string;
+  tag_items?: TagItemWithKey[];
 }
 
 export interface TagItemWithKey extends TagItem {

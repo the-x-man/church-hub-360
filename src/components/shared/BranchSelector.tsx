@@ -1,7 +1,14 @@
-import { useMemo } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Command,
   CommandEmpty,
@@ -19,214 +26,254 @@ import { Badge } from '@/components/ui/badge';
 import { useBranches } from '@/hooks/queries';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
-interface BranchSelectorProps {
-  value?: string | string[];
-  onValueChange: (value: string | string[]) => void;
+// Base interface for common props
+interface BaseBranchSelectorProps {
   placeholder?: string;
-  multiple?: boolean;
   disabled?: boolean;
   className?: string;
   showActiveOnly?: boolean;
-  allowSelectAll?: boolean;
-  selectAllLabel?: string;
 }
 
-export function BranchSelector({
+// Single Branch Selector
+interface SingleBranchSelectorProps extends BaseBranchSelectorProps {
+  value?: string;
+  onValueChange: (value: string | undefined) => void;
+  allowClear?: boolean;
+}
+
+export function SingleBranchSelector({
   value,
   onValueChange,
-  placeholder = "Select branch...",
-  multiple = false,
+  placeholder = 'Select branch...',
   disabled = false,
   className,
   showActiveOnly = true,
-  allowSelectAll = false,
-  selectAllLabel = "All Branches",
-}: BranchSelectorProps) {
+  allowClear = false,
+}: SingleBranchSelectorProps) {
   const { currentOrganization } = useOrganization();
-  const { data: branches = [], isLoading } = useBranches(currentOrganization?.id);
+  const { data: branches = [], isLoading } = useBranches(
+    currentOrganization?.id
+  );
 
   // Filter branches based on showActiveOnly prop
   const filteredBranches = useMemo(() => {
-    return showActiveOnly ? branches.filter(branch => branch.is_active) : branches;
+    return showActiveOnly
+      ? branches.filter((branch) => branch.is_active)
+      : branches;
   }, [branches, showActiveOnly]);
 
-  // Handle value changes
+  const selectedBranch = filteredBranches.find((branch) => branch.id === value);
+
   const handleValueChange = (branchId: string) => {
-    if (multiple) {
-      const currentValues = Array.isArray(value) ? value : [];
-      
-      if (branchId === 'all' && allowSelectAll) {
-        // Toggle select all
-        const allBranchIds = filteredBranches.map(branch => branch.id);
-        const isAllSelected = allBranchIds.every(id => currentValues.includes(id));
-        onValueChange(isAllSelected ? [] : allBranchIds);
-      } else {
-        // Toggle individual branch
-        const newValues = currentValues.includes(branchId)
-          ? currentValues.filter(id => id !== branchId)
-          : [...currentValues, branchId];
-        onValueChange(newValues);
-      }
+    if (branchId === 'clear') {
+      onValueChange(undefined);
     } else {
       onValueChange(branchId);
     }
   };
 
-  // Get display text
-  const getDisplayText = () => {
-    if (multiple) {
-      const selectedValues = Array.isArray(value) ? value : [];
-      if (selectedValues.length === 0) return placeholder;
-      
-      if (allowSelectAll && selectedValues.length === filteredBranches.length) {
-        return selectAllLabel;
-      }
-      
-      if (selectedValues.length === 1) {
-        const branch = filteredBranches.find(b => b.id === selectedValues[0]);
-        return branch?.name || placeholder;
-      }
-      
-      return `${selectedValues.length} branches selected`;
-    } else {
-      const selectedBranch = filteredBranches.find(b => b.id === value);
-      return selectedBranch?.name || placeholder;
-    }
-  };
-
-  // Check if branch is selected
-  const isBranchSelected = (branchId: string) => {
-    if (multiple) {
-      const selectedValues = Array.isArray(value) ? value : [];
-      return selectedValues.includes(branchId);
-    }
-    return value === branchId;
-  };
-
-  // Check if all branches are selected (for multiple mode)
-  const isAllSelected = useMemo(() => {
-    if (!multiple || !allowSelectAll) return false;
-    const selectedValues = Array.isArray(value) ? value : [];
-    return filteredBranches.length > 0 && filteredBranches.every(branch => selectedValues.includes(branch.id));
-  }, [multiple, allowSelectAll, value, filteredBranches]);
+  if (isLoading) {
+    return (
+      <Select disabled>
+        <SelectTrigger className={cn('w-full', className)}>
+          <SelectValue placeholder="Loading branches..." />
+        </SelectTrigger>
+      </Select>
+    );
+  }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          disabled={disabled || isLoading}
-          className={cn(
-            "justify-between",
-            !value && "text-muted-foreground",
-            className
-          )}
-        >
-          <span className="truncate">{getDisplayText()}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
-        <Command>
-          <CommandInput placeholder="Search branches..." />
-          <CommandList>
-            <CommandEmpty>
-              {isLoading ? "Loading branches..." : "No branches found."}
-            </CommandEmpty>
-            <CommandGroup>
-              {allowSelectAll && multiple && (
-                <CommandItem
-                  value="all"
-                  onSelect={() => handleValueChange('all')}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      isAllSelected ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="font-medium">{selectAllLabel}</span>
-                </CommandItem>
+    <Select
+      value={value || ''}
+      onValueChange={handleValueChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className={cn('w-full', className)}>
+        <SelectValue placeholder={placeholder}>
+          {selectedBranch?.name}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {allowClear && value && (
+          <SelectItem value="clear" className="text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <X className="h-4 w-4" />
+              Clear selection
+            </div>
+          </SelectItem>
+        )}
+        {filteredBranches.map((branch) => (
+          <SelectItem key={branch.id} value={branch.id}>
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col">
+                <span>{branch.name}</span>
+              </div>
+              {!branch.is_active && (
+                <Badge variant="secondary" className="ml-2">
+                  Inactive
+                </Badge>
               )}
-              {filteredBranches.map((branch) => (
-                <CommandItem
-                  key={branch.id}
-                  value={branch.name}
-                  onSelect={() => handleValueChange(branch.id)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      isBranchSelected(branch.id) ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{branch.name}</span>
-                    {branch.location && (
-                      <span className="text-sm text-muted-foreground">
-                        {branch.location}
-                      </span>
-                    )}
-                  </div>
-                  {!branch.is_active && (
-                    <Badge variant="secondary" className="ml-auto">
-                      Inactive
-                    </Badge>
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+            </div>
+          </SelectItem>
+        ))}
+        {filteredBranches.length === 0 && (
+          <SelectItem value="" disabled>
+            No branches found
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
   );
 }
 
-// Multiple branch selector with badges display
-interface MultipleBranchSelectorProps {
+// Multi Branch Selector
+interface MultiBranchSelectorProps extends BaseBranchSelectorProps {
   value: string[];
   onValueChange: (value: string[]) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
-  showActiveOnly?: boolean;
   allowSelectAll?: boolean;
   selectAllLabel?: string;
   showBadges?: boolean;
   maxBadges?: number;
 }
 
-export function MultipleBranchSelector({
+export function MultiBranchSelector({
   value,
   onValueChange,
+  placeholder = 'Select branches...',
+  disabled = false,
+  className,
+  showActiveOnly = true,
+  allowSelectAll = false,
+  selectAllLabel = 'All Branches',
   showBadges = true,
   maxBadges = 3,
-  ...props
-}: MultipleBranchSelectorProps) {
+}: MultiBranchSelectorProps) {
   const { currentOrganization } = useOrganization();
-  const { data: branches = [] } = useBranches(currentOrganization?.id);
+  const { data: branches = [], isLoading } = useBranches(
+    currentOrganization?.id
+  );
+  const [open, setOpen] = useState(false);
+
+  // Filter branches based on showActiveOnly prop
+  const filteredBranches = useMemo(() => {
+    return showActiveOnly
+      ? branches.filter((branch) => branch.is_active)
+      : branches;
+  }, [branches, showActiveOnly]);
 
   const selectedBranches = useMemo(() => {
-    return branches.filter(branch => value.includes(branch.id));
-  }, [branches, value]);
+    return filteredBranches.filter((branch) => value.includes(branch.id));
+  }, [filteredBranches, value]);
+
+  const isAllSelected = useMemo(() => {
+    return (
+      filteredBranches.length > 0 &&
+      filteredBranches.every((branch) => value.includes(branch.id))
+    );
+  }, [filteredBranches, value]);
+
+  const handleSelect = (branchId: string) => {
+    if (branchId === 'all' && allowSelectAll) {
+      // Toggle select all
+      const allBranchIds = filteredBranches.map((branch) => branch.id);
+      onValueChange(isAllSelected ? [] : allBranchIds);
+    } else {
+      // Toggle individual branch
+      const newValues = value.includes(branchId)
+        ? value.filter((id) => id !== branchId)
+        : [...value, branchId];
+      onValueChange(newValues);
+    }
+  };
 
   const removeBranch = (branchId: string) => {
-    onValueChange(value.filter(id => id !== branchId));
+    onValueChange(value.filter((id) => id !== branchId));
+  };
+
+  const getDisplayText = () => {
+    if (value.length === 0) return placeholder;
+    if (allowSelectAll && isAllSelected) return selectAllLabel;
+    if (value.length === 1) {
+      const branch = selectedBranches[0];
+      return branch?.name || placeholder;
+    }
+    return `${value.length} branches selected`;
   };
 
   return (
     <div className="space-y-2">
-      <BranchSelector
-        {...props}
-        value={value}
-        onValueChange={onValueChange as (value: string | string[]) => void}
-        multiple={true}
-      />
-      
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled || isLoading}
+            className={cn(
+              'justify-between w-full',
+              value.length === 0 && 'text-muted-foreground',
+              className
+            )}
+          >
+            <span className="truncate">{getDisplayText()}</span>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+        >
+          <Command>
+            <CommandInput placeholder="Search branches..." />
+            <CommandList>
+              <CommandEmpty>
+                {isLoading ? 'Loading branches...' : 'No branches found.'}
+              </CommandEmpty>
+              <CommandGroup>
+                {allowSelectAll && (
+                  <CommandItem
+                    value="all"
+                    onSelect={() => handleSelect('all')}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        isAllSelected ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <span className="font-medium">{selectAllLabel}</span>
+                  </CommandItem>
+                )}
+                {filteredBranches.map((branch) => (
+                  <CommandItem
+                    key={branch.id}
+                    value={branch.name}
+                    onSelect={() => handleSelect(branch.id)}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value.includes(branch.id) ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <div className="flex flex-col flex-1">
+                      <span>{branch.name}</span>
+                    </div>
+                    {!branch.is_active && (
+                      <Badge variant="secondary" className="ml-auto">
+                        Inactive
+                      </Badge>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
       {showBadges && selectedBranches.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {selectedBranches.slice(0, maxBadges).map((branch) => (
@@ -257,5 +304,52 @@ export function MultipleBranchSelector({
         </div>
       )}
     </div>
+  );
+}
+
+// Main BranchSelector with variant support
+interface BranchSelectorProps extends BaseBranchSelectorProps {
+  variant: 'single' | 'multi';
+  value?: string | string[];
+  onValueChange: (value: string | string[] | undefined) => void;
+  allowClear?: boolean;
+  allowSelectAll?: boolean;
+  selectAllLabel?: string;
+  showBadges?: boolean;
+  maxBadges?: number;
+}
+
+export function BranchSelector({
+  variant,
+  value,
+  onValueChange,
+  allowClear = false,
+  allowSelectAll = false,
+  selectAllLabel = 'All Branches',
+  showBadges = true,
+  maxBadges = 3,
+  ...baseProps
+}: BranchSelectorProps) {
+  if (variant === 'single') {
+    return (
+      <SingleBranchSelector
+        {...baseProps}
+        value={typeof value === 'string' ? value : undefined}
+        onValueChange={onValueChange as (value: string | undefined) => void}
+        allowClear={allowClear}
+      />
+    );
+  }
+
+  return (
+    <MultiBranchSelector
+      {...baseProps}
+      value={Array.isArray(value) ? value : []}
+      onValueChange={onValueChange as (value: string[]) => void}
+      allowSelectAll={allowSelectAll}
+      selectAllLabel={selectAllLabel}
+      showBadges={showBadges}
+      maxBadges={maxBadges}
+    />
   );
 }

@@ -16,6 +16,7 @@ interface DateOfBirthPickerProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function DateOfBirthPicker({
@@ -23,7 +24,8 @@ export function DateOfBirthPicker({
   onChange,
   label = "Date of birth",
   placeholder = "Select date",
-  className = "w-full"
+  className = "w-full",
+  disabled = false
 }: DateOfBirthPickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedDate = value ? new Date(value) : undefined;
@@ -48,6 +50,7 @@ export function DateOfBirthPicker({
             variant="outline"
             id="date-of-birth"
             className={`${className} justify-between font-normal`}
+            disabled={disabled}
           >
             {selectedDate ? selectedDate.toLocaleDateString() : placeholder}
             <ChevronDownIcon className="h-4 w-4" />
@@ -64,6 +67,7 @@ export function DateOfBirthPicker({
             }
             fromYear={1900}
             toYear={new Date().getFullYear()}
+            defaultMonth={selectedDate || new Date()}
           />
         </PopoverContent>
       </Popover>

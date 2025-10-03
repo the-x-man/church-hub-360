@@ -1,15 +1,11 @@
+import { DateOfBirthPicker } from '@/components/shared/DateOfBirthPicker';
+import { DatePicker } from '@/components/shared/DatePicker';
 import { ModernFileUpload } from '@/components/shared/ModernFileUpload';
 import { ProfilePhotoCropper } from '@/components/shared/ProfilePhotoCropper';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
@@ -19,14 +15,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { format } from 'date-fns';
-import { CalendarIcon, Camera, FileText, Phone, User, X } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
+import { Camera, FileText, Phone, User, X } from 'lucide-react';
 import React, {
   forwardRef,
-  useImperativeHandle,
-  useState,
   useCallback,
+  useImperativeHandle,
   useMemo,
+  useState,
 } from 'react';
 
 // Form data interface - aligned with database schema
@@ -217,17 +213,12 @@ export const DefaultMembershipForm = forwardRef<
       newErrors.city = 'City is required';
     }
     if (!state.trim()) {
-      newErrors.state = 'State is required';
-    }
-    if (!postalCode.trim()) {
-      newErrors.postal_code = 'Postal code is required';
+      newErrors.state = 'State/Region is required';
     }
     if (!country.trim()) {
       newErrors.country = 'Country is required';
     }
-    if (!dateJoined) {
-      newErrors.date_joined = 'Date joined is required';
-    }
+
     if (baptismDate && !baptismDate) {
       newErrors.baptism_date = 'Baptism date is required when baptized';
     }
@@ -237,6 +228,18 @@ export const DefaultMembershipForm = forwardRef<
       isValid: Object.keys(newErrors).length === 0,
       errors: newErrors,
     };
+  };
+
+  const clearFieldErrors = (
+    fieldName: keyof DefaultMembershipFormData,
+    value: string
+  ) => {
+    if (value.trim()) {
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        [fieldName]: '',
+      }));
+    }
   };
 
   // Helper function to reset form
@@ -270,12 +273,19 @@ export const DefaultMembershipForm = forwardRef<
     resetForm,
   }));
 
-  // Notify parent of form data changes
+  // Create a debounced version of onFormDataChange with 1 second delay
+  const { debouncedCallback: debouncedOnFormDataChange } = useDebounce(
+    (data: DefaultMembershipFormData) => {
+      // console.log('Debounced::::', data);
+      onFormDataChange?.(data);
+    },
+    2000
+  );
+
+  // Notify parent of form data changes with debouncing
   React.useEffect(() => {
-    if (onFormDataChange) {
-      onFormDataChange(formData);
-    }
-  }, [formData, onFormDataChange]);
+    debouncedOnFormDataChange(formData);
+  }, [formData]);
 
   // Profile photo handlers
   const handleFileSelect = (file: File) => {
@@ -332,7 +342,7 @@ export const DefaultMembershipForm = forwardRef<
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-baseline gap-2 space-y-4">
+          <div className="flex flex-col md:flex-row items-center gap-2 space-y-4">
             {/* Photo Preview */}
             <div className="relative w-fit">
               <div className="w-32 h-32 rounded-lg border-2 border-dashed border-border bg-muted/50 flex items-center justify-center overflow-hidden">
@@ -364,7 +374,7 @@ export const DefaultMembershipForm = forwardRef<
 
             {/* Upload Section */}
             {!isPreviewMode && (
-              <div className="w-full max-w-[300px]">
+              <div className="w-full md:max-w-[300px]">
                 <ModernFileUpload
                   onFileSelect={handleFileSelect}
                   accept="image/*"
@@ -402,6 +412,7 @@ export const DefaultMembershipForm = forwardRef<
                 className={`w-full ${
                   errors.first_name ? 'border-red-500' : ''
                 }`}
+                onBlur={(e) => clearFieldErrors('first_name', e.target.value)}
               />
               {errors.first_name && (
                 <p className="text-sm text-red-500">{errors.first_name}</p>
@@ -431,6 +442,7 @@ export const DefaultMembershipForm = forwardRef<
                 onChange={(e) => setLastName(e.target.value)}
                 disabled={isPreviewMode}
                 className={`w-full ${errors.last_name ? 'border-red-500' : ''}`}
+                onBlur={(e) => clearFieldErrors('last_name', e.target.value)}
               />
               {errors.last_name && (
                 <p className="text-sm text-red-500">{errors.last_name}</p>
@@ -438,65 +450,55 @@ export const DefaultMembershipForm = forwardRef<
             </div>
           </div>
 
-          <div className="flex gap-4 flex-wrap">
+          <div className="flex flex-col md:flex-row gap-4 flex-wrap">
             {/* Date of Birth */}
-            <div className="space-y-2 border border-dashed py-2 px-4">
-              <Label className="text-sm font-medium">
-                Date of Birth <span className="text-red-500">*</span>
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-full md:w-auto justify-start text-left font-normal ${
-                      errors.date_of_birth ? 'border-red-500' : ''
-                    }`}
-                    disabled={isPreviewMode}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateOfBirth ? (
-                      format(dateOfBirth, 'PPP')
-                    ) : (
-                      <span>Select date of birth</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateOfBirth}
-                    onSelect={setDateOfBirth}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="flex-1 space-y-2 border border-dashed py-2 px-4">
+              <DateOfBirthPicker
+                value={
+                  dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''
+                }
+                onChange={(dateString) => {
+                  if (dateString) {
+                    const date = new Date(dateString);
+                    setDateOfBirth(date);
+                    clearFieldErrors('date_of_birth', dateString);
+                  } else {
+                    setDateOfBirth(undefined);
+                  }
+                }}
+                label="Date of Birth *"
+                placeholder="Select date of birth"
+                className={`w-full md:w-auto ${
+                  errors.date_of_birth ? 'border-red-500' : ''
+                }`}
+                disabled={isPreviewMode}
+              />
               {errors.date_of_birth && (
                 <p className="text-sm text-red-500">{errors.date_of_birth}</p>
               )}
             </div>
 
             {/* Gender */}
-            <div className="space-y-3 border border-dashed py-2 px-4">
+            <div className="flex-1 space-y-3 border border-dashed py-2 px-4">
               <Label className="text-sm font-medium">
                 Gender <span className="text-red-500">*</span>
               </Label>
               <RadioGroup
                 value={gender}
-                onValueChange={setGender}
+                onValueChange={(value) => {
+                  setGender(value);
+                  clearFieldErrors('gender', value);
+                }}
                 disabled={isPreviewMode}
-                className="flex flex-wrap gap-6"
+                className="flex flex-wrap gap-3"
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   <RadioGroupItem value="male" id="male" />
                   <Label htmlFor="male">Male</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="female" id="female" />
                   <Label htmlFor="female">Female</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other">Other</Label>
                 </div>
               </RadioGroup>
               {errors.gender && (
@@ -505,17 +507,20 @@ export const DefaultMembershipForm = forwardRef<
             </div>
 
             {/* Marital Status */}
-            <div className="space-y-2 border border-dashed py-2 px-4">
+            <div className="flex-1 space-y-2 border border-dashed py-2 px-4">
               <Label className="text-sm font-medium">
                 Marital Status <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={maritalStatus}
-                onValueChange={setMaritalStatus}
+                onValueChange={(value) => {
+                  setMaritalStatus(value);
+                  clearFieldErrors('marital_status', value);
+                }}
                 disabled={isPreviewMode}
               >
                 <SelectTrigger
-                  className={`w-full md:w-auto ${
+                  className={`w-full ${
                     errors.marital_status ? 'border-red-500' : ''
                   }`}
                 >
@@ -559,6 +564,7 @@ export const DefaultMembershipForm = forwardRef<
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={isPreviewMode}
                 className={`w-full ${errors.phone ? 'border-red-500' : ''}`}
+                onBlur={() => clearFieldErrors('phone', phone)}
               />
               {errors.phone && (
                 <p className="text-sm text-red-500">{errors.phone}</p>
@@ -576,6 +582,7 @@ export const DefaultMembershipForm = forwardRef<
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isPreviewMode}
                 className={`w-full ${errors.email ? 'border-red-500' : ''}`}
+                onBlur={() => clearFieldErrors('email', email)}
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email}</p>
@@ -599,6 +606,9 @@ export const DefaultMembershipForm = forwardRef<
                   className={`w-full ${
                     errors.address_line_1 ? 'border-red-500' : ''
                   }`}
+                  onBlur={() =>
+                    clearFieldErrors('address_line_1', addressLine1)
+                  }
                 />
                 {errors.address_line_1 && (
                   <p className="text-sm text-red-500">
@@ -632,6 +642,7 @@ export const DefaultMembershipForm = forwardRef<
                   onChange={(e) => setCity(e.target.value)}
                   disabled={isPreviewMode}
                   className={`w-full ${errors.city ? 'border-red-500' : ''}`}
+                  onBlur={() => clearFieldErrors('city', city)}
                 />
                 {errors.city && (
                   <p className="text-sm text-red-500">{errors.city}</p>
@@ -639,15 +650,16 @@ export const DefaultMembershipForm = forwardRef<
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state" className="text-sm font-medium">
-                  State <span className="text-red-500">*</span>
+                  State/Region <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="state"
-                  placeholder="Enter state"
+                  placeholder="Enter state/region"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
                   disabled={isPreviewMode}
                   className={`w-full ${errors.state ? 'border-red-500' : ''}`}
+                  onBlur={() => clearFieldErrors('state', state)}
                 />
                 {errors.state && (
                   <p className="text-sm text-red-500">{errors.state}</p>
@@ -655,7 +667,7 @@ export const DefaultMembershipForm = forwardRef<
               </div>
               <div className="space-y-2">
                 <Label htmlFor="postalCode" className="text-sm font-medium">
-                  Postal Code <span className="text-red-500">*</span>
+                  Postal Code
                 </Label>
                 <Input
                   id="postalCode"
@@ -682,6 +694,7 @@ export const DefaultMembershipForm = forwardRef<
                   onChange={(e) => setCountry(e.target.value)}
                   disabled={isPreviewMode}
                   className={`w-full ${errors.country ? 'border-red-500' : ''}`}
+                  onBlur={() => clearFieldErrors('country', country)}
                 />
                 {errors.country && (
                   <p className="text-sm text-red-500">{errors.country}</p>
@@ -718,35 +731,28 @@ export const DefaultMembershipForm = forwardRef<
               </p>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Date Joined <span className="text-red-500">*</span>
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-full justify-start text-left font-normal ${
-                      errors.date_joined ? 'border-red-500' : ''
-                    }`}
-                    disabled={isPreviewMode}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateJoined ? (
-                      format(dateJoined, 'PPP')
-                    ) : (
-                      <span>Select date joined</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateJoined}
-                    onSelect={setDateJoined}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                label="Date Joined"
+                value={dateJoined ? dateJoined.toISOString().split('T')[0] : ''}
+                onChange={(dateString) => {
+                  if (dateString) {
+                    const date = new Date(dateString);
+                    setDateJoined(date);
+                    clearFieldErrors('date_joined', dateString);
+                  } else {
+                    setDateJoined(undefined);
+                  }
+                }}
+                disabled={isPreviewMode}
+                className={`w-full ${
+                  errors.date_joined ? 'border-red-500' : ''
+                }`}
+                captionLayout="dropdown"
+                fromYear={1900}
+                toYear={new Date().getFullYear()}
+                disableFuture={true}
+                placeholder="Select join date"
+              />
               {errors.date_joined && (
                 <p className="text-sm text-red-500">{errors.date_joined}</p>
               )}
@@ -755,35 +761,28 @@ export const DefaultMembershipForm = forwardRef<
 
           {/* Baptism Date */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Baptism Date (Optional)
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-full md:w-auto justify-start text-left font-normal ${
-                    errors.baptism_date ? 'border-red-500' : ''
-                  }`}
-                  disabled={isPreviewMode}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {baptismDate ? (
-                    format(baptismDate, 'PPP')
-                  ) : (
-                    <span>Select baptism date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={baptismDate}
-                  onSelect={setBaptismDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <DatePicker
+              label="Baptism Date (Optional)"
+              value={baptismDate ? baptismDate.toISOString().split('T')[0] : ''}
+              onChange={(dateString) => {
+                if (dateString) {
+                  const date = new Date(dateString);
+                  setBaptismDate(date);
+                  clearFieldErrors('baptism_date', dateString);
+                } else {
+                  setBaptismDate(undefined);
+                }
+              }}
+              disabled={isPreviewMode}
+              className={`w-full md:w-auto ${
+                errors.baptism_date ? 'border-red-500' : ''
+              }`}
+              captionLayout="dropdown"
+              fromYear={1900}
+              toYear={new Date().getFullYear()}
+              disableFuture={true}
+              placeholder="Select baptism date"
+            />
             {errors.baptism_date && (
               <p className="text-sm text-red-500">{errors.baptism_date}</p>
             )}
