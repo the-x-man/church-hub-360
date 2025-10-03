@@ -25,6 +25,7 @@ import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueri
 import { FieldSettingsDialog } from './FieldSettingsDialog';
 import { FormColumn } from './FormColumn';
 import { DefaultMembershipForm } from './DefaultMembershipForm';
+import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import type {
   MembershipFormSchema,
   FormRow,
@@ -447,67 +448,10 @@ export function MembershipFormBuilder({
                 </div>
 
                 {/* Additional Custom Fields */}
-                {formSchema.rows.length > 0 && (
-                  <div className="bg-background border border-border rounded-lg p-6 shadow-sm">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        Additional Information
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Custom fields added by your organization
-                      </p>
-                    </div>
-                    <div className="space-y-6">
-                      {formSchema.rows.map((row) => (
-                        <div key={row.id} className="space-y-4">
-                          {/* Columns Grid */}
-                          <div
-                            className={`grid gap-6 ${
-                              row.layout === 1
-                                ? 'grid-cols-1'
-                                : row.layout === 2
-                                ? 'grid-cols-2'
-                                : 'grid-cols-3'
-                            }`}
-                          >
-                            {row.columns.map((column) => (
-                              <div key={column.id} className="space-y-3">
-                                <FormColumn
-                                  component={column.component || undefined}
-                                  isPreviewMode={isPreviewMode}
-                                  onComponentChange={(updatedComponent) =>
-                                    updateComponentDirect(
-                                      row.id,
-                                      column.id,
-                                      updatedComponent
-                                    )
-                                  }
-                                  onComponentSelect={(componentType) =>
-                                    addComponentToColumn(
-                                      row.id,
-                                      column.id,
-                                      componentType
-                                    )
-                                  }
-                                  onComponentTypeChange={(newType) =>
-                                    changeComponentType(
-                                      row.id,
-                                      column.id,
-                                      newType
-                                    )
-                                  }
-                                  onComponentRemove={() =>
-                                    removeComponentFromColumn(row.id, column.id)
-                                  }
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <CustomFieldsRenderer
+                  schema={formSchema}
+                  isPreviewMode={true}
+                />
               </div>
             )}
 

@@ -1,9 +1,11 @@
 import type { DefaultMembershipFormData } from '@/components/people/configurations/DefaultMembershipForm';
 import { DefaultMembershipForm, type DefaultMembershipFormMethods } from '@/components/people/configurations/DefaultMembershipForm';
+import { CustomFieldsRenderer } from '@/components/people/configurations/CustomFieldsRenderer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useCreateMember } from '@/hooks/useMemberQueries';
+import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueries';
 import type { CreateMemberData } from '@/types/members';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
@@ -16,14 +18,20 @@ export function AddMember() {
   const formRef = useRef<DefaultMembershipFormMethods>(null);
   
   const [formData, setFormData] = useState<DefaultMembershipFormData | null>(null);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const createMemberMutation = useCreateMember();
+  const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
   
   const organizationId = currentOrganization?.id;
 
   const handleFormDataChange = useCallback((data: DefaultMembershipFormData) => {
     setFormData(data);
+  }, []);
+
+  const handleCustomFieldChange = useCallback((values: Record<string, any>) => {
+    setCustomFieldValues(values);
   }, []);
 
   const handleSave = async () => {
@@ -65,6 +73,7 @@ export function AddMember() {
         notes: formData.notes || undefined,
         profile_image_url: formData.profile_image_url || undefined,
         branch_id: undefined, // Will be set based on organization structure
+        form_data: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
       };
 
       await createMemberMutation.mutateAsync(createData);
@@ -85,6 +94,7 @@ export function AddMember() {
   const handleReset = () => {
     formRef.current?.resetForm();
     setFormData(null);
+    setCustomFieldValues({});
   };
 
   return (
@@ -135,6 +145,15 @@ export function AddMember() {
             ref={formRef}
             onFormDataChange={handleFormDataChange}
           />
+
+          {/* Custom Fields from Membership Form Schema */}
+          {membershipFormSchema && (
+            <CustomFieldsRenderer
+              schema={membershipFormSchema}
+              isPreviewMode={false}
+              onValuesChange={handleCustomFieldChange}
+            />
+          )}
 
         <div className='flex justify-end pt-4'>
           <Button
