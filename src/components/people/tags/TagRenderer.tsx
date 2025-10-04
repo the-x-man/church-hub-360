@@ -27,8 +27,8 @@ import { cn } from '@/lib/utils';
 import type { RelationalTagWithItems } from '@/hooks/useRelationalTags';
 
 interface TagRendererProps {
-  category: RelationalTagWithItems;
-  categoryKey: string;
+  tag: RelationalTagWithItems;
+  tagKey: string;
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
   disabled?: boolean;
@@ -37,8 +37,8 @@ interface TagRendererProps {
 }
 
 export function TagRenderer({
-  category,
-  categoryKey,
+  tag,
+  tagKey,
   value,
   onChange,
   disabled = false,
@@ -46,9 +46,9 @@ export function TagRenderer({
   className,
 }: TagRendererProps) {
   const [open, setOpen] = useState(false);
-  
-  const activeItems = category.tag_items?.filter(item => item.is_active) || [];
-  
+
+  const activeItems = tag.tag_items?.filter((item) => item.is_active) || [];
+
   // Sort items by display_order
   const sortedItems = activeItems.sort((a, b) => {
     const orderA = a.display_order ?? 999;
@@ -65,7 +65,7 @@ export function TagRenderer({
     if (checked) {
       onChange?.([...currentValues, itemId]);
     } else {
-      onChange?.(currentValues.filter(v => v !== itemId));
+      onChange?.(currentValues.filter((v) => v !== itemId));
     }
   };
 
@@ -75,14 +75,14 @@ export function TagRenderer({
       onValueChange={handleSingleChange}
       disabled={disabled}
     >
-      <SelectTrigger className={cn("w-full", error && "border-destructive")}>
-        <SelectValue placeholder={`Select ${category.name.toLowerCase()}`} />
+      <SelectTrigger className={cn('w-full', error && 'border-destructive')}>
+        <SelectValue placeholder={`Select ${tag.name.toLowerCase()}`} />
       </SelectTrigger>
       <SelectContent>
         {sortedItems.map((item) => (
           <SelectItem key={item.id} value={item.id}>
             <div className="flex items-center gap-2">
-              <div 
+              <div
                 className="w-3 h-3 rounded-full border"
                 style={{ backgroundColor: item.color }}
               />
@@ -96,7 +96,9 @@ export function TagRenderer({
 
   const renderMultiselect = () => {
     const selectedValues = Array.isArray(value) ? value : [];
-    const selectedItems = sortedItems.filter(item => selectedValues.includes(item.id));
+    const selectedItems = sortedItems.filter((item) =>
+      selectedValues.includes(item.id)
+    );
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -106,19 +108,23 @@ export function TagRenderer({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between min-h-[40px] h-auto",
-              error && "border-destructive",
-              selectedValues.length === 0 && "text-muted-foreground"
+              'w-full justify-between min-h-[40px] h-auto',
+              error && 'border-destructive',
+              selectedValues.length === 0 && 'text-muted-foreground'
             )}
             disabled={disabled}
           >
             <div className="flex-1 text-left overflow-hidden">
               {selectedValues.length === 0 ? (
-                `Select ${category.name.toLowerCase()}`
+                `Select ${tag.name.toLowerCase()}`
               ) : (
                 <div className="flex flex-wrap gap-1 py-1">
                   {selectedItems.slice(0, 3).map((item) => (
-                    <Badge key={item.id} variant="secondary" className="text-xs shrink-0">
+                    <Badge
+                      key={item.id}
+                      variant="secondary"
+                      className="text-xs shrink-0"
+                    >
                       {item.name}
                     </Badge>
                   ))}
@@ -135,7 +141,7 @@ export function TagRenderer({
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput placeholder={`Search ${category.name.toLowerCase()}...`} />
+            <CommandInput placeholder={`Search ${tag.name.toLowerCase()}...`} />
             <CommandEmpty>No items found.</CommandEmpty>
             <CommandGroup>
               {sortedItems.map((item) => (
@@ -148,12 +154,14 @@ export function TagRenderer({
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedValues.includes(item.id) ? "opacity-100" : "opacity-0"
+                      'mr-2 h-4 w-4',
+                      selectedValues.includes(item.id)
+                        ? 'opacity-100'
+                        : 'opacity-0'
                     )}
                   />
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full border"
                       style={{ backgroundColor: item.color }}
                     />
@@ -176,19 +184,19 @@ export function TagRenderer({
         {sortedItems.map((item) => (
           <div key={item.id} className="flex items-center space-x-2">
             <Checkbox
-              id={`${categoryKey}-${item.id}`}
+              id={`${tagKey}-${item.id}`}
               checked={selectedValues.includes(item.id)}
-              onCheckedChange={(checked) => 
+              onCheckedChange={(checked) =>
                 handleMultipleChange(item.id, checked as boolean)
               }
               disabled={disabled}
             />
-            <Label 
-              htmlFor={`${categoryKey}-${item.id}`}
+            <Label
+              htmlFor={`${tagKey}-${item.id}`}
               className="flex items-center gap-2 cursor-pointer text-sm"
               title={item.description || undefined}
             >
-              <div 
+              <div
                 className="w-3 h-3 rounded-full border shrink-0"
                 style={{ backgroundColor: item.color }}
               />
@@ -206,20 +214,20 @@ export function TagRenderer({
         <div key={item.id} className="flex items-center space-x-2">
           <input
             type="radio"
-            id={`${categoryKey}-${item.id}`}
-            name={categoryKey}
+            id={`${tagKey}-${item.id}`}
+            name={tagKey}
             value={item.id}
             checked={value === item.id}
             onChange={(e) => handleSingleChange(e.target.value)}
             disabled={disabled}
             className="h-4 w-4 text-primary focus:ring-primary border-gray-300 shrink-0"
           />
-          <Label 
-            htmlFor={`${categoryKey}-${item.id}`}
+          <Label
+            htmlFor={`${tagKey}-${item.id}`}
             className="flex items-center gap-2 cursor-pointer text-sm"
             title={item.description || undefined}
           >
-            <div 
+            <div
               className="w-3 h-3 rounded-full border shrink-0"
               style={{ backgroundColor: item.color }}
             />
@@ -233,12 +241,12 @@ export function TagRenderer({
   const renderList = () => (
     <div className="space-y-1">
       {sortedItems.map((item) => (
-        <div 
-          key={item.id} 
+        <div
+          key={item.id}
           className="flex items-center gap-2 p-2 rounded-lg border bg-muted/25"
           title={item.description || undefined}
         >
-          <div 
+          <div
             className="w-3 h-3 rounded-full border shrink-0"
             style={{ backgroundColor: item.color }}
           />
@@ -254,7 +262,9 @@ export function TagRenderer({
     if (!value) return null;
 
     const selectedValues = Array.isArray(value) ? value : [value];
-    const selectedItems = sortedItems.filter(item => selectedValues.includes(item.id));
+    const selectedItems = sortedItems.filter((item) =>
+      selectedValues.includes(item.id)
+    );
 
     if (selectedItems.length === 0) return null;
 
@@ -262,7 +272,7 @@ export function TagRenderer({
       <div className="mt-2 flex flex-wrap gap-1">
         {selectedItems.map((item) => (
           <Badge key={item.id} variant="outline" className="text-xs">
-            <div 
+            <div
               className="w-2 h-2 rounded-full mr-1"
               style={{ backgroundColor: item.color }}
             />
@@ -274,7 +284,7 @@ export function TagRenderer({
                 className="ml-1 h-auto p-0 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   if (Array.isArray(value)) {
-                    onChange(value.filter(v => v !== item.id));
+                    onChange(value.filter((v) => v !== item.id));
                   } else {
                     onChange('');
                   }
@@ -290,7 +300,7 @@ export function TagRenderer({
   };
 
   const renderComponent = () => {
-    switch (category.component_style) {
+    switch (tag.component_style) {
       case 'dropdown':
         return renderDropdown();
       case 'multiselect':
@@ -302,30 +312,33 @@ export function TagRenderer({
       case 'list':
         return renderList();
       default:
-        return <div className="text-sm text-muted-foreground">Unsupported component style</div>;
+        return (
+          <div className="text-sm text-muted-foreground">
+            Unsupported component style
+          </div>
+        );
     }
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       <div className="flex items-center">
-        <Label 
+        <Label
           className="text-sm font-medium truncate"
-          title={category.description || undefined}
+          title={tag.description || undefined}
         >
-          {category.name}
-          {category.is_required && <span className="text-destructive ml-1">*</span>}
+          {tag.name}
+          {tag.is_required && <span className="text-destructive ml-1">*</span>}
         </Label>
       </div>
-      
+
       {renderComponent()}
-      
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
-      
-      {(category.component_style === 'dropdown' || category.component_style === 'radio') && 
-       renderSelectedValues()}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {(tag.component_style === 'dropdown' ||
+        tag.component_style === 'radio') &&
+        renderSelectedValues()}
     </div>
   );
 }

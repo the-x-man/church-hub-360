@@ -45,7 +45,7 @@ export function useMembers(
 
       // Apply filters
       if (filters?.search) {
-        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);
+        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,membership_id.ilike.%${filters.search}%`);
       }
 
       if (filters?.membership_status) {
@@ -142,7 +142,7 @@ export function useMembersSummaryPaginated(
 
       // Apply filters
       if (filters?.search) {
-        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);
+        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,membership_id.ilike.%${filters.search}%`);
       }
 
       if (filters?.membership_status && filters.membership_status !== 'all') {
@@ -227,11 +227,7 @@ export function useMemberStatistics(organizationId: string | undefined) {
     queryFn: async (): Promise<MemberStatistics> => {
       if (!organizationId) throw new Error('Organization ID is required');
 
-      const { data, error } = await supabase
-        .rpc('get_member_statistics', { org_id: organizationId });
-
-      if (error) {
-        // Fallback to manual calculation if RPC doesn't exist
+      
         const { data: members, error: membersError } = await supabase
           .from('members')
           .select('membership_status, gender, date_of_birth, date_joined, branch_id')
@@ -310,9 +306,6 @@ export function useMemberStatistics(organizationId: string | undefined) {
         };
 
         return stats;
-      }
-
-      return data;
     },
     enabled: !!organizationId,
   });

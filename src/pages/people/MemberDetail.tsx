@@ -632,8 +632,8 @@ export function MemberDetail() {
                 {tags.map((category) => (
                   <TagRenderer
                     key={category.id}
-                    category={category}
-                    categoryKey={category.id}
+                    tag={category}
+                    tagKey={category.id}
                     value={tagValues[category.id] || []}
                     onChange={(value) => handleTagChange(category.id, value)}
                     disabled={!isEditing}

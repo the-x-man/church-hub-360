@@ -18,6 +18,7 @@ import {
   MemberForm,
   FilterBar,
   MemberPagination,
+  MemberStatistics,
 } from '@/components/people/members';
 import {
   useMembersSummaryPaginated,
@@ -40,6 +41,7 @@ import type {
   MembershipType,
 } from '@/types/members';
 import type { MembershipFormSchema } from '@/types/people-configurations';
+import { cn } from '@/lib/utils';
 
 // Helper function to convert MembershipFormSchema to MemberFormField[]
 // Helper function to convert MembershipFormSchema to MemberFormField[]
@@ -71,7 +73,12 @@ const convertSchemaToFormFields = (
 };
 
 // Available membership types
-const membershipTypes: MembershipType[] = ['Regular', 'Associate', 'New Convert', 'Visitor'];
+const membershipTypes: MembershipType[] = [
+  'Regular',
+  'Associate',
+  'New Convert',
+  'Visitor',
+];
 
 export default function MembershipList() {
   const navigate = useNavigate();
@@ -98,7 +105,7 @@ export default function MembershipList() {
     currentPage,
     preferences.page_size
   );
-  const { data: statistics } = useMemberStatistics(organizationId);
+  const { data: statistics, isLoading: isLoadingStatistics } = useMemberStatistics(organizationId);
   const { configuration: peopleConfig } = usePeopleConfiguration(
     organizationId
   );
@@ -218,76 +225,33 @@ export default function MembershipList() {
 
       {/* Statistics Cards */}
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Members
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {statistics.total_members}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Members
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {statistics.active_members}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                New This Month
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {statistics.new_members_this_month}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
-                {statistics.inactive_members}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <MemberStatistics 
+          statistics={statistics} 
+          isLoading={isLoadingStatistics} 
+        />
       )}
 
       {/* Main Content */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex justify-between items-center gap-4">
             <CardTitle>Members</CardTitle>
 
             {/* View Toggle */}
             <div className="flex items-center gap-2">
               <Button
-                variant={preferences.view_mode === 'table' ? 'default' : 'outline'}
+                variant={
+                  preferences.view_mode === 'table' ? 'default' : 'outline'
+                }
                 size="sm"
                 onClick={() => setViewMode('table')}
               >
                 <Table className="h-4 w-4" />
               </Button>
               <Button
-                variant={preferences.view_mode === 'card' ? 'default' : 'outline'}
+                variant={
+                  preferences.view_mode === 'card' ? 'default' : 'outline'
+                }
                 size="sm"
                 onClick={() => setViewMode('card')}
               >
@@ -302,17 +266,22 @@ export default function MembershipList() {
           <FilterBar
             filters={filters}
             onFiltersChange={setFilters}
-            branches={branches}
+            branches={branches.filter((branch) => branch.is_active)}
             membershipTypes={membershipTypes}
           />
         </CardHeader>
 
-        <CardContent>
-          {isLoadingMembers ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <CardContent className="relative">
+          {/* Loading Overlay */}
+          {isLoadingMembers && (
+            <div className="absolute top-0 left-0 right-0 bottom-0 w-full h-full bg-background/30 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
             </div>
-          ) : !membersData?.members.length ? (
+          )}
+
+          {!membersData?.members.length && !isLoadingMembers ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No members found.</p>
               <Button
@@ -325,11 +294,13 @@ export default function MembershipList() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div
+              className={cn('space-y-4', isLoadingMembers ? 'opacity-40' : '')}
+            >
               {/* Members List */}
               {preferences.view_mode === 'table' ? (
                 <MemberTable
-                  members={membersData.members}
+                  members={membersData?.members || []}
                   onView={handleViewMember}
                   onEdit={handleEditMemberFromSummary}
                   onDelete={handleDeleteMember}
@@ -339,7 +310,7 @@ export default function MembershipList() {
                 />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {membersData.members.map((member) => (
+                  {(membersData?.members || []).map((member) => (
                     <MemberCard
                       key={member.id}
                       member={member}
@@ -354,14 +325,16 @@ export default function MembershipList() {
               )}
 
               {/* Pagination */}
-              <MemberPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                pageSize={preferences.page_size || 20}
-                totalItems={membersData.total}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={setPageSize}
-              />
+              {membersData && (
+                <MemberPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={preferences.page_size || 20}
+                  totalItems={membersData.total}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              )}
             </div>
           )}
         </CardContent>
@@ -383,7 +356,7 @@ export default function MembershipList() {
             <MemberForm
               member={editingMember}
               membershipFormSchema={membershipFormFields}
-              branches={branches || []}
+              branches={branches.filter((branch) => branch.is_active) || []}
               onSubmit={handleFormSubmit}
               onCancel={() => setEditingMember(null)}
               isLoading={updateMemberMutation.isPending}

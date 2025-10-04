@@ -26,6 +26,7 @@ export function AddMember() {
   const [formData, setFormData] = useState<DefaultMembershipFormData | null>(null);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [tagValues, setTagValues] = useState<Record<string, any>>({});
+  const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [branchId, setBranchId] = useState<string | string[]>('');
   const [branchError, setBranchError] = useState<string>('');
@@ -33,7 +34,7 @@ export function AddMember() {
   const createMemberMutation = useCreateMember();
   const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
   const { tags } = useRelationalTags();
-  const { createAssignment } = useMemberTagAssignments();
+  const {  bulkCreateAssignments } = useMemberTagAssignments();
   const { isUploading } = useCloudinaryUpload(); // Check if any upload is in progress
   
   const organizationId = currentOrganization?.id;
@@ -67,15 +68,52 @@ export function AddMember() {
       return;
     }
 
+    // Collect all validation errors before any early returns
+    let hasValidationErrors = false;
+
     // Validate branch selection
     if (!branchId || (typeof branchId === 'string' && branchId.trim() === '')) {
       setBranchError('Please select a branch');
+      hasValidationErrors = true;
+    } else {
+      setBranchError('');
     }
 
     // Validate the form
     const validationResult = formRef.current?.validateForm();
-    if (!validationResult || !validationResult.isValid || !branchId || (typeof branchId === 'string' && branchId.trim() === '')) {
-      toast.error('Please fix the validation errors');
+    const isFormValid = validationResult && validationResult.isValid;
+    if (!isFormValid) {
+      hasValidationErrors = true;
+    }
+
+    // Validate required tags
+    const newTagErrors: Record<string, string> = {};
+    if (tags && tags.length > 0) {
+      for (const tag of tags) {
+        if (tag.is_required) {
+          const value = tagValues[tag.id] || [];
+          let hasValue = false;
+
+          if (tag.component_style === 'dropdown' || tag.component_style === 'radio') {
+            hasValue = value.length > 0 && value[0] !== '';
+          } else if (tag.component_style === 'multiselect' || tag.component_style === 'checkbox') {
+            hasValue = value.length > 0;
+          }
+
+          if (!hasValue) {
+            newTagErrors[tag.id] = `${tag.name} is required`;
+            hasValidationErrors = true;
+          }
+        }
+      }
+    }
+
+    // Set tag errors regardless of other validation results
+    setTagErrors(newTagErrors);
+
+    // If there are any validation errors, show message and return
+    if (hasValidationErrors) {
+      toast.error('Please fix all validation errors in the form.');
       return;
     }
 
@@ -116,24 +154,25 @@ export function AddMember() {
 
       // Create tag assignments for the new member
       if (Object.keys(tagValues).length > 0) {
-        const tagAssignmentPromises = Object.entries(tagValues).flatMap(([, tagItemIds]) =>
-          (tagItemIds as string[]).map(tagItemId =>
-            createAssignment({
-              member_id: newMember.id,
-              tag_item_id: tagItemId,
-            })
-          )
-        );
+        // Collect all tag item IDs for bulk insert
+        const allTagItemIds = Object.entries(tagValues).flatMap(([, tagItemIds]) => {
+          if (Array.isArray(tagItemIds)) {
+            return tagItemIds as string[];
+          } else if (typeof tagItemIds === 'string' && tagItemIds.trim() !== '') {
+            return [tagItemIds];
+          }
+          return [];
+        });
         
-        await Promise.all(tagAssignmentPromises);
+        if (allTagItemIds.length > 0) {
+          await bulkCreateAssignments({
+            memberId: newMember.id,
+            tagItemIds: allTagItemIds,
+          });
+        }
       }
       
-      // Show success message with profile photo status
-      if (formData.profile_image_url) {
-        toast.success('Member added successfully with profile photo');
-      } else {
-        toast.success('Member added successfully');
-      }
+      toast.success('Member added successfully');
       
       navigate('/people/membership');
     } catch (error) {
@@ -274,18 +313,29 @@ export function AddMember() {
                {tags && tags.length > 0 ? (
                  tags
                    .sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999))
-                   .map((category) => (
+                   .map((tag) => (
                      <TagRenderer
-                       key={category.id}
-                       category={category}
-                       categoryKey={category.id}
-                       value={tagValues[category.id] || []}
-                       onChange={(value) => setTagValues(prev => ({ ...prev, [category.id]: value }))}
+                       key={tag.id}
+                       tag={tag}
+                       tagKey={tag.id}
+                       value={tagValues[tag.id] || []}
+                       onChange={(value) => {
+                         setTagValues(prev => ({ ...prev, [tag.id]: value }));
+                         // Clear error when user makes a selection
+                         if (tagErrors[tag.id]) {
+                           setTagErrors(prev => {
+                             const newErrors = { ...prev };
+                             delete newErrors[tag.id];
+                             return newErrors;
+                           });
+                         }
+                       }}
+                       error={tagErrors[tag.id]}
                      />
                    ))
                ) : (
                  <div className="text-sm text-muted-foreground">
-                   No tag categories configured
+                   No tags configured
                  </div>
                )}
              </CardContent>

@@ -138,6 +138,35 @@ export function useMemberTagAssignments(memberId?: string) {
     },
   });
 
+  // Bulk create tag assignments for a member
+  const bulkCreateAssignments = useMutation({
+    mutationFn: async ({ 
+      memberId, 
+      tagItemIds 
+    }: { 
+      memberId: string; 
+      tagItemIds: string[] 
+    }) => {
+      if (tagItemIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('member_tag_items')
+        .insert(
+          tagItemIds.map(tagItemId => ({
+            member_id: memberId,
+            tag_item_id: tagItemId,
+          }))
+        )
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['member-tag-assignments', memberId] });
+    },
+  });
+
   // Update tag assignments for a specific tag (replace all assignments for that tag)
   const updateTagAssignments = useMutation({
     mutationFn: async ({ 
@@ -189,6 +218,7 @@ export function useMemberTagAssignments(memberId?: string) {
     isLoading,
     error,
     createAssignment: createAssignment.mutateAsync,
+    bulkCreateAssignments: bulkCreateAssignments.mutateAsync,
     deleteAssignment: deleteAssignment.mutateAsync,
     updateTagAssignments: updateTagAssignments.mutateAsync,
   };

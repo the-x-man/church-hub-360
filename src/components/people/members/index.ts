@@ -1,5 +1,6 @@
+export { default as FilterBar } from './FilterBar';
 export { MemberCard } from './MemberCard';
-export { MemberTable } from './MemberTable';
 export { MemberForm } from './MemberForm';
-export { FilterBar } from './FilterBar';
 export { MemberPagination } from './MemberPagination';
+export { default as MemberStatistics } from './MemberStatistics';
+export { MemberTable } from './MemberTable';

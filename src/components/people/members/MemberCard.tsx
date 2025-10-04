@@ -123,11 +123,6 @@ export function MemberCard({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Badge
-              className={cn('text-xs', statusColors[member.membership_status])}
-            >
-              {member.membership_status}
-            </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -239,7 +234,15 @@ export function MemberCard({
 
           {/* Membership Type */}
           {member.membership_type && (
-            <div className="pt-2 border-t">
+            <div className="pt-2 border-t flex items-center gap-2">
+              <Badge
+                className={cn(
+                  'text-xs',
+                  statusColors[member.membership_status]
+                )}
+              >
+                {member.membership_status}
+              </Badge>
               <Badge variant="outline" className="text-xs">
                 {member.membership_type}
               </Badge>
