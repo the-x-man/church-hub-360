@@ -14,19 +14,19 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { tagIcons } from '../../../constants/people-configurations';
-import type { TagCategory } from '../../../types/people-configurations';
+import type { TagSchema } from '../../../types/people-configurations';
 
 interface TagCategoriesListProps {
-  tags: { [key: string]: TagCategory };
-  selectedTag: string | null;
+  tags: { [key: string]: TagSchema };
+  selectedTagKey: string | null;
   onSelectTag: (tagKey: string) => void;
-  onEditTag: (tagKey: string, tag: TagCategory) => void;
+  onEditTag: (tagKey: string, tag: TagSchema) => void;
   onDeleteTag: (tagKey: string) => void;
 }
 
 export function TagCategoriesList({
   tags,
-  selectedTag,
+  selectedTagKey,
   onSelectTag,
   onEditTag,
   onDeleteTag,
@@ -34,16 +34,16 @@ export function TagCategoriesList({
   return (
     <div className="space-y-4">
       {Object.entries(tags)
-        .sort(([, a], [, b]) => ((a as TagCategory).display_order ?? 0) - ((b as TagCategory).display_order ?? 0))
-        .map(([tagKey, tag]) => {
-          const typedTag = tag as TagCategory;
+        .sort(([, a], [, b]) => ((a as TagSchema).display_order ?? 0) - ((b as TagSchema).display_order ?? 0))
+      .map(([tagKey, tag]) => {
+        const typedTag = tag as TagSchema;
           const IconComponent = tagIcons[tagKey] || tagIcons.groups;
           
           return (
             <Card
               key={tagKey}
               className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedTag === tagKey
+                selectedTagKey === tagKey
                   ? 'ring-2 ring-primary border-primary'
                   : ''
               }`}

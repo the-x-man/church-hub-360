@@ -31,6 +31,7 @@ import { ActivityLogs } from '../pages/ActivityLogs';
 // People section pages
 import { People } from '../pages/people';
 import { PeopleConfigurations } from '../pages/people/Configurations';
+import { Tags } from '../pages/people/Tags';
 import { AddMember } from '../pages/people/AddMember';
 import { MemberDetail } from '../pages/people/MemberDetail';
 import Membership from '../pages/people/Membership';
@@ -107,6 +108,7 @@ function AppRoutes() {
 
         {/* People section with nested routes */}
         <Route path="people" element={<People />}>
+          <Route path="tags" element={<Tags />} />
           <Route path="configurations" element={<PeopleConfigurations />} />
           <Route path="membership" element={<Membership />}>
             <Route index element={<MembershipList />} />

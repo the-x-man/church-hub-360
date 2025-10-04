@@ -8,12 +8,12 @@ import {
   CardTitle,
 } from '../../ui/card';
 import { Badge } from '../../ui/badge';
-import type { TagCategory, TagItem } from '../../../types/people-configurations';
+import type { TagSchema, TagItemSchema } from '@/types/people-configurations';
 
 interface TagItemsPanelProps {
-  selectedTagData: TagCategory | null;
+  selectedTagData: TagSchema | null;
   onAddItem: () => void;
-  onEditItem: (item: TagItem) => void;
+  onEditItem: (item: TagItemSchema) => void;
   onDeleteItem: (itemId: string) => void;
 }
 
@@ -68,8 +68,11 @@ export function TagItemsPanel({
         ) : (
           <div className="space-y-3">
             {selectedTagData.items
-              .sort((a: TagItem, b: TagItem) => (a.display_order ?? 0) - (b.display_order ?? 0))
-              .map((item: TagItem) => (
+              .sort(
+                (a: TagItemSchema, b: TagItemSchema) =>
+                  (a.display_order ?? 0) - (b.display_order ?? 0)
+              )
+              .map((item: TagItemSchema) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"

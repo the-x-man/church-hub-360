@@ -1,4 +1,5 @@
 import { MemberForm } from '@/components/people/members';
+import { TagRenderer } from '@/components/people/tags/TagRenderer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBranches } from '@/hooks/useBranchQueries';
 import { useMember } from '@/hooks/useMemberQueries';
 import { usePeopleConfiguration } from '@/hooks/usePeopleConfigurationQueries';
+import { useRelationalTags } from '@/hooks/useRelationalTags';
+import { useMemberTagAssignments } from '@/hooks/useMemberTagAssignments';
 import { type MemberFormField, type MembershipStatus } from '@/types/members';
 import type { MembershipFormSchema } from '@/types/people-configurations';
 import { format } from 'date-fns';
@@ -26,9 +29,10 @@ import {
   Phone,
   Printer,
   User,
-  XCircle
+  XCircle,
+  Tags
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 // Helper function to convert MembershipFormSchema to MemberFormField[]
@@ -61,14 +65,46 @@ export function MemberDetail() {
   const { memberId } = useParams<{ memberId: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [tagValues, setTagValues] = useState<Record<string, any>>({});
 
   // Fetch member data
   const { data: member, isLoading, error } = useMember(memberId!);
   const { configuration } = usePeopleConfiguration(member?.organization_id);
   const { data: branches } = useBranches(member?.organization_id);
   
+  // Fetch tag data
+  const { tags } = useRelationalTags();
+  const { 
+    assignmentsByTag, 
+    updateTagAssignments 
+  } = useMemberTagAssignments(memberId);
+  
   // Convert membership form schema to form fields
   const membershipFormFields = convertSchemaToFormFields(configuration?.membership_form_schema);
+
+  // Initialize tag values from current assignments
+  useEffect(() => {
+    if (assignmentsByTag && Object.keys(assignmentsByTag).length > 0) {
+      setTagValues(assignmentsByTag);
+    }
+  }, [assignmentsByTag]);
+
+  // Handle tag changes
+  const handleTagChange = async (tagId: string, tagItemIds: string | string[]) => {
+    if (!memberId) return;
+    
+    try {
+      const itemIds = Array.isArray(tagItemIds) ? tagItemIds : [tagItemIds];
+      await updateTagAssignments({
+        memberId,
+        tagId,
+        tagItemIds: itemIds,
+      });
+      setTagValues(prev => ({ ...prev, [tagId]: itemIds }));
+    } catch (error) {
+      console.error('Error updating tag assignments:', error);
+    }
+  };
 
   // Handle edit mode
   const handleEditToggle = () => {
@@ -579,6 +615,30 @@ export function MemberDetail() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{member.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tags */}
+          {tags && tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tags className="h-5 w-5" />
+                  Tags
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {tags.map((category) => (
+                  <TagRenderer
+                    key={category.id}
+                    category={category}
+                    categoryKey={category.id}
+                    value={tagValues[category.id] || []}
+                    onChange={(value) => handleTagChange(category.id, value)}
+                    disabled={!isEditing}
+                  />
+                ))}
               </CardContent>
             </Card>
           )}

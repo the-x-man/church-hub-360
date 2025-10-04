@@ -70,6 +70,11 @@ const navItems: NavItem[] = [
     label: 'People',
     children: [
       {
+        to: '/people/tags',
+        icon: Settings,
+        label: 'Tags',
+      },
+      {
         to: '/people/configurations',
         icon: Settings,
         label: 'Configurations',

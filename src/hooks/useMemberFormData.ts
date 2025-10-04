@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import type { 
   FormComponent, 
-  TagCategoryWithId
+  TagWithKey
 } from '@/types/people-configurations';
 import type { CreateMemberData } from '@/types/members';
 import { createMemberFormSchema, type MemberFormData } from '@/schemas/memberFormSchema';
 
 export interface UseMemberFormDataProps {
   customFields?: FormComponent[];
-  tagCategories?: TagCategoryWithId[];
+  tagCategories?: TagWithKey[];
   initialData?: Partial<MemberFormData>;
   initialCustomFields?: Record<string, any>;
   initialTags?: Record<string, any>;
@@ -183,7 +183,7 @@ function getDefaultValueForField(field: FormComponent): any {
   }
 }
 
-function getDefaultValueForTag(category: TagCategoryWithId): any {
+function getDefaultValueForTag(category: TagWithKey): any {
   switch (category.component_style) {
     case 'multiselect':
     case 'checkbox':

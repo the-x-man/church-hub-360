@@ -1,12 +1,24 @@
 import { Palette } from 'lucide-react';
 import React from 'react';
-import type { TagItemFormData } from '../../types/people-configurations';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
-import { Textarea } from '../ui/textarea';
+import { Button } from '../../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Switch } from '../../ui/switch';
+import { Textarea } from '../../ui/textarea';
+
+// Form data interface
+interface TagItemFormData {
+  name: string;
+  description: string;
+  color: string;
+  is_active: boolean;
+}
 
 interface TagItemModalProps {
   isOpen: boolean;
@@ -152,7 +164,7 @@ export function TagItemModal({
                   Saving...
                 </>
               ) : (
-                <>{isEditing ? 'Keep Changes' : 'Add Item'}</>
+                <>{isEditing ? 'Update Item' : 'Add Item'}</>
               )}
             </Button>
           </div>

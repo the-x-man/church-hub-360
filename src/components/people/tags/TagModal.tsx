@@ -1,29 +1,40 @@
 import { componentStyleOptions } from '@/constants/people-configurations';
 import React from 'react';
-import type {
-  ComponentStyle,
-  TagCategoryFormData,
-} from '../../types/people-configurations';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import type { ComponentStyle } from '@/types/people-configurations';
+import { Button } from '../../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { Switch } from '../ui/switch';
-import { Textarea } from '../ui/textarea';
+} from '../../ui/select';
+import { Switch } from '../../ui/switch';
+import { Textarea } from '../../ui/textarea';
+
+// Form data interface
+interface TagFormData {
+  name: string;
+  description: string;
+  is_required: boolean;
+  component_style: ComponentStyle;
+  is_active: boolean;
+}
 
 interface TagModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  formData: TagCategoryFormData;
-  setFormData: React.Dispatch<React.SetStateAction<TagCategoryFormData>>;
+  formData: TagFormData;
+  setFormData: React.Dispatch<React.SetStateAction<TagFormData>>;
   isEditing: boolean;
   loading?: boolean;
 }
@@ -44,7 +55,7 @@ export function TagModal({
     }
   };
 
-  const updateFormData = (field: keyof TagCategoryFormData, value: any) => {
+  const updateFormData = (field: keyof TagFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -98,19 +109,53 @@ export function TagModal({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {componentStyleOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    className="dark:hover:text-accent-foreground"
-                  >
-                    <option.icon className="hover:text-accent-foreground" />
-                    <div>
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-sm">{option.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
+                {/* Single Selection Group */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  Single Selection
+                </div>
+                {componentStyleOptions
+                  .filter((option) => option.group === 'single')
+                  .map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="dark:hover:text-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <option.icon className="h-4 w-4" />
+                        <div>
+                          <div className="font-medium">{option.label}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {option.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+
+                {/* Multiple Selection Group */}
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                  Multiple Selection
+                </div>
+                {componentStyleOptions
+                  .filter((option) => option.group === 'multiple')
+                  .map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="dark:hover:text-accent-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <option.icon className="h-4 w-4" />
+                        <div>
+                          <div className="font-medium">{option.label}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {option.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -131,21 +176,6 @@ export function TagModal({
                 }
               />
             </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Active</Label>
-                <p className="text-sm text-muted-foreground">
-                  Show this category in forms and lists
-                </p>
-              </div>
-              <Switch
-                checked={formData.is_active}
-                onCheckedChange={(checked) =>
-                  updateFormData('is_active', checked)
-                }
-              />
-            </div>
           </div>
 
           {/* Actions */}
@@ -160,7 +190,7 @@ export function TagModal({
                   Saving...
                 </>
               ) : (
-                <>{isEditing ? 'Keep Changes' : 'Add Tag'}</>
+                <>{isEditing ? 'Update Tag' : 'Add Tag'}</>
               )}
             </Button>
           </div>

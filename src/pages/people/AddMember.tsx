@@ -1,12 +1,14 @@
 import type { DefaultMembershipFormData } from '@/components/people/configurations/DefaultMembershipForm';
 import { DefaultMembershipForm, type DefaultMembershipFormMethods } from '@/components/people/configurations/DefaultMembershipForm';
 import { CustomFieldsRenderer } from '@/components/people/configurations/CustomFieldsRenderer';
-import { TagRenderer } from '@/components/people/configurations/TagRenderer';
+import { TagRenderer } from '@/components/people/tags/TagRenderer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useCreateMember } from '@/hooks/useMemberQueries';
-import { useMembershipFormManagement, useTagsManagement } from '@/hooks/usePeopleConfigurationQueries';
+import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueries';
+import { useRelationalTags } from '@/hooks/useRelationalTags';
+import { useMemberTagAssignments } from '@/hooks/useMemberTagAssignments';
 import type { CreateMemberData } from '@/types/members';
 import { ArrowLeft, Save, X, Tags } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -29,7 +31,8 @@ export function AddMember() {
   
   const createMemberMutation = useCreateMember();
   const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
-  const { tagsSchema } = useTagsManagement(currentOrganization?.id);
+  const { tags } = useRelationalTags();
+  const { createAssignment } = useMemberTagAssignments();
   
   const organizationId = currentOrganization?.id;
 
@@ -48,12 +51,7 @@ export function AddMember() {
     setCustomFieldValues(values);
   }, []);
 
-  const handleTagChange = useCallback((categoryKey: string, value: any) => {
-    setTagValues(prev => ({
-      ...prev,
-      [categoryKey]: value
-    }));
-  }, []);
+
 
   const handleSave = async () => {
     if (!formData || !organizationId) {
@@ -99,15 +97,26 @@ export function AddMember() {
         baptism_date: formData.baptism_date ? formData.baptism_date.toISOString().split('T')[0] : undefined,
         notes: formData.notes || undefined,
         profile_image_url: formData.profile_image_url || undefined,
-        form_data: Object.keys(customFieldValues).length > 0 || Object.keys(tagValues).length > 0 
-          ? { 
-              ...customFieldValues, 
-              tags: tagValues 
-            } 
+        form_data: Object.keys(customFieldValues).length > 0 
+          ? customFieldValues 
           : undefined,
       };
 
-      await createMemberMutation.mutateAsync(createData);
+      const newMember = await createMemberMutation.mutateAsync(createData);
+
+      // Create tag assignments for the new member
+      if (Object.keys(tagValues).length > 0) {
+        const tagAssignmentPromises = Object.entries(tagValues).flatMap(([, tagItemIds]) =>
+          (tagItemIds as string[]).map(tagItemId =>
+            createAssignment({
+              member_id: newMember.id,
+              tag_item_id: tagItemId,
+            })
+          )
+        );
+        
+        await Promise.all(tagAssignmentPromises);
+      }
       toast.success('Member added successfully');
       navigate('/people/membership');
     } catch (error) {
@@ -227,16 +236,16 @@ export function AddMember() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-               {tagsSchema && Object.keys(tagsSchema.categories).length > 0 ? (
-                 Object.entries(tagsSchema.categories)
-                   .sort(([, a], [, b]) => (a.display_order ?? 999) - (b.display_order ?? 999))
-                   .map(([categoryKey, category]) => (
+               {tags && tags.length > 0 ? (
+                 tags
+                   .sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999))
+                   .map((category) => (
                      <TagRenderer
-                       key={categoryKey}
-                       category={{ ...category, id: categoryKey }}
-                       categoryKey={categoryKey}
-                       value={tagValues[categoryKey]}
-                       onChange={(value) => handleTagChange(categoryKey, value)}
+                       key={category.id}
+                       category={category}
+                       categoryKey={category.id}
+                       value={tagValues[category.id] || []}
+                       onChange={(value) => setTagValues(prev => ({ ...prev, [category.id]: value }))}
                      />
                    ))
                ) : (

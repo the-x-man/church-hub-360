@@ -1,6 +1,6 @@
 import { Download } from 'lucide-react';
 import { tagIcons } from '../../../constants/people-configurations';
-import { defaultTagsSchema } from '../../../utils/defaultTagsData';
+import { defaultTagCategories } from '../../../utils/defaultTagsData';
 import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import {
@@ -30,7 +30,7 @@ export function DefaultSchemasDialog({
   onAddSchemas,
   existingCategories,
 }: DefaultSchemasDialogProps) {
-  const availableSchemas = Object.entries(defaultTagsSchema.categories).filter(
+  const availableSchemas = Object.entries(defaultTagCategories).filter(
     ([key]) => !existingCategories[key]
   );
 

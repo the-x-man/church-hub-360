@@ -1,4 +1,4 @@
-import { type SchemaChanges } from '../../../utils/schema-change-detection';
+import { type SchemaChanges } from '../../../hooks/useLocalCommitteesSchema';
 
 interface ConfigurationsHeaderProps {
   hasUnsavedChanges: boolean;

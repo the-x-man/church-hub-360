@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import { useRelationalTags, type BulkCreateTagData, type RelationalTagWithItems } from '@/hooks/useRelationalTags';
+import {
+  defaultTagCategories,
+} from '@/utils/defaultTagsData';
 import {
   Briefcase,
   Building,
   Check,
   Heart,
+  Loader2,
   Shield,
-  Tag,
+  Tag as TagIcon,
   UserCheck,
   Users,
   X,
 } from 'lucide-react';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Checkbox } from '../ui/checkbox';
+import React, { useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '../../ui/badge';
+import { Button } from '../../ui/button';
+import { Checkbox } from '../../ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -20,10 +26,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { ScrollArea } from '../ui/scroll-area';
-import { defaultTagsSchema } from '../../utils/defaultTagsData';
-import type { TagCategory } from '../../types/people-configurations';
+} from '../../ui/dialog';
+import { ScrollArea } from '../../ui/scroll-area';
 
 // Tag icons mapping
 const tagIcons: Record<string, React.ComponentType<any>> = {
@@ -39,17 +43,18 @@ const tagIcons: Record<string, React.ComponentType<any>> = {
 interface TagTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTemplates: (selectedTemplates: Record<string, TagCategory>) => void;
-  existingTags: Record<string, TagCategory>;
+  existingTags: RelationalTagWithItems[];
 }
 
 export function TagTemplateModal({
   isOpen,
   onClose,
-  onAddTemplates,
-  existingTags,
 }: TagTemplateModalProps) {
-  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(
+    new Set()
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const { bulkCreateTags } = useRelationalTags();
 
   const handleTemplateToggle = (templateKey: string) => {
     const newSelected = new Set(selectedTemplates);
@@ -61,19 +66,50 @@ export function TagTemplateModal({
     setSelectedTemplates(newSelected);
   };
 
-  const handleAddTemplates = () => {
-    const templatesToAdd: Record<string, TagCategory> = {};
-    
-    selectedTemplates.forEach((templateKey) => {
-      const template = defaultTagsSchema.categories[templateKey];
-      if (template && !existingTags[templateKey]) {
-        templatesToAdd[templateKey] = template;
-      }
-    });
+  const handleAddTemplates = async () => {
+    if (selectedTemplates.size === 0) return;
 
-    onAddTemplates(templatesToAdd);
-    setSelectedTemplates(new Set());
-    onClose();
+    setIsLoading(true);
+    try {
+      // Prepare bulk create data
+      const bulkCreateData: BulkCreateTagData[] = Array.from(selectedTemplates).map((templateKey) => {
+        const template = defaultTagCategories[templateKey];
+        if (!template) throw new Error(`Template ${templateKey} not found`);
+
+        return {
+          name: template.name,
+          description: template.description,
+          is_required: template.is_required,
+          component_style: template.component_style,
+          items: template.items?.map((item) => ({
+            name: item.label,
+            description: item.description,
+            color: item.color,
+          })) || [],
+        };
+      });
+
+      // Use bulk create mutation
+      const result = await bulkCreateTags(bulkCreateData);
+
+      if (result) {
+        toast.success(
+          `Added ${selectedTemplates.size} tag template${
+            selectedTemplates.size !== 1 ? 's' : ''
+          } successfully`
+        );
+
+        setSelectedTemplates(new Set());
+        onClose();
+      } else {
+        throw new Error('Failed to create tags');
+      }
+    } catch (error) {
+      console.error('Error adding templates:', error);
+      toast.error('Failed to add tag templates. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -81,21 +117,18 @@ export function TagTemplateModal({
     onClose();
   };
 
-  const availableTemplates = Object.entries(defaultTagsSchema.categories).filter(
-    ([key]) => !existingTags[key]
-  );
-
+  const availableTemplates = Object.entries(defaultTagCategories);
+  
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5" />
+            <TagIcon className="h-5 w-5" />
             Add Tag Templates
           </DialogTitle>
           <DialogDescription>
-            Select from predefined tag templates to quickly set up common church management categories.
-            Each template includes pre-configured items that you can customize later.
+            Select from predefined tag templates.
           </DialogDescription>
         </DialogHeader>
 
@@ -103,12 +136,12 @@ export function TagTemplateModal({
           <div className="space-y-4">
             {availableTemplates.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <TagIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>All available templates have already been added.</p>
               </div>
             ) : (
               availableTemplates.map(([key, template]) => {
-                const IconComponent = tagIcons[key] || Tag;
+                const IconComponent = tagIcons[key] || TagIcon;
                 const isSelected = selectedTemplates.has(key);
 
                 return (
@@ -144,14 +177,14 @@ export function TagTemplateModal({
                           {template.description}
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {template.items.slice(0, 5).map((item) => (
+                          {template.items.slice(0, 5).map((item, index) => (
                             <Badge
-                              key={item.id}
+                              key={`${key}-item-${index}`}
                               variant="outline"
                               className="text-xs"
                               style={{ borderColor: item.color }}
                             >
-                              {item.name}
+                              {item.label}
                             </Badge>
                           ))}
                           {template.items.length > 5 && (
@@ -170,16 +203,21 @@ export function TagTemplateModal({
         </ScrollArea>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
           <Button
             onClick={handleAddTemplates}
-            disabled={selectedTemplates.size === 0}
+            disabled={selectedTemplates.size === 0 || isLoading}
           >
-            <Check className="h-4 w-4 mr-2" />
-            Add {selectedTemplates.size} Template{selectedTemplates.size !== 1 ? 's' : ''}
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4 mr-2" />
+            )}
+            Add {selectedTemplates.size} Template
+            {selectedTemplates.size !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,20 +1,22 @@
 import { supabase } from './supabase';
-import { getDefaultTagsSchema, getMinimalTagsSchema } from './defaultTagsData';
+// TODO: Update seeding utilities to work with new relational tag system
+// import { getDefaultTagsSchema, getMinimalTagsSchema } from './defaultTagsData';
 import type { 
   PeopleConfiguration, 
-  TagsSchema, 
+  // TagsSchema, // Removed - using relational tags now
   CommitteesSchema, 
   MembershipFormSchema 
 } from '../types/people-configurations';
 
 /**
  * Seeding options for organization initialization
+ * TODO: Update to work with relational tag system
  */
 export interface SeedingOptions {
   /** Whether to use minimal or full default schema */
   useMinimalSchema?: boolean;
-  /** Custom tags schema to override defaults */
-  customTagsSchema?: TagsSchema;
+  /** Custom tags schema to override defaults - DEPRECATED: Use relational tags */
+  // customTagsSchema?: TagsSchema;
   /** Custom committees schema */
   customCommitteesSchema?: CommitteesSchema;
   /** Custom membership form schema */
@@ -25,6 +27,7 @@ export interface SeedingOptions {
 
 /**
  * Seeds an organization with default people configuration
+ * @deprecated This function uses the old JSON-based tag schema. Use relational tag system instead.
  * @param organizationId - The organization ID to seed
  * @param options - Seeding options
  * @returns Promise with the created configuration
@@ -33,23 +36,22 @@ export async function seedOrganizationWithDefaults(
   organizationId: string,
   options: SeedingOptions = {}
 ): Promise<PeopleConfiguration | null> {
+  console.warn('seedOrganizationWithDefaults is deprecated. Please use the new relational tag system.');
+  
   try {
     const {
-      useMinimalSchema = false,
-      customTagsSchema,
+      // useMinimalSchema = false,
+      // customTagsSchema,
       customCommitteesSchema = {},
       customMembershipFormSchema = {},
       userId
     } = options;
 
-    // Determine which tags schema to use
-    const tagsSchema = customTagsSchema || 
-      (useMinimalSchema ? getMinimalTagsSchema() : getDefaultTagsSchema());
-
-    // Prepare the configuration data
+    // TODO: Implement seeding with relational tag system
+    // For now, create configuration without tags_schema
     const configurationData = {
       organization_id: organizationId,
-      tags_schema: tagsSchema,
+      // tags_schema: {}, // Remove tags_schema for now
       committees_schema: customCommitteesSchema,
       membership_form_schema: customMembershipFormSchema,
       created_by: userId,
@@ -138,7 +140,7 @@ export async function seedOrganizationIfNeeded(
 
 /**
  * Updates existing organization configuration with new defaults
- * Useful for migrating existing organizations to new schema versions
+ * @deprecated This function uses the old JSON-based tag schema. Use relational tag system instead.
  * @param organizationId - The organization ID to update
  * @param options - Update options
  * @returns Promise with the updated configuration
@@ -146,11 +148,13 @@ export async function seedOrganizationIfNeeded(
 export async function updateOrganizationWithDefaults(
   organizationId: string,
   options: SeedingOptions = {}
-): Promise<void> {
+): Promise<any> {
+  console.warn('updateOrganizationWithDefaults is deprecated. Please use the new relational tag system.');
+  
   try {
     const {
-      useMinimalSchema = false,
-      customTagsSchema,
+      // useMinimalSchema = false,
+      // customTagsSchema,
       customCommitteesSchema,
       customMembershipFormSchema,
       userId
@@ -159,7 +163,7 @@ export async function updateOrganizationWithDefaults(
     // Get current configuration
     const { error: fetchError } = await supabase
       .from('people_configurations')
-      .select('tags_schema')
+      .select('id')
       .eq('organization_id', organizationId)
       .single();
 
@@ -167,12 +171,9 @@ export async function updateOrganizationWithDefaults(
       throw fetchError;
     }
 
-    // Merge with defaults
-    const updatedTagsSchema = customTagsSchema || 
-      (useMinimalSchema ? getMinimalTagsSchema() : getDefaultTagsSchema());
-
+    // TODO: Implement updating with relational tag system
     const updateData = {
-      tags_schema: updatedTagsSchema,
+      // tags_schema: {}, // Remove tags_schema for now
       ...(customCommitteesSchema && { committees_schema: customCommitteesSchema }),
       ...(customMembershipFormSchema && { membership_form_schema: customMembershipFormSchema }),
       last_updated_by: userId,
@@ -228,10 +229,13 @@ export async function batchSeedOrganizations(
 
 /**
  * Validates that a tags schema has the required structure
+ * @deprecated This function validates the old JSON-based tag schema. Use relational tag validation instead.
  * @param schema - The schema to validate
  * @returns boolean indicating if schema is valid
  */
-export function validateTagsSchema(schema: any): schema is TagsSchema {
+export function validateTagsSchema(schema: any): boolean {
+  console.warn('validateTagsSchema is deprecated. Please use relational tag validation.');
+  
   try {
     return (
       schema &&

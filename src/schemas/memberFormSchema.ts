@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { FormComponent, TagCategoryWithId } from '@/types/people-configurations';
+import type { FormComponent, TagWithKey } from '@/types/people-configurations';
 
 // Base schema for default membership form fields
 export const defaultMembershipSchema = z.object({
@@ -135,7 +135,7 @@ export const createDynamicFieldSchema = (component: FormComponent) => {
 };
 
 // Tag field validation based on TagCategory component style
-export const createTagFieldSchema = (category: TagCategoryWithId) => {
+export const createTagFieldSchema = (category: TagWithKey) => {
   const fieldName = category.name;
   
   switch (category.component_style) {
@@ -160,7 +160,7 @@ export const createTagFieldSchema = (category: TagCategoryWithId) => {
 // Function to create complete form schema dynamically
 export const createMemberFormSchema = (
   customFields: FormComponent[] = [],
-  tagCategories: TagCategoryWithId[] = []
+  tagCategories: TagWithKey[] = []
 ) => {
   // Add custom fields
   const customFieldsShape: Record<string, z.ZodTypeAny> = {};

@@ -22,10 +22,7 @@ import {
 } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Label } from '../../ui/label';
-import type {
-  TagCategory,
-  TagItem,
-} from '../../../types/people-configurations';
+import type { TagSchema, TagItemSchema } from '@/types/people-configurations';
 import { componentStyleOptions } from '@/constants/people-configurations';
 
 // Tag icons mapping
@@ -41,10 +38,10 @@ const tagIcons: Record<string, React.ComponentType<any>> = {
 
 interface TagDetailsPanelProps {
   selectedTag: string | null;
-  selectedTagData: TagCategory | null;
+  selectedTagData: TagSchema | null;
   onAddItem: () => void;
-  onEditItem: (item: TagItem) => void;
-  onDeleteItem: (itemId: string) => void;
+  onEditItem: (itemId: string, item: TagItemSchema) => void;
+  onDeleteItem: (itemId: string, itemName: string) => void;
 }
 
 export function TagDetailsPanel({
@@ -158,14 +155,14 @@ export function TagDetailsPanel({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onEditItem(item)}
+                          onClick={() => onEditItem(item.id, item)}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => onDeleteItem(item.id)}
+                          onClick={() => onDeleteItem(item.id, item.name)}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

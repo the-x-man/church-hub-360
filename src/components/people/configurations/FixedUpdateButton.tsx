@@ -1,7 +1,13 @@
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Save, RotateCcw, Loader2 } from 'lucide-react';
-import { getChangesSummary, type SchemaChanges } from '../../../utils/schema-change-detection';
+import { type SchemaChanges } from '../../../hooks/useLocalCommitteesSchema';
+
+// Simple function to summarize changes
+const getChangesSummary = (changes: SchemaChanges): string => {
+  if (!changes.hasChanges) return 'No changes';
+  return 'Changes detected';
+};
 
 interface FixedUpdateButtonProps {
   hasUnsavedChanges: boolean;

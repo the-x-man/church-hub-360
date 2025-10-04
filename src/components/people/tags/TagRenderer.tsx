@@ -24,10 +24,10 @@ import {
 } from '@/components/ui/popover';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { TagCategoryWithId } from '@/types/people-configurations';
+import type { RelationalTagWithItems } from '@/hooks/useRelationalTags';
 
 interface TagRendererProps {
-  category: TagCategoryWithId;
+  category: RelationalTagWithItems;
   categoryKey: string;
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
@@ -47,7 +47,7 @@ export function TagRenderer({
 }: TagRendererProps) {
   const [open, setOpen] = useState(false);
   
-  const activeItems = category.items.filter(item => item.is_active);
+  const activeItems = category.tag_items?.filter(item => item.is_active) || [];
   
   // Sort items by display_order
   const sortedItems = activeItems.sort((a, b) => {

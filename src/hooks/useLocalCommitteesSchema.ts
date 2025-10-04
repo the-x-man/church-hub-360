@@ -1,8 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCommitteesManagement } from './usePeopleConfigurationQueries';
-import { type SchemaChanges } from '../utils/schema-change-detection';
 import type { CommitteesSchema, Committee, CommitteeFormData } from '../types/people-configurations';
 import { useOrganization } from '@/contexts/OrganizationContext';
+
+// Define SchemaChanges type inline since the utility file doesn't exist
+export interface SchemaChanges {
+  hasChanges: boolean;
+  changedCategories: Set<string>;
+  changedItems: Map<string, Set<string>>;
+  addedCategories: Set<string>;
+  deletedCategories: Set<string>;
+  addedItems: Map<string, Set<string>>;
+  deletedItems: Map<string, Set<string>>;
+}
 
 export interface LocalCommitteesSchemaState {
   // Local state

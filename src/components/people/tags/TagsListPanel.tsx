@@ -13,7 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import React from 'react';
-import type { TagCategory } from '../../../types/people-configurations';
+import type { TagSchema } from '../../../types/people-configurations';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import {
@@ -42,14 +42,14 @@ const tagIcons: Record<string, React.ComponentType<any>> = {
 };
 
 interface TagsListPanelProps {
-  tags: Record<string, TagCategory>;
+  tags: Record<string, TagSchema>;
   selectedTag: string | null;
   editingTag: string | null;
   onSelectTag: (tagKey: string) => void;
   onAddTag: () => void;
   onAddFromTemplate: () => void;
-  onEditTag: (tagKey: string, tag: TagCategory) => void;
-  onDeleteTag: (tagKey: string) => void;
+  onEditTag: (tagKey: string, tag: TagSchema) => void;
+  onDeleteTag: (tagKey: string, tagName: string) => void;
 }
 
 export function TagsListPanel({
@@ -160,7 +160,7 @@ export function TagsListPanel({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteTag(key);
+                          onDeleteTag(key, tag.name);
                         }}
                       >
                         <Trash2 className="h-3 w-3" />

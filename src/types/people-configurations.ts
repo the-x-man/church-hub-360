@@ -12,38 +12,68 @@ export type ComponentStyle =
   | 'list'
   | 'badge';
 
-// Base interface for tag items
-export interface TagItem {
-  id: string;
-  name: string;
-  description?: string;
-  color: string;
-  is_active: boolean;
-  display_order?: number;
-}
+// Component style groups for UI organization
+export type ComponentStyleGroup = 'single_select' | 'multi_select';
 
-// Interface for tag categories
-export interface TagCategory {
+// Mapping of component styles to their groups
+export const COMPONENT_STYLE_GROUPS: Record<ComponentStyle, ComponentStyleGroup> = {
+  dropdown: 'single_select',
+  radio: 'single_select',
+  list: 'single_select',
+  multiselect: 'multi_select',
+  checkbox: 'multi_select',
+  badge: 'multi_select',
+} as const;
+
+// New relational database types
+
+// Tags table type (replaces TagCategory)
+export interface Tag {
+  id: string;
+  organization_id: string;
   name: string;
   description?: string;
   display_order?: number;
   is_required: boolean;
   component_style: ComponentStyle;
   is_active: boolean;
-  items: TagItem[];
+  created_at: string;
+  updated_at: string;
 }
 
-// Interface for tag categories with id (for component usage)
-export interface TagCategoryWithId extends TagCategory {
+// Tag items table type (replaces TagItem)
+export interface TagItem {
   id: string;
+  tag_id: string;
+  label: string;
+  description?: string;
+  color: string;
+  display_order?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-// Tags schema structure
-export interface TagsSchema {
-  categories: {
-    [categoryKey: string]: TagCategory;
-  };
+// Member tag items junction table type
+export interface MemberTagItem {
+  id: string;
+  member_id: string;
+  tag_item_id: string;
+  created_at: string;
+  updated_at: string;
 }
+
+// Extended types with relationships for UI usage
+export interface TagWithItems extends Tag {
+  tag_items: TagItem[];
+}
+
+export interface TagItemWithTag extends TagItem {
+  tag: Tag;
+}
+
+
+
 
 // Position interface for committee roles
 export interface CommitteePosition {
@@ -74,7 +104,6 @@ export interface CommitteesSchema {
 export interface PeopleConfiguration {
   id: string;
   organization_id: string;
-  tags_schema?: TagsSchema;
   committees_schema?: CommitteesSchema;
   membership_form_schema?: MembershipFormSchema;
   created_at: string;
@@ -83,35 +112,60 @@ export interface PeopleConfiguration {
   last_updated_by?: string;
 }
 
-// API request/response types
-export interface CreatePeopleConfigurationRequest {
+// API request/response types for relational tags
+export interface CreateTagRequest {
   organization_id: string;
-  tags_schema?: TagsSchema;
-  committees_schema?: CommitteesSchema;
-  membership_form_schema?: MembershipFormSchema;
-}
-
-export interface UpdatePeopleConfigurationRequest {
-  tags_schema?: TagsSchema;
-  committees_schema?: CommitteesSchema;
-  membership_form_schema?: MembershipFormSchema;
-}
-
-// Form data types for UI components
-export interface TagCategoryFormData {
   name: string;
   description?: string;
   is_required: boolean;
   component_style: ComponentStyle;
   is_active: boolean;
+  display_order?: number;
 }
 
-export interface TagItemFormData {
-  name: string;
+export interface UpdateTagRequest {
+  name?: string;
+  description?: string;
+  is_required?: boolean;
+  component_style?: ComponentStyle;
+  is_active?: boolean;
+  display_order?: number;
+}
+
+export interface CreateTagItemRequest {
+  tag_id: string;
+  label: string;
   description?: string;
   color: string;
   is_active: boolean;
+  display_order?: number;
 }
+
+export interface UpdateTagItemRequest {
+  label?: string;
+  description?: string;
+  color?: string;
+  is_active?: boolean;
+  display_order?: number;
+}
+
+export interface CreateMemberTagItemRequest {
+  member_id: string;
+  tag_item_id: string;
+}
+export interface CreatePeopleConfigurationRequest {
+  organization_id: string;
+  committees_schema?: CommitteesSchema;
+  membership_form_schema?: MembershipFormSchema;
+}
+
+export interface UpdatePeopleConfigurationRequest {
+  committees_schema?: CommitteesSchema;
+  membership_form_schema?: MembershipFormSchema;
+}
+
+// Tag form data types
+
 
 // Committee form data types
 export interface CommitteeFormData {
@@ -133,7 +187,18 @@ export interface Committee {
 }
 
 // Utility types for tag management
-export interface TagCategoryWithKey extends TagCategory {
+export interface TagWithKey extends Tag {
+  key: string;
+  tag_items?: TagItemWithKey[];
+}
+
+export interface TagItemWithKey extends TagItem {
+  key: string;
+  tag_id: string;
+}
+
+// Tag utility types
+export interface TagWithKey extends Tag {
   id: string;
   key: string;
   tag_items?: TagItemWithKey[];
@@ -232,21 +297,9 @@ export interface UsePeopleConfigurationReturn {
   refetch: () => Promise<void>;
 }
 
-export interface UseTagsManagementReturn {
-  tagsSchema: TagsSchema | null;
-  loading: boolean;
-  operationLoading: boolean;
-  error: string | null;
-  updateTagsSchema: (newTagsSchema: TagsSchema, skipOptimistic?: boolean) => Promise<void>;
-  createCategory: (categoryKey: string, category: TagCategoryFormData) => Promise<void>;
-  updateCategory: (categoryKey: string, category: Partial<TagCategoryFormData>) => Promise<void>;
-  deleteCategory: (categoryKey: string) => Promise<void>;
-  createTagItem: (categoryKey: string, item: TagItemFormData) => Promise<void>;
-  updateTagItem: (categoryKey: string, itemId: string, item: Partial<TagItemFormData>) => Promise<void>;
-  deleteTagItem: (categoryKey: string, itemId: string) => Promise<void>;
-  reorderCategories: (categoryKeys: string[]) => Promise<void>;
-  reorderTagItems: (categoryKey: string, itemIds: string[]) => Promise<void>;
-}
+
+
+
 
 export interface UseCommitteesManagementReturn {
   committeesSchema: CommitteesSchema | null;
@@ -282,6 +335,24 @@ export interface TagValidationResult {
   errors: ValidationError[];
 }
 
-// Export utility functions types
-export type TagCategoryValidator = (category: TagCategoryFormData) => TagValidationResult;
-export type TagItemValidator = (item: TagItemFormData) => TagValidationResult;
+// Legacy types for backward compatibility with existing components
+// TODO: Remove these once all components are updated to use relational types
+export interface TagSchema {
+  id: string;
+  name: string;
+  description?: string;
+  is_required: boolean;
+  component_style: ComponentStyle;
+  is_active: boolean;
+  display_order?: number;
+  items: TagItemSchema[];
+}
+
+export interface TagItemSchema {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  is_active: boolean;
+  display_order?: number;
+}
