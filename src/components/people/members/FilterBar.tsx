@@ -25,12 +25,15 @@ import type {
   MembershipStatus,
 } from '@/types/members';
 import { useDebounceValue } from '@/hooks/useDebounce';
+import { TagFilter } from '@/components/people/tags/TagFilter';
+import type { RelationalTagWithItems } from '@/hooks/useRelationalTags';
 
 interface FilterBarProps {
   filters: MemberFilters;
   onFiltersChange: (filters: MemberFilters) => void;
   branches?: Array<{ id: string; name: string }>;
   membershipTypes?: MembershipType[];
+  tags?: RelationalTagWithItems[];
   className?: string;
 }
 
@@ -62,6 +65,7 @@ export default function FilterBar({
   onFiltersChange,
   branches = [],
   membershipTypes = [],
+  tags = [],
   className,
 }: FilterBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -297,6 +301,33 @@ export default function FilterBar({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Tag Filter */}
+            {tags.length > 0 && (
+              <div className="space-y-2 flex-1 min-w-0 sm:min-w-[200px]">
+                <Label className="text-sm font-medium">Tags</Label>
+                <TagFilter
+                  tags={tags}
+                  value={
+                    filters.tag_items && filters.tag_filter_mode
+                      ? {
+                          tag_items: filters.tag_items,
+                          tag_filter_mode: filters.tag_filter_mode,
+                        }
+                      : undefined
+                  }
+                  onChange={(value) => {
+                    if (value) {
+                      updateFilter('tag_items', value.tag_items);
+                      updateFilter('tag_filter_mode', value.tag_filter_mode);
+                    } else {
+                      updateFilter('tag_items', undefined);
+                      updateFilter('tag_filter_mode', undefined);
+                    }
+                  }}
+                />
+              </div>
+            )}
 
             {/* Age Range Filter */}
             <div className="space-y-2 flex-1 min-w-0 sm:min-w-[200px]">
@@ -556,6 +587,22 @@ export default function FilterBar({
                 size="sm"
                 className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
                 onClick={() => updateFilter('gender', 'all')}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </Badge>
+          )}
+          {filters.tag_items && filters.tag_items.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              Tags: {filters.tag_items.length} selected ({filters.tag_filter_mode || 'any'})
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                onClick={() => {
+                  updateFilter('tag_items', undefined);
+                  updateFilter('tag_filter_mode', undefined);
+                }}
               >
                 <X className="h-2 w-2" />
               </Button>

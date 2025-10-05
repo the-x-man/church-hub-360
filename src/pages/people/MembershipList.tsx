@@ -29,6 +29,7 @@ import {
 import { useMemberPreferences } from '@/hooks/useMemberPreferences';
 import { usePeopleConfiguration } from '@/hooks/usePeopleConfigurationQueries';
 import { useBranches } from '@/hooks/useBranchQueries';
+import { useRelationalTags } from '@/hooks/useRelationalTags';
 
 import { useOrganization } from '@/contexts/OrganizationContext';
 import type {
@@ -110,6 +111,7 @@ export default function MembershipList() {
     organizationId
   );
   const { data: branches = [] } = useBranches(organizationId);
+  const { tags } = useRelationalTags();
 
   // Convert membership form schema to form fields
   const membershipFormFields = convertSchemaToFormFields(
@@ -268,6 +270,7 @@ export default function MembershipList() {
             onFiltersChange={setFilters}
             branches={branches.filter((branch) => branch.is_active)}
             membershipTypes={membershipTypes}
+            tags={tags}
           />
         </CardHeader>
 

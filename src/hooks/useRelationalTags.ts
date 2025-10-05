@@ -87,7 +87,7 @@ export interface BulkCreateTagsRequest {
 
 // Query Keys
 export const relationalTagKeys = {
-  all: ['relational-tags'] as const,
+  all: ['relational-tags', 'tags'] as const,
   organizationTags: (organizationId: string) => [...relationalTagKeys.all, 'organization', organizationId] as const,
   tag: (tagId: string) => [...relationalTagKeys.all, 'detail', tagId] as const,
 };

@@ -172,6 +172,9 @@ export interface MemberFilters {
     end?: string;
   };
   is_active?: boolean | 'all';
+  // Tag filtering options
+  tag_items?: string[]; // Array of tag item IDs to filter by
+  tag_filter_mode?: 'any' | 'all'; // Whether member should have ANY or ALL of the specified tags
   sort_field?: string;
   sort_order?: 'asc' | 'desc';
 }
