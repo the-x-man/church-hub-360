@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { BranchSelector } from '@/components/shared/BranchSelector';
+import { CopyToClipboard } from '@/components/shared/CopyToClipboard';
+import { MembershipCardModal } from '@/components/shared/MembershipCardModal';
 import { TagRenderer } from '@/components/people/tags/TagRenderer';
 import { useMember, useUpdateMember } from '@/hooks/useMemberQueries';
 import { useMemberTagAssignments } from '@/hooks/useMemberTagAssignments';
@@ -25,7 +27,6 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  Copy,
   CreditCard,
   Edit,
   FileText,
@@ -56,6 +57,7 @@ export function MemberDetail() {
   const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
   const [branchError, setBranchError] = useState<string>('');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
   // Fetch member data
   const { data: member, isLoading, error } = useMember(memberId!);
@@ -72,17 +74,6 @@ export function MemberDetail() {
   const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
   const { bulkUpdateTags } = useBulkTagOperations();
 
-  // Handle copy to clipboard
-  const handleCopyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // You could add a toast notification here if you have a toast system
-      console.log(`${label} copied to clipboard`);
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-    }
-  };
-  
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
   };
@@ -328,102 +319,7 @@ export function MemberDetail() {
 
   // Handle print membership card
   const handlePrintCard = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow || !member) return;
-
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Membership Card - ${member.first_name} ${member.last_name}</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              margin: 0; 
-              padding: 20px;
-              background-color: #f5f5f5;
-            }
-            .card {
-              width: 3.375in;
-              height: 2.125in;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              border-radius: 12px;
-              padding: 16px;
-              color: white;
-              position: relative;
-              box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-              margin: 0 auto;
-            }
-            .card-header {
-              text-align: center;
-              margin-bottom: 12px;
-            }
-            .church-name {
-              font-size: 14px;
-              font-weight: bold;
-              margin-bottom: 4px;
-            }
-            .card-title {
-              font-size: 10px;
-              opacity: 0.9;
-            }
-            .member-info {
-              text-align: center;
-            }
-            .member-name {
-              font-size: 16px;
-              font-weight: bold;
-              margin-bottom: 4px;
-            }
-            .member-id {
-              font-size: 12px;
-              opacity: 0.9;
-              margin-bottom: 8px;
-            }
-            .member-status {
-              font-size: 10px;
-              background-color: rgba(255,255,255,0.2);
-              padding: 2px 8px;
-              border-radius: 12px;
-              display: inline-block;
-            }
-            .card-footer {
-              position: absolute;
-              bottom: 8px;
-              right: 12px;
-              font-size: 8px;
-              opacity: 0.7;
-            }
-            @media print {
-              body { background-color: white; }
-              .card { box-shadow: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <div class="card-header">
-              <div class="church-name">ChurchHub360</div>
-              <div class="card-title">MEMBERSHIP CARD</div>
-            </div>
-            
-            <div class="member-info">
-              <div class="member-name">${member.first_name} ${member.last_name}</div>
-              <div class="member-id">ID: ${member.membership_id}</div>
-              <div class="member-status">${member.membership_status?.toUpperCase()}</div>
-            </div>
-            
-            <div class="card-footer">
-              ${format(new Date(), 'yyyy')}
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
+    setIsCardModalOpen(true);
   };
 
   // Get status icon and color
@@ -721,27 +617,26 @@ export function MemberDetail() {
                   {member.first_name[0]}{member.last_name[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="text-center lg:text-left">
+              <div className="text-left">
                 <h1 className="text-3xl font-bold mb-2">
                    {member.first_name} {member.last_name}
                  </h1>
-                 <div className="flex items-center gap-2 mb-4">
-                   <p className="text-muted-foreground">
-                     Member ID: {member.membership_id}
-                   </p>
-                   <Button
-                     variant="ghost"
-                     size="sm"
-                     onClick={() => handleCopyToClipboard(member.membership_id, 'Member ID')}
-                     className="h-6 w-6 p-0"
-                   >
-                     <Copy className="h-3 w-3" />
-                   </Button>
-                 </div>
-                <Badge variant="secondary" className={`${statusDisplay.bg} ${statusDisplay.color} mb-4`}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {statusDisplay.text}
-                </Badge>
+                 <div className='flex justify-between items-center'>
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="text-muted-foreground">
+                      Member ID: {member.membership_id}
+                    </p>
+                    <CopyToClipboard 
+                      text={member.membership_id} 
+                      label="Member ID" 
+                      size="sm"
+                    />
+                  </div>
+                  <Badge variant="secondary" className={`${statusDisplay.bg} ${statusDisplay.color} mb-4`}>
+                    <StatusIcon className="h-3 w-3 mr-1" />
+                    {statusDisplay.text}
+                  </Badge>
+                </div>
               </div>
             </div>
 
@@ -755,14 +650,11 @@ export function MemberDetail() {
                      <div className="flex items-center gap-2">
                        <p className="text-lg">{member.phone || 'Not provided'}</p>
                        {member.phone && (
-                         <Button
-                           variant="ghost"
+                         <CopyToClipboard 
+                           text={member.phone} 
+                           label="Phone number" 
                            size="sm"
-                           onClick={() => handleCopyToClipboard(member.phone!, 'Phone number')}
-                           className="h-6 w-6 p-0"
-                         >
-                           <Copy className="h-3 w-3" />
-                         </Button>
+                         />
                        )}
                      </div>
                    </div>
@@ -774,14 +666,11 @@ export function MemberDetail() {
                      <div className="flex items-center gap-2">
                        <p className="text-lg truncate max-w-[140px]" title={member.email || 'Not provided'}>{member.email || 'Not provided'}</p>
                        {member.email && (
-                         <Button
-                           variant="ghost"
+                         <CopyToClipboard 
+                           text={member.email} 
+                           label="Email" 
                            size="sm"
-                           onClick={() => handleCopyToClipboard(member.email!, 'Email')}
-                           className="h-6 w-6 p-0"
-                         >
-                           <Copy className="h-3 w-3" />
-                         </Button>
+                         />
                        )}
                      </div>
                    </div>
@@ -858,14 +747,11 @@ export function MemberDetail() {
                   <label className="text-sm font-medium text-muted-foreground">First Name</label>
                   <div className="flex items-center gap-2">
                     <p className="text-sm">{member.first_name}</p>
-                    <Button
-                      variant="ghost"
+                    <CopyToClipboard 
+                      text={member.first_name} 
+                      label="First name" 
                       size="sm"
-                      onClick={() => handleCopyToClipboard(member.first_name, 'First name')}
-                      className="h-5 w-5 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    />
                   </div>
                 </div>
                 <div>
@@ -876,14 +762,11 @@ export function MemberDetail() {
                   <label className="text-sm font-medium text-muted-foreground">Last Name</label>
                   <div className="flex items-center gap-2">
                     <p className="text-sm">{member.last_name}</p>
-                    <Button
-                      variant="ghost"
+                    <CopyToClipboard 
+                      text={member.last_name} 
+                      label="Last name" 
                       size="sm"
-                      onClick={() => handleCopyToClipboard(member.last_name, 'Last name')}
-                      className="h-5 w-5 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    />
                   </div>
                 </div>
               </div>
@@ -925,14 +808,11 @@ export function MemberDetail() {
                   <div className="flex items-center gap-2">
                     <p className="text-sm">{member.phone || 'Not provided'}</p>
                     {member.phone && (
-                      <Button
-                        variant="ghost"
+                      <CopyToClipboard 
+                        text={member.phone} 
+                        label="Phone number" 
                         size="sm"
-                        onClick={() => handleCopyToClipboard(member.phone!, 'Phone number')}
-                        className="h-5 w-5 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
+                      />
                     )}
                   </div>
                 </div>
@@ -941,14 +821,11 @@ export function MemberDetail() {
                   <div className="flex items-center gap-2">
                     <p className="text-sm">{member.email || 'Not provided'}</p>
                     {member.email && (
-                      <Button
-                        variant="ghost"
+                      <CopyToClipboard 
+                        text={member.email} 
+                        label="Email" 
                         size="sm"
-                        onClick={() => handleCopyToClipboard(member.email!, 'Email')}
-                        className="h-5 w-5 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
+                      />
                     )}
                   </div>
                 </div>
@@ -962,14 +839,12 @@ export function MemberDetail() {
                   {member.address_line_1 && (
                     <div className="flex items-center gap-2">
                       <p>{member.address_line_1}</p>
-                      <Button
-                        variant="ghost"
+                      <CopyToClipboard 
+                        text={member.address_line_1} 
+                        label="Address" 
                         size="sm"
-                        onClick={() => handleCopyToClipboard(member.address_line_1!, 'Address')}
                         className="h-4 w-4 p-0"
-                      >
-                        <Copy className="h-2 w-2" />
-                      </Button>
+                      />
                     </div>
                   )}
                   {member.address_line_2 && <p>{member.address_line_2}</p>}
@@ -1001,14 +876,11 @@ export function MemberDetail() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm">{member.emergency_contact_name || 'Not provided'}</p>
                       {member.emergency_contact_name && (
-                        <Button
-                          variant="ghost"
+                        <CopyToClipboard 
+                          text={member.emergency_contact_name} 
+                          label="Emergency contact name" 
                           size="sm"
-                          onClick={() => handleCopyToClipboard(member.emergency_contact_name!, 'Emergency contact name')}
-                          className="h-5 w-5 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                        />
                       )}
                     </div>
                   </div>
@@ -1017,14 +889,11 @@ export function MemberDetail() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm">{member.emergency_contact_phone || 'Not provided'}</p>
                       {member.emergency_contact_phone && (
-                        <Button
-                          variant="ghost"
+                        <CopyToClipboard 
+                          text={member.emergency_contact_phone} 
+                          label="Emergency contact phone" 
                           size="sm"
-                          onClick={() => handleCopyToClipboard(member.emergency_contact_phone!, 'Emergency contact phone')}
-                          className="h-5 w-5 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                        />
                       )}
                     </div>
                   </div>
@@ -1059,14 +928,11 @@ export function MemberDetail() {
                   <label className="text-sm font-medium text-muted-foreground">Membership ID</label>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-mono">{member.membership_id}</p>
-                    <Button
-                      variant="ghost"
+                    <CopyToClipboard 
+                      text={member.membership_id} 
+                      label="Membership ID" 
                       size="sm"
-                      onClick={() => handleCopyToClipboard(member.membership_id, 'Membership ID')}
-                      className="h-5 w-5 p-0"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
+                    />
                   </div>
                 </div>
                 <div>
@@ -1199,6 +1065,24 @@ export function MemberDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Membership Card Modal */}
+      {member && (
+        <MembershipCardModal
+          isOpen={isCardModalOpen}
+          onClose={() => setIsCardModalOpen(false)}
+          member={{
+            first_name: member.first_name,
+            last_name: member.last_name,
+            email: member.email,
+            membership_id: member.membership_id,
+            date_of_birth: member.date_of_birth,
+            gender: member.gender,
+            profile_image_url: member.profile_image_url,
+            date_joined: member.date_joined,
+          }}
+        />
+      )}
     </div>
   );
 }
