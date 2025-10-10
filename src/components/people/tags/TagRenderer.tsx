@@ -25,6 +25,7 @@ import {
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RelationalTagWithItems } from '@/hooks/useRelationalTags';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TagRendererProps {
   tag: RelationalTagWithItems;
@@ -144,31 +145,33 @@ export function TagRenderer({
             <CommandInput placeholder={`Search ${tag.name.toLowerCase()}...`} />
             <CommandEmpty>No items found.</CommandEmpty>
             <CommandGroup>
-              {sortedItems.map((item) => (
-                <CommandItem
-                  key={item.id}
-                  onSelect={() => {
-                    const isSelected = selectedValues.includes(item.id);
-                    handleMultipleChange(item.id, !isSelected);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      selectedValues.includes(item.id)
-                        ? 'opacity-100'
-                        : 'opacity-0'
-                    )}
-                  />
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full border"
-                      style={{ backgroundColor: item.color }}
+              <ScrollArea className="h-[300px]">
+                {sortedItems.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    onSelect={() => {
+                      const isSelected = selectedValues.includes(item.id);
+                      handleMultipleChange(item.id, !isSelected);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        selectedValues.includes(item.id)
+                          ? 'opacity-100'
+                          : 'opacity-0'
+                      )}
                     />
-                    {item.name}
-                  </div>
-                </CommandItem>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full border"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      {item.name}
+                    </div>
+                  </CommandItem>
+                ))}
+              </ScrollArea>
             </CommandGroup>
           </Command>
         </PopoverContent>
@@ -181,35 +184,38 @@ export function TagRenderer({
 
     return (
       <div className="space-y-2">
-        {sortedItems.map((item) => (
-          <div key={item.id} className="flex items-center space-x-2">
-            <Checkbox
-              id={`${tagKey}-${item.id}`}
-              checked={selectedValues.includes(item.id)}
-              onCheckedChange={(checked) =>
-                handleMultipleChange(item.id, checked as boolean)
-              }
-              disabled={disabled}
-            />
-            <Label
-              htmlFor={`${tagKey}-${item.id}`}
-              className="flex items-center gap-2 cursor-pointer text-sm"
-              title={item.description || undefined}
-            >
-              <div
-                className="w-3 h-3 rounded-full border shrink-0"
-                style={{ backgroundColor: item.color }}
+        <div className="max-h-[250px] overflow-auto">
+          {sortedItems.map((item) => (
+            <div key={item.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`${tagKey}-${item.id}`}
+                checked={selectedValues.includes(item.id)}
+                onCheckedChange={(checked) =>
+                  handleMultipleChange(item.id, checked as boolean)
+                }
+                disabled={disabled}
               />
-              <span className="truncate">{item.name}</span>
-            </Label>
-          </div>
-        ))}
+              <Label
+                htmlFor={`${tagKey}-${item.id}`}
+                className="flex items-center gap-2 cursor-pointer text-sm"
+                title={item.description || undefined}
+              >
+                <div
+                  className="w-3 h-3 rounded-full border shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="truncate">{item.name}</span>
+              </Label>
+            </div>
+          ))}
+          <p className="text-sm text-muted-foreground"></p>
+        </div>
       </div>
     );
   };
 
   const renderRadioButtons = () => (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[250px] overflow-auto">
       {sortedItems.map((item) => (
         <div key={item.id} className="flex items-center space-x-2">
           <input
@@ -239,12 +245,19 @@ export function TagRenderer({
   );
 
   const renderList = () => (
-    <div className="space-y-1">
+    <div className="space-y-1 max-h-[250px] overflow-auto">
       {sortedItems.map((item) => (
         <div
           key={item.id}
-          className="flex items-center gap-2 p-2 rounded-lg border bg-muted/25"
+          className={cn(
+            'flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors',
+            value === item.id
+              ? 'bg-primary/10 border-primary'
+              : 'bg-muted/25 hover:bg-muted/50',
+            disabled && 'cursor-not-allowed opacity-50'
+          )}
           title={item.description || undefined}
+          onClick={() => !disabled && handleSingleChange(item.id)}
         >
           <div
             className="w-3 h-3 rounded-full border shrink-0"
@@ -253,6 +266,9 @@ export function TagRenderer({
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{item.name}</div>
           </div>
+          {value === item.id && (
+            <Check className="h-4 w-4 text-primary shrink-0" />
+          )}
         </div>
       ))}
     </div>
@@ -334,7 +350,7 @@ export function TagRenderer({
 
       {renderComponent()}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
 
       {(tag.component_style === 'dropdown' ||
         tag.component_style === 'radio') &&

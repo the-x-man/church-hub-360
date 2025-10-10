@@ -1,6 +1,4 @@
-import { DefaultMembershipForm, type DefaultMembershipFormData, type DefaultMembershipFormMethods } from '@/components/people/configurations/DefaultMembershipForm';
-import { TagRenderer } from '@/components/people/tags/TagRenderer';
-import { BranchSelector } from '@/components/shared/BranchSelector';
+import { EditMemberView } from '@/components/people/members/EditMemberView';
 import { CopyToClipboard } from '@/components/shared/CopyToClipboard';
 import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
 import { MembershipCardModal } from '@/components/shared/MembershipCardModal';
@@ -12,19 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { useBulkTagOperations } from '@/hooks/useBulkTagOperations';
-import { useMember, useUpdateMember } from '@/hooks/useMemberQueries';
-import { useMemberTagAssignments, type MemberTagAssignment } from '@/hooks/useMemberTagAssignments';
-import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueries';
+import { useMember } from '@/hooks/useMemberQueries';
+import { useMemberTagAssignments } from '@/hooks/useMemberTagAssignments';
+import type { MemberTagAssignment } from '@/hooks/useMemberTagAssignments';
+import { type MemberSearchResult } from '@/hooks/useMemberSearch';
 import { useRelationalTags } from '@/hooks/useRelationalTags';
 import { useTemplateSelection } from '@/hooks/useTemplateSelection';
-import { type UpdateMemberData } from '@/types/members';
-import { type MemberSearchResult } from '@/hooks/useMemberSearch';
-import { compareTagAssignments } from '@/utils/tagAssignmentUtils';
 import { format } from 'date-fns';
 import {
   AlertCircle,
@@ -38,207 +32,33 @@ import {
   MailIcon,
   Phone,
   Printer,
-  Save,
   Tags,
-  User,
-  X
+  User
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 export function MemberDetail() {
   const { memberId } = useParams<{ memberId: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const formRef = useRef<DefaultMembershipFormMethods>(null);
 
-  // State for branch and tag management
-  const [branchId, setBranchId] = useState<string>('');
-  const [tagValues, setTagValues] = useState<Record<string, any>>({});
-  const [tagErrors, setTagErrors] = useState<Record<string, string>>({});
-  const [branchError, setBranchError] = useState<string>('');
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  // State for modals and drawers
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
 
   // Fetch member data
   const { data: member, isLoading, error } = useMember(memberId!);
-  const updateMemberMutation = useUpdateMember();
   const { currentOrganization } = useOrganization();
   
   // Fetch tag assignments and related data
-  const { 
-    assignments,
-    assignmentsByTag
-  } = useMemberTagAssignments(memberId || '');
-  
+  const { assignments } = useMemberTagAssignments(memberId!);
   const { tags } = useRelationalTags();
-  const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
-  const { bulkUpdateTags } = useBulkTagOperations();
   const { selectTemplate } = useTemplateSelection();
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
-  };
-
-  // Initialize default values when member data is loaded
-  useEffect(() => {
-    if (member && !isEditing) {
-      setBranchId(member.branch_id || '');
-      
-      // Initialize tag values from existing assignments
-      const initialTagValues: Record<string, any> = {};
-      if (assignmentsByTag) {
-        Object.entries(assignmentsByTag).forEach(([tagId, tagItemIds]) => {
-          if (tagItemIds && tagItemIds.length > 0) {
-            // assignmentsByTag contains arrays of tag_item_ids
-            initialTagValues[tagId] = tagItemIds;
-          }
-        });
-      }
-      setTagValues(initialTagValues);
-      
-      // Initialize custom field values
-      const initialCustomFields: Record<string, any> = {};
-      if (member.form_data) {
-        Object.entries(member.form_data).forEach(([fieldId, value]) => {
-          initialCustomFields[fieldId] = value;
-        });
-      }
-      setCustomFieldValues(initialCustomFields);
-    }
-  }, [member, isEditing]);
-
-  // Callback handlers for branch and tag changes
-  const handleBranchChange = useCallback((value: string | string[] | undefined) => {
-    // For single branch selection, we expect a string
-    const branchValue = Array.isArray(value) ? value[0] : value;
-    setBranchId(branchValue || '');
-    setBranchError('');
-  }, []);
-
-  const handleTagChange = useCallback((tagId: string, value: any) => {
-    setTagValues(prev => ({
-      ...prev,
-      [tagId]: value
-    }));
-    setTagErrors(prev => ({
-      ...prev,
-      [tagId]: ''
-    }));
-  }, []);
-
-  const handleUpdateMember = async () => {
-    if (!member || !formRef.current) return;
-    
-    setIsSubmitting(true);
-    try {
-      // Get form data and validate
-      const { isValid, errors } = formRef.current.validateForm();
-      if (!isValid) {
-        toast.error('Please fix the form errors before submitting');
-        console.error('Form validation errors:', errors);
-        return;
-      }
-
-      // Validate branch selection if required
-      // Note: branch_required is not part of MembershipFormSchema, 
-      // branch validation should be handled by form validation
-      if (!branchId) {
-        setBranchError('Branch selection is required');
-      }
-
-      // Validate required tags
-      let hasTagErrors = false;
-      const newTagErrors: Record<string, string> = {};
-      
-      if (tags && membershipFormSchema) {
-        tags.forEach(tag => {
-          if (tag.is_required && (!tagValues[tag.id] || tagValues[tag.id] === '')) {
-            newTagErrors[tag.id] = `${tag.name} is required`;
-            hasTagErrors = true;
-          }
-        });
-      }
-
-      if (hasTagErrors) {
-        setTagErrors(newTagErrors);
-      }
-
-      if(!isValid || !branchId || hasTagErrors) {
-        toast.error('Please fill in all required fields');
-        return;
-      }
-
-      const formData: DefaultMembershipFormData = formRef.current.getFormData();
-      
-      // Convert DefaultMembershipFormData to UpdateMemberData
-      const updateData: UpdateMemberData = {
-        id: member.id,
-        first_name: formData.first_name,
-        middle_name: formData.middle_name,
-        last_name: formData.last_name,
-        date_of_birth: formData.date_of_birth ? formData.date_of_birth.toISOString().split('T')[0] : undefined,
-        gender: formData.gender,
-        marital_status: formData.marital_status,
-        phone: formData.phone,
-        email: formData.email,
-        address_line_1: formData.address_line_1,
-        address_line_2: formData.address_line_2,
-        city: formData.city,
-        state: formData.state,
-        postal_code: formData.postal_code,
-        country: formData.country,
-        membership_id: formData.membership_id,
-        membership_status: formData.membership_status,
-        membership_type: formData.membership_type,
-        date_joined: formData.date_joined ? formData.date_joined.toISOString().split('T')[0] : undefined,
-        baptism_date: formData.baptism_date ? formData.baptism_date.toISOString().split('T')[0] : undefined,
-        notes: formData.notes,
-        profile_image_url: formData.profile_image_url,
-        emergency_contact_name: formData.emergency_contact_name,
-        emergency_contact_phone: formData.emergency_contact_phone,
-        emergency_contact_relationship: formData.emergency_contact_relationship,
-        branch_id: branchId || undefined,
-        form_data: customFieldValues
-      };
-
-      // Update member data
-      await updateMemberMutation.mutateAsync(updateData);
-
-      // Handle tag assignment changes
-      if (assignments) {
-        // Transform assignments to the format expected by compareTagAssignments
-        const currentAssignments: Record<string, MemberTagAssignment | null> = {};
-        assignments.forEach(assignment => {
-          currentAssignments[assignment.tag_item.tag_id] = assignment;
-        });
-        
-        const tagComparison = compareTagAssignments(currentAssignments, tagValues);
-        
-        if (tagComparison.hasChanges) {
-          await bulkUpdateTags({
-            memberId: member.id,
-            changes: tagComparison.changes
-          });
-        }
-      }
-
-      toast.success('Member updated successfully');
-      setIsEditing(false);
-    } catch (error) {
-      toast.error('Failed to update member');
-      console.error('Error updating member:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
   };
 
   // Handle member search selection
@@ -349,171 +169,12 @@ export function MemberDetail() {
   // Edit mode
   if (isEditing) {
     return (
-      <div className="container mx-auto max-w-7xl">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCancel}
-          className="flex items-center gap-2 mb-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Cancel Edit
-        </Button>
-        
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 bg-neutral-100 dark:bg-neutral-800/50 px-4 py-2 rounded-md border">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Edit Member</h1>
-              <p className="text-muted-foreground">
-                {member.first_name} {member.last_name}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-               variant="outline"
-               onClick={handleCancel}
-               disabled={isSubmitting}
-             >
-               <X className="h-4 w-4 mr-2" />
-               Cancel
-             </Button>
-             <Button
-               onClick={handleUpdateMember}
-               disabled={isSubmitting}
-             >
-               <Save className="h-4 w-4 mr-2" />
-               {isSubmitting ? 'Saving...' : 'Save Changes'}
-             </Button>
-          </div>
-        </div>
-
-        {/* Main Content Grid - Similar to AddMember */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Form Section - Left Side */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardContent>
-                <DefaultMembershipForm
-                  ref={formRef}
-                  initialData={{
-                    first_name: member.first_name || '',
-                    middle_name: member.middle_name || '',
-                    last_name: member.last_name || '',
-                    date_of_birth: member.date_of_birth ? new Date(member.date_of_birth) : undefined,
-                    gender: member.gender || '',
-                    marital_status: member.marital_status || '',
-                    phone: member.phone || '',
-                    email: member.email || '',
-                    address_line_1: member.address_line_1 || '',
-                    address_line_2: member.address_line_2 || '',
-                    city: member.city || '',
-                    state: member.state || '',
-                    postal_code: member.postal_code || '',
-                    country: member.country || '',
-                    membership_id: member.membership_id || '',
-                    membership_status: member.membership_status || 'active',
-                    membership_type: member.membership_type || 'Regular',
-                    date_joined: member.date_joined ? new Date(member.date_joined) : undefined,
-                    baptism_date: member.baptism_date ? new Date(member.baptism_date) : undefined,
-                    notes: member.notes || '',
-                    profile_image_url: member.profile_image_url || '',
-                    emergency_contact_name: member.emergency_contact_name || '',
-                    emergency_contact_phone: member.emergency_contact_phone || '',
-                    emergency_contact_relationship: member.emergency_contact_relationship || '',
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Sidebar - Member Info */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Member Info
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={member.profile_image_url || undefined} />
-                    <AvatarFallback>
-                      {member.first_name?.[0]}{member.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{member.first_name} {member.last_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Member ID: {member.membership_id || 'Not assigned'}
-                    </p>
-                  </div>
-                </div>
-                
-                <Separator />
-
-                {/* Branch Selector - Only show in edit mode */}
-                {isEditing && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="branch-selector">Branch</Label>
-                      <BranchSelector
-                        variant="single"
-                        value={branchId}
-                        onValueChange={handleBranchChange}
-                        allowClear={true}
-                        placeholder="Select a branch..."
-                      />
-                      {branchError && <p className="text-sm text-red-500">{branchError}</p>}
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Tag Renderer - Only show in edit mode */}
-                {isEditing && tags && tags.length > 0 && (
-                  <>
-                    <div className="space-y-4">
-                      <Label>Tags & Information</Label>
-                      {tags.map((tag) => (
-                        <TagRenderer
-                          key={tag.id}
-                          tag={tag}
-                          tagKey={tag.id}
-                          value={tagValues[tag.id]}
-                          onChange={(value) => handleTagChange(tag.id, value)}
-                          error={tagErrors[tag.id]}
-                        />
-                      ))}
-                    </div>
-                    <Separator />
-                  </>
-                )}
-                
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Status</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <MemberStatusRenderer status={member.membership_status} />
-                    </div>
-                  </div>
-                  
-                  {member.date_joined && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Joined</label>
-                      <p className="text-sm">{format(new Date(member.date_joined), 'MMM d, yyyy')}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+      <EditMemberView
+        member={member}
+        tags={tags}
+        onCancel={() => setIsEditing(false)}
+        onUpdateSuccess={() => setIsEditing(false)}
+      />
     );
   }
 
@@ -967,12 +628,12 @@ export function MemberDetail() {
               {assignments && assignments.length > 0 ? (
                 <div className="space-y-4">
                   {Object.entries(
-                    assignments.reduce((acc, assignment) => {
+                    assignments.reduce((acc: Record<string, MemberTagAssignment[]>, assignment: MemberTagAssignment) => {
                       const parentName = assignment.tag_item.tag.name || 'Other';
                       if (!acc[parentName]) acc[parentName] = [];
                       acc[parentName].push(assignment);
                       return acc;
-                    }, {} as Record<string, typeof assignments>)
+                    }, {})
                   ).map(([parentName, tagAssignments]) => (
                     <div key={parentName}>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">

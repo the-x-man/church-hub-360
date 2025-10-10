@@ -2,7 +2,7 @@ import type { MemberTagAssignment } from '@/hooks/useMemberTagAssignments';
 
 export interface TagAssignmentChange {
   tagId: string;
-  action: 'add' | 'update' | 'delete';
+  action: 'add' | 'delete';
   value?: any;
   assignmentId?: string;
   tagItemId?: string;
@@ -20,7 +20,7 @@ export interface TagAssignmentComparison {
  * @returns Object containing the changes that need to be made
  */
 export function compareTagAssignments(
-  currentAssignments: Record<string, MemberTagAssignment | null>,
+  currentAssignments: Record<string, MemberTagAssignment[]>,
   newTagValues: Record<string, any>
 ): TagAssignmentComparison {
   const changes: TagAssignmentChange[] = [];
@@ -32,44 +32,42 @@ export function compareTagAssignments(
   ]);
 
   allTagIds.forEach(tagId => {
-    const currentAssignment = currentAssignments[tagId];
+    const currentAssignmentsForTag = currentAssignments[tagId] || [];
     const newValue = newTagValues[tagId];
 
-    // Check if the new value is empty/null/undefined
-    const hasNewValue = newValue !== null && newValue !== undefined && newValue !== '';
-    const hasCurrentValue = currentAssignment !== null && currentAssignment !== undefined;
+    // Normalize new values to array for consistent comparison
+    const newTagItemIds = Array.isArray(newValue) 
+      ? newValue.filter(v => v !== null && v !== undefined && v !== '')
+      : (newValue !== null && newValue !== undefined && newValue !== '') 
+        ? [newValue] 
+        : [];
 
-    if (hasNewValue && !hasCurrentValue) {
-      // Add new assignment
-      changes.push({
-        tagId,
-        action: 'add',
-        value: newValue
-      });
-    } else if (!hasNewValue && hasCurrentValue) {
-      // Delete existing assignment
-      changes.push({
-        tagId,
-        action: 'delete',
-        assignmentId: currentAssignment.id
-      });
-    } else if (hasNewValue && hasCurrentValue) {
-      // Check if tag item has changed
-      const currentTagItemId = currentAssignment.tag_item_id;
-      
-      // For tag assignments, we compare the tag_item_id
-      // newValue should be the tag_item_id or array of tag_item_ids
-      const newTagItemId = Array.isArray(newValue) ? newValue[0] : newValue;
-      
-      if (currentTagItemId !== newTagItemId) {
+    // Get current tag item IDs for this tag
+    const currentTagItemIds = currentAssignmentsForTag.map(assignment => assignment.tag_item_id);
+
+    // Find tag items to delete (in current but not in new)
+    currentAssignmentsForTag.forEach(assignment => {
+      if (!newTagItemIds.includes(assignment.tag_item_id)) {
         changes.push({
           tagId,
-          action: 'update',
-          value: newValue,
-          assignmentId: currentAssignment.id
+          action: 'delete',
+          assignmentId: assignment.id,
+          tagItemId: assignment.tag_item_id
         });
       }
-    }
+    });
+
+    // Find tag items to add (in new but not in current)
+    newTagItemIds.forEach(tagItemId => {
+      if (!currentTagItemIds.includes(tagItemId)) {
+        changes.push({
+          tagId,
+          action: 'add',
+          value: tagItemId,
+          tagItemId: tagItemId
+        });
+      }
+    });
   });
 
   return {
@@ -86,7 +84,6 @@ export function compareTagAssignments(
 export function groupChangesByAction(changes: TagAssignmentChange[]) {
   return {
     toAdd: changes.filter(change => change.action === 'add'),
-    toUpdate: changes.filter(change => change.action === 'update'),
     toDelete: changes.filter(change => change.action === 'delete')
   };
 }

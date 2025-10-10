@@ -33,63 +33,80 @@ export function useBulkTagOperations() {
       }
 
       try {
-        // Start a transaction by grouping operations
-        const operations = [];
+        // Group changes by action type using reduce for better efficiency
+        const groupedChanges = changes.reduce(
+          (acc, change) => {
+            switch (change.action) {
+              case 'delete':
+                if (change.assignmentId) {
+                  acc.deletes.push(change.assignmentId);
+                }
+                break;
+              case 'add':
+                if (change.value) {
+                  // Handle both single values and arrays
+                  const tagItemIds = Array.isArray(change.value) ? change.value : [change.value];
+                  tagItemIds.forEach(tagItemId => {
+                    if (tagItemId) {
+                      acc.inserts.push({
+                        member_id: memberId,
+                        tag_item_id: tagItemId,
+                        assigned_at: new Date().toISOString(),
+                        assigned_by: user?.id || null
+                      });
+                    }
+                  });
+                }
+                break;
+            }
+            return acc;
+          },
+          {
+            deletes: [] as string[],
+            inserts: [] as Array<{
+              member_id: string;
+              tag_item_id: string;
+              assigned_at: string;
+              assigned_by: string | null;
+            }>
+          }
+        );
 
-        // Prepare delete operations
-        const deleteIds = changes
-          .filter(change => change.action === 'delete' && change.assignmentId)
-          .map(change => change.assignmentId!);
+        // Build operations array based on grouped changes
+        const operations: Array<() => Promise<any>> = [];
 
-        if (deleteIds.length > 0) {
-          operations.push(
-            supabase
+        // Batch delete operations
+        if (groupedChanges.deletes.length > 0) {
+          operations.push(async () => {
+            const { error } = await supabase
               .from('member_tag_items')
               .delete()
-              .in('id', deleteIds)
-          );
+              .in('id', groupedChanges.deletes);
+            return { error };
+          });
         }
 
-        // Prepare update operations
-        const updateChanges = changes.filter(change => change.action === 'update');
-        for (const change of updateChanges) {
-          if (change.assignmentId) {
-            operations.push(
-              supabase
-                .from('member_tag_items')
-                .update({
-                  value: change.value
-                })
-                .eq('id', change.assignmentId)
-            );
-          }
-        }
-
-        // Prepare insert operations
-        const insertChanges = changes.filter(change => change.action === 'add');
-        if (insertChanges.length > 0) {
-          const insertData = insertChanges.map(change => ({
-            member_id: memberId,
-            tag_item_id: change.assignmentId,
-            assigned_at: new Date().toISOString(),
-            assigned_by: user?.id || null
-          }));
-
-          operations.push(
-            supabase
+        // Batch insert operations
+        if (groupedChanges.inserts.length > 0) {
+          operations.push(async () => {
+            const { error } = await supabase
               .from('member_tag_items')
-              .insert(insertData)
-          );
+              .insert(groupedChanges.inserts);
+            return { error };
+          });
         }
 
-        // Execute all operations
-        const results = await Promise.all(operations);
+        // Execute all operations concurrently
+        const results = await Promise.all(operations.map(op => op()));
 
         // Check for errors in any operation
-        for (const result of results) {
-          if (result.error) {
-            throw new Error(result.error.message);
-          }
+        const errors = results
+          .filter(result => result.error)
+          .map(result => result.error.message);
+
+        if (errors.length > 0) {
+          console.log('errors', errors);
+          throw new Error(`Operations failed: ${errors.join(', ')}`);
         }
 
         return { success: true };
