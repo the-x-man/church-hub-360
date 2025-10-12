@@ -109,7 +109,7 @@ export const useMemberFormData = ({
       ...defaultMembershipData,
       date_joined: date_joined ? date_joined.toString() : undefined,
       baptism_date: baptism_date ? baptism_date.toString() : undefined,
-      form_data: {
+      custom_form_data: {
         custom_fields: transformedCustomFields,
         tags: transformedTags,
       },

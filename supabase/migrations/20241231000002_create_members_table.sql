@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS public.members (
     emergency_contact_relationship VARCHAR(50),
     
     -- Additional form data from membership form schema
-    form_data JSONB DEFAULT '{}',
+    custom_form_data JSONB DEFAULT '{}',
     
     -- Profile and preferences
     profile_image_url TEXT,
@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_members_email ON public.members(email);
 CREATE INDEX IF NOT EXISTS idx_members_phone ON public.members(phone);
 CREATE INDEX IF NOT EXISTS idx_members_membership_status ON public.members(membership_status);
 CREATE INDEX IF NOT EXISTS idx_members_is_active ON public.members(is_active);
-CREATE INDEX IF NOT EXISTS idx_members_form_data ON public.members USING GIN (form_data);
+CREATE INDEX IF NOT EXISTS idx_members_custom_form_data ON public.members USING GIN (custom_form_data);
 CREATE INDEX IF NOT EXISTS idx_members_full_name ON public.members(first_name, last_name);
 CREATE INDEX IF NOT EXISTS idx_members_date_joined ON public.members(date_joined);
 

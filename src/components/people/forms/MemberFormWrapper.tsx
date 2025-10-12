@@ -1,10 +1,11 @@
 import  { forwardRef, useImperativeHandle, useRef, useState, useCallback, useEffect } from 'react';
 import { DefaultMembershipForm, type DefaultMembershipFormMethods, type DefaultMembershipFormData } from '../configurations/DefaultMembershipForm';
-import { CustomFieldsRenderer } from '../configurations/CustomFieldsRenderer';
+import { CustomFieldsRenderer } from '@/modules/internal/custom-field-rendering/components/CustomFieldsRenderer';
 import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueries';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import type { CreateMemberData, UpdateMemberData } from '@/types/members';
+import { convertToFlattenedFieldData, convertSavedDataToFormValues } from '@/modules/internal/custom-field-rendering/utils';
 import { toast } from 'sonner';
 
 export interface MemberFormData {
@@ -54,14 +55,19 @@ export const MemberFormWrapper = forwardRef<MemberFormWrapperMethods, MemberForm
     const { currentOrganization } = useOrganization();
     const formRef = useRef<DefaultMembershipFormMethods>(null);
     
-    const [formData, setFormData] = useState<DefaultMembershipFormData | null>(null);
-    const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>(
-      initialData?.customFields || {}
-    );
-    const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
-    
+    // Get the membership form schema first
     const { membershipFormSchema } = useMembershipFormManagement(currentOrganization?.id);
     const { uploadFile, isUploading: isFileUploading, error: fileUploadError } = useFileUpload();
+    
+    const [formData, setFormData] = useState<DefaultMembershipFormData | null>(null);
+    const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>(() => {
+      // Initialize with reverse-mapped values from saved data if available
+      if (initialData?.customFields && membershipFormSchema) {
+        return convertSavedDataToFormValues(initialData.customFields, membershipFormSchema);
+      }
+      return initialData?.customFields || {};
+    });
+    const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string>>({});
 
     // Show file upload errors as toast
     useEffect(() => {
@@ -70,12 +76,17 @@ export const MemberFormWrapper = forwardRef<MemberFormWrapperMethods, MemberForm
       }
     }, [fileUploadError]);
 
-    // Initialize custom field values when initialData changes
+    // Initialize custom field values when initialData or schema changes
     useEffect(() => {
-      if (initialData?.customFields) {
+      if (initialData?.customFields && membershipFormSchema) {
+        // Use reverse mapping to populate form values with validation
+        const mappedValues = convertSavedDataToFormValues(initialData.customFields, membershipFormSchema);
+        setCustomFieldValues(mappedValues);
+      } else if (initialData?.customFields) {
+        // Fallback to direct assignment if no schema available
         setCustomFieldValues(initialData.customFields);
       }
-    }, [initialData?.customFields]);
+    }, [initialData?.customFields, membershipFormSchema]);
 
     const handleFormDataChange = useCallback((data: DefaultMembershipFormData) => {
       setFormData(data);
@@ -256,6 +267,9 @@ export const MemberFormWrapper = forwardRef<MemberFormWrapperMethods, MemberForm
           };
         }
 
+        // Create optimized Custom_form_data with flattened field metadata
+        const optimizedFormData = convertToFlattenedFieldData(processedCustomFields, membershipFormSchema);
+
         // Convert form data to API format
         const baseData = {
           membership_id: currentFormData.defaultFields.membership_id,
@@ -282,7 +296,7 @@ export const MemberFormWrapper = forwardRef<MemberFormWrapperMethods, MemberForm
           emergency_contact_relationship: currentFormData.defaultFields.emergency_contact_relationship,
           profile_image_url: currentFormData.defaultFields.profile_image_url,
           notes: currentFormData.defaultFields.notes,
-          form_data: processedCustomFields
+          custom_form_data: optimizedFormData
         };
 
         if (mode === 'create') {
@@ -335,6 +349,56 @@ export const MemberFormWrapper = forwardRef<MemberFormWrapperMethods, MemberForm
             values={customFieldValues}
             onValuesChange={handleCustomFieldChange}
             errors={customFieldErrors}
+            savedData={initialData?.customFields ? (() => {
+              // Convert member.custom_form_data to SavedFormData format
+              const savedFormData: any = {
+                version: '1.0.0',
+                timestamp: new Date().toISOString(),
+                fields: {}
+              };
+
+              // Handle the custom_form_data structure which contains the actual field values
+              Object.entries(initialData.customFields).forEach(([fieldKey, fieldValue]) => {
+                // Find the field metadata from the schema
+                let fieldMetadata = null;
+                
+                if (membershipFormSchema) {
+                  // Look for the field in the schema by matching field IDs
+                  for (const row of membershipFormSchema.rows) {
+                    for (const column of row.columns) {
+                      if (column.component && (
+                        column.component.id === fieldKey || 
+                        fieldKey.includes(column.component.id) ||
+                        column.id === fieldKey
+                      )) {
+                        fieldMetadata = {
+                          schemaId: column.component.id,
+                          label: column.component.label,
+                          type: column.component.type,
+                          required: column.component.required || false,
+                          version: '1.0.0',
+                          lastModified: new Date().toISOString()
+                        };
+                        break;
+                      }
+                    }
+                    if (fieldMetadata) break;
+                  }
+                }
+
+                // If we found metadata, add the field to savedFormData
+                if (fieldMetadata) {
+                  savedFormData.fields[fieldKey] = {
+                    value: fieldValue,
+                    metadata: fieldMetadata
+                  };
+                }
+              });
+
+              return savedFormData;
+            })() : undefined}
+            showValidationSummary={false}
+            showEvolutionInfo={true}
           />
         )}
       </div>

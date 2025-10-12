@@ -38,7 +38,7 @@ export interface Member {
   emergency_contact_relationship: string | null;
   
   // Additional form data from membership form schema
-  form_data: Record<string, any>;
+  custom_form_data: Record<string, any>;
   
   // Profile and preferences
   profile_image_url: string | null;
@@ -144,7 +144,7 @@ export interface CreateMemberData {
   emergency_contact_relationship?: string;
   
   // Additional form data
-  form_data?: Record<string, any>;
+  custom_form_data?: Record<string, any>;
   
   // Profile and preferences
   profile_image_url?: string;

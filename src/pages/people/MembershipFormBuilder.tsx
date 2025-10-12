@@ -22,10 +22,10 @@ import {
 } from 'lucide-react';
 
 import { useMembershipFormManagement } from '@/hooks/usePeopleConfigurationQueries';
-import { FieldSettingsDialog } from './FieldSettingsDialog';
-import { FormColumn } from './FormColumn';
-import { DefaultMembershipForm } from './DefaultMembershipForm';
-import { CustomFieldsRenderer } from './CustomFieldsRenderer';
+import { FieldSettingsDialog } from '../../components/people/configurations/FieldSettingsDialog';
+import { FormColumn } from '../../components/people/configurations/FormColumn';
+import { DefaultMembershipForm } from '../../components/people/configurations/DefaultMembershipForm';
+import { CustomFieldsRenderer } from '@/modules/internal/custom-field-rendering/components/CustomFieldsRenderer';
 import type {
   MembershipFormSchema,
   FormRow,
@@ -128,7 +128,7 @@ export function MembershipFormBuilder({
     schema ||
       membershipFormSchema || {
         id: '',
-        name: 'New Membership Form',
+        name: 'Custom Membership Form',
         description: '',
         rows: [],
         is_active: true,
@@ -174,12 +174,12 @@ export function MembershipFormBuilder({
 
   const addRow = (layout: ColumnLayout) => {
     const newRow: FormRow = {
-      id: `row-${Date.now()}`,
+      id: `row-${crypto.randomUUID()}`,
       layout,
       columns: Array(layout)
         .fill(null)
         .map((_, index) => ({
-          id: `col-${Date.now()}-${index}`,
+          id: `col-${crypto.randomUUID()}-${index}`,
           component: null,
         })),
     };
@@ -230,7 +230,7 @@ export function MembershipFormBuilder({
     };
 
     const newComponent = {
-      id: `comp-${Date.now()}`,
+      id: `comp-${crypto.randomUUID()}`,
       type: componentType,
       label: componentConfig.label,
       required: false,
@@ -370,14 +370,13 @@ export function MembershipFormBuilder({
   return (
     <div className="space-y-6">
       {/* Form Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2 bg-neutral-100 dark:bg-neutral-800/50 px-4 py-2 rounded-md border">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
             Membership Form Builder
           </h2>
           <p className="text-muted-foreground">
-            Build a custom membership form by selecting components for each
-            section.
+            Generate custom form to be added to default membership form.
           </p>
         </div>
         <div className="flex items-center gap-2">

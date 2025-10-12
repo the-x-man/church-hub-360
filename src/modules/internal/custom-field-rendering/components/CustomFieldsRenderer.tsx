@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,19 +11,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { CalendarIcon, Upload } from 'lucide-react';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { Upload, AlertCircle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { DatePicker } from '@/components/shared/DatePicker';
+import FileRenderer from './FileRenderer';
 import type {
   MembershipFormSchema,
   FormComponent,
 } from '@/types/people-configurations';
+import {
+  useFieldMapping,
+  useSchemaValidation,
+  useSchemaEvolution,
+} from '../hooks';
+import type { SavedFormData } from '../types';
 
 interface CustomFieldsRendererProps {
   schema: MembershipFormSchema;
@@ -33,6 +35,12 @@ interface CustomFieldsRendererProps {
   errors?: Record<string, string>;
   disabled?: boolean;
   className?: string;
+  savedData?:
+    | SavedFormData
+    | { version: string; timestamp: string; fields: Record<string, any> }
+    | null;
+  showValidationSummary?: boolean;
+  showEvolutionInfo?: boolean;
 }
 
 export function CustomFieldsRenderer({
@@ -43,14 +51,59 @@ export function CustomFieldsRenderer({
   errors = {},
   disabled = false,
   className = '',
+  savedData = null,
+  showValidationSummary = false,
+  showEvolutionInfo = false,
 }: CustomFieldsRendererProps) {
-  // Notify parent of value changes
+  // Convert savedData to proper SavedFormData format if needed
+  const currentSavedData = useMemo<SavedFormData | null>(() => {
+    if (!savedData) return null;
+
+    // If savedData is already in the correct format, return it
+    if (
+      'schemaId' in savedData &&
+      'schemaVersion' in savedData &&
+      'savedAt' in savedData
+    ) {
+      return savedData as SavedFormData;
+    }
+
+    // Convert from the format passed by MemberFormWrapper
+    return {
+      schemaId: schema.id || 'default',
+      schemaVersion: Date.now(),
+      savedAt: Date.now(),
+      fields: savedData.fields || {},
+    } as SavedFormData;
+  }, [savedData, schema.id]);
+
+  // Use our custom hooks for enhanced functionality
+  const fieldMapping = useFieldMapping(currentSavedData, schema);
+  const validation = useSchemaValidation(currentSavedData, schema);
+  const evolution = useSchemaEvolution(currentSavedData, schema);
+
+  // Notify parent of value changes with enhanced validation
   const handleValueChange = useCallback(
     (fieldId: string, value: any) => {
       const newValues = { ...values, [fieldId]: value };
-      onValuesChange?.(newValues);
+
+      // Validate the specific field
+      const fieldValidation = validation.validateField(fieldId, value);
+
+      // Update values
+      if (onValuesChange) {
+        onValuesChange(newValues);
+      }
+
+      // Log validation result for debugging
+      if (!fieldValidation.isValid) {
+        console.warn(
+          `Field ${fieldId} validation failed:`,
+          fieldValidation.errors
+        );
+      }
     },
-    [values, onValuesChange]
+    [values, onValuesChange, validation]
   );
 
   // Get default placeholder for field types
@@ -194,36 +247,14 @@ export function CustomFieldsRenderer({
         );
 
       case 'date':
-        const dateValue = fieldValue ? new Date(fieldValue) : undefined;
         return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={`w-full justify-start text-left font-normal ${
-                  !dateValue ? 'text-muted-foreground' : ''
-                } ${errorClass}`}
-                disabled={disabled || isPreviewMode}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateValue ? (
-                  format(dateValue, component.dateFormat || 'PPP')
-                ) : (
-                  <span>{placeholder}</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateValue}
-                onSelect={(date) =>
-                  handleValueChange(fieldId, date?.toISOString())
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <DatePicker
+            value={fieldValue}
+            onChange={(date) => handleValueChange(fieldId, date)}
+            placeholder={placeholder}
+            disabled={disabled || isPreviewMode}
+            className={errorClass}
+          />
         );
 
       case 'file':
@@ -234,7 +265,7 @@ export function CustomFieldsRenderer({
                 htmlFor={`${fieldId}-file`}
                 className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg cursor-pointer bg-muted/10 hover:bg-muted/20 transition-colors"
               >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
                   <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                   <p className="mb-2 text-sm text-muted-foreground">
                     <span className="font-semibold">
@@ -264,13 +295,19 @@ export function CustomFieldsRenderer({
                 />
               </label>
             </div>
-            {fieldValue &&
-              typeof fieldValue === 'object' &&
-              fieldValue.name && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {fieldValue.name}
-                </p>
-              )}
+            {fieldValue && (
+              <div className="mt-2">
+                {typeof fieldValue === 'object' && fieldValue.name ? (
+                  <FileRenderer
+                    url={URL.createObjectURL(fieldValue)}
+                    fileName={fieldValue.name}
+                    className="w-full"
+                  />
+                ) : typeof fieldValue === 'string' && fieldValue ? (
+                  <FileRenderer url={fieldValue} className="w-full" />
+                ) : null}
+              </div>
+            )}
           </div>
         );
 
@@ -300,6 +337,98 @@ export function CustomFieldsRenderer({
         <h3 className="text-lg font-semibold text-foreground">
           Additional Information
         </h3>
+
+        {/* Schema Evolution Information */}
+        {showEvolutionInfo && evolution.evolutionResult.changes.length > 0 && (
+          <Alert className="mt-2">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">
+                  Schema has evolved since last save
+                </p>
+
+                {/* Orphaned Fields */}
+                {fieldMapping.mappingResult &&
+                  fieldMapping.mappingResult.orphaned.length > 0 && (
+                    <div>
+                      <p className="font-medium text-sm">
+                        Fields no longer in form:
+                      </p>
+                      <ul className="list-disc list-inside text-sm">
+                        {fieldMapping.mappingResult.orphaned.map((orphaned) => (
+                          <li key={orphaned.fieldId}>
+                            {orphaned.savedMetadata.label} (
+                            {orphaned.savedMetadata.type})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                {/* Missing Fields */}
+                {fieldMapping.mappingResult &&
+                  fieldMapping.mappingResult.missing.length > 0 && (
+                    <div>
+                      <p className="font-medium text-sm">New fields added:</p>
+                      <ul className="list-disc list-inside text-sm">
+                        {fieldMapping.mappingResult.missing.map((missing) => (
+                          <li key={missing.fieldId}>
+                            {missing.currentMetadata.label} (
+                            {missing.currentMetadata.type})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Validation Summary */}
+        {showValidationSummary && !validation.isValid && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-1">
+                <p className="font-medium">Form validation issues:</p>
+                <ul className="text-sm list-disc list-inside">
+                  {Object.entries(validation.fieldErrors).map(
+                    ([fieldId, error]) => (
+                      <li key={fieldId}>
+                        {fieldId}: {error}
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Field Mapping Status */}
+        {fieldMapping.hasOrphanedFields && (
+          <Alert className="mt-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-1">
+                <p className="font-medium">Data mapping issues detected</p>
+                <div className="flex flex-wrap gap-1">
+                  {fieldMapping.mappingResult?.orphaned.map((orphaned) => (
+                    <Badge
+                      key={orphaned.fieldId}
+                      variant="outline"
+                      className="text-xs"
+                    >
+                      Orphaned: {orphaned.savedMetadata.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -321,22 +450,51 @@ export function CustomFieldsRenderer({
                 const fieldId = `${row.id}-${column.id}`;
                 const component = column.component;
 
+                // Enhanced error handling - check both props errors and validation errors
+                const propError = errors[fieldId];
+                const validationError = validation.fieldErrors[fieldId];
+                const fieldError = propError || validationError;
+
+                // Check if field has mapping issues
+                const isMapped =
+                  fieldMapping.mappingResult?.mapped.some(
+                    (m) => m.fieldId === fieldId
+                  ) || false;
+                const isOrphaned =
+                  fieldMapping.mappingResult?.orphaned.some(
+                    (o) => o.fieldId === fieldId
+                  ) || false;
+
                 return (
                   <div key={column.id} className="space-y-2">
-                    {/* Field Label */}
-                    <Label htmlFor={fieldId} className="text-sm font-medium">
-                      {component.label || 'Untitled Field'}
-                      {component.required && (
-                        <span className="text-destructive ml-1">*</span>
+                    {/* Field Label with status indicators */}
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={fieldId} className="text-sm font-medium">
+                        {component.label || 'Untitled Field'}
+                        {component.required && (
+                          <span className="text-destructive ml-1">*</span>
+                        )}
+                      </Label>
+
+                      {/* Status badges */}
+                      {isOrphaned && (
+                        <Badge variant="outline" className="text-xs">
+                          Orphaned
+                        </Badge>
                       )}
-                    </Label>
+                      {isMapped && (
+                        <Badge variant="secondary" className="text-xs">
+                          Mapped
+                        </Badge>
+                      )}
+                    </div>
 
                     {/* Field Input */}
                     <div>
                       {renderFormField(component, fieldId)}
-                      {errors[fieldId] && (
+                      {fieldError && (
                         <p className="text-sm text-red-500 mt-1">
-                          {errors[fieldId]}
+                          {fieldError}
                         </p>
                       )}
                     </div>

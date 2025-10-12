@@ -263,7 +263,7 @@ export const EditMemberView = ({ member, tags, onCancel, onUpdateSuccess }: Edit
                       emergency_contact_phone: member.emergency_contact_phone || '',
                       emergency_contact_relationship: member.emergency_contact_relationship || '',
                     },
-                    customFields: member.form_data || {}
+                    customFields: member.custom_form_data || {}
                   }}
                 />
               </CardContent>

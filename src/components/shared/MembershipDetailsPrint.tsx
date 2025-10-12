@@ -374,25 +374,26 @@ export function MembershipDetailsPrint({
         )}
 
         {/* Additional Information (Form Data) */}
-        {member.form_data && Object.keys(member.form_data).length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-bold mb-2 bg-neutral-100 dark:bg-neutral-800/50 px-2 py-1 print:text-lg">
-              Additional Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:gap-3 print:grid-cols-2">
-              {Object.entries(member.form_data).map(([key, value]) => (
-                <div key={key}>
-                  <label className="text-sm font-medium text-gray-500 capitalize print:text-xs">
-                    {key.replace(/_/g, ' ')}
-                  </label>
-                  <p className="text-gray-900 dark:text-gray-300 mt-1 print:text-xs print:mt-0">
-                    {String(value) || 'Not provided'}
-                  </p>
-                </div>
-              ))}
+        {member.custom_form_data &&
+          Object.keys(member.custom_form_data).length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-2 bg-neutral-100 dark:bg-neutral-800/50 px-2 py-1 print:text-lg">
+                Additional Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:gap-3 print:grid-cols-2">
+                {Object.entries(member.custom_form_data).map(([key, value]) => (
+                  <div key={key}>
+                    <label className="text-sm font-medium text-gray-500 capitalize print:text-xs">
+                      {key.replace(/_/g, ' ')}
+                    </label>
+                    <p className="text-gray-900 dark:text-gray-300 mt-1 print:text-xs print:mt-0">
+                      {String(value) || 'Not provided'}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Notes */}
         {member.notes && (

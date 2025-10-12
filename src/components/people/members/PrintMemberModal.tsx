@@ -68,7 +68,7 @@ export function PrintMemberModal({
     emergency_contact_name: null,
     emergency_contact_phone: null,
     emergency_contact_relationship: null,
-    form_data: {},
+    custom_form_data: {},
     notes: null,
     created_at:
       'created_at' in member ? member.created_at : new Date().toISOString(),

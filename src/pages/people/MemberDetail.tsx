@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import CustomFieldRenderer from '@/modules/internal/custom-field-rendering/components/CustomFieldRenderer';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useMember } from '@/hooks/useMemberQueries';
 import { useMemberTagAssignments } from '@/hooks/useMemberTagAssignments';
@@ -594,27 +595,7 @@ export function MemberDetail() {
             </Card>
           )}
 
-          {/* Custom Fields */}
-          {member.form_data && Object.keys(member.form_data).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Additional Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(member.form_data).map(([key, value]) => (
-                  <div key={key}>
-                    <label className="text-sm font-medium text-muted-foreground capitalize">
-                      {key.replace(/_/g, ' ')}
-                    </label>
-                    <p className="text-sm">{String(value) || 'Not provided'}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          
 
           {/* Tags Section */}
           <Card>
@@ -669,6 +650,14 @@ export function MemberDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Custom Fields */}
+          {member.custom_form_data && (
+            <CustomFieldRenderer 
+              formData={member.custom_form_data}
+              className="w-full"
+            />
+          )}
         </div>
       </div>
 

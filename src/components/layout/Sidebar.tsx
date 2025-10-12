@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Settings, 
-  Users, 
-  LogOut, 
-  MapPin, 
-  ChevronDown, 
+import {
+  Home,
+  Settings,
+  Users,
+  LogOut,
+  MapPin,
+  ChevronDown,
   ChevronRight,
   UserCheck,
   Calendar,
@@ -22,17 +22,14 @@ import {
   Activity,
   PanelLeftClose,
   PanelLeftOpen,
-  Menu
+  Menu,
+  FormInput,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSidebar } from '../../contexts/SidebarContext';
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from '../ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,9 +72,9 @@ const navItems: NavItem[] = [
         label: 'Tags',
       },
       {
-        to: '/people/configurations',
+        to: '/people/committee',
         icon: Settings,
-        label: 'Configurations',
+        label: 'Committees',
       },
       {
         to: '/people/membership',
@@ -88,6 +85,11 @@ const navItems: NavItem[] = [
         to: '/people/attendance',
         icon: Calendar,
         label: 'Attendance',
+      },
+      {
+        to: '/people/form-builder',
+        icon: FormInput,
+        label: 'Form Builder',
       },
     ],
   },
@@ -160,12 +162,20 @@ export function Sidebar() {
   const [expandedItems, setExpandedItems] = useState<string[]>(() => {
     // Initialize with auto-expanded parent if child is active
     const currentPath = location.pathname;
-    const parentToExpand = navItems.find(item => 
-      item.children?.some(child => child.to && currentPath.startsWith(child.to))
+    const parentToExpand = navItems.find((item) =>
+      item.children?.some(
+        (child) => child.to && currentPath.startsWith(child.to)
+      )
     );
     return parentToExpand ? [parentToExpand.label] : [];
   });
-  const { isCollapsed, isMobile, isMobileOpen, toggleCollapse, setMobileOpen } = useSidebar();
+  const {
+    isCollapsed,
+    isMobile,
+    isMobileOpen,
+    toggleCollapse,
+    setMobileOpen,
+  } = useSidebar();
 
   const filteredNavItems = navItems.filter((item) => !item.devOnly || isDev);
   const { signOut } = useAuth();
@@ -174,12 +184,14 @@ export function Sidebar() {
   // Auto-expand parent when child is selected on page refresh (only when route changes)
   useEffect(() => {
     const currentPath = location.pathname;
-    const parentToExpand = filteredNavItems.find(item => 
-      item.children?.some(child => child.to && currentPath.startsWith(child.to))
+    const parentToExpand = filteredNavItems.find((item) =>
+      item.children?.some(
+        (child) => child.to && currentPath.startsWith(child.to)
+      )
     );
-    
+
     if (parentToExpand && !isCollapsed) {
-      setExpandedItems(prev => {
+      setExpandedItems((prev) => {
         // Only add if not already expanded
         if (!prev.includes(parentToExpand.label)) {
           return [...prev, parentToExpand.label];
@@ -195,16 +207,18 @@ export function Sidebar() {
   };
 
   const toggleExpanded = (label: string) => {
-    setExpandedItems(prev => 
-      prev.includes(label) 
-        ? prev.filter(item => item !== label)
+    setExpandedItems((prev) =>
+      prev.includes(label)
+        ? prev.filter((item) => item !== label)
         : [...prev, label]
     );
   };
 
   const isParentActive = (item: NavItem) => {
     if (!item.children) return false;
-    return item.children.some(child => child.to && location.pathname.startsWith(child.to));
+    return item.children.some(
+      (child) => child.to && location.pathname.startsWith(child.to)
+    );
   };
 
   const renderNavItem = (item: NavItem, level = 0) => {
@@ -235,7 +249,11 @@ export function Sidebar() {
                       </button>
                     </TooltipTrigger>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" align="start" className="w-48">
+                  <DropdownMenuContent
+                    side="right"
+                    align="start"
+                    className="w-48"
+                  >
                     {item.children?.map((child) => {
                       const ChildIcon = child.icon;
                       return (
@@ -282,11 +300,12 @@ export function Sidebar() {
                 </span>
               )}
             </div>
-            {!isCollapsed && (isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            ))}
+            {!isCollapsed &&
+              (isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              ))}
           </button>
           {isExpanded && !isCollapsed && (
             <ul className="mt-1 ml-6 space-y-1">
@@ -299,8 +318,10 @@ export function Sidebar() {
 
     // Single nav item
     if (isCollapsed && level === 0) {
-      const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/');
-      
+      const isActive =
+        location.pathname === item.to ||
+        location.pathname.startsWith(item.to + '/');
+
       return (
         <li key={item.to || item.label}>
           <TooltipProvider>
@@ -389,7 +410,9 @@ export function Sidebar() {
           </button>
           {isExpanded && (
             <ul className="mt-1 ml-6 space-y-1">
-              {item.children?.map((child) => renderMobileNavItem(child, level + 1))}
+              {item.children?.map((child) =>
+                renderMobileNavItem(child, level + 1)
+              )}
             </ul>
           )}
         </li>
@@ -460,10 +483,10 @@ export function Sidebar() {
 
   // Desktop Sidebar
   const DesktopSidebar = () => (
-    <aside 
+    <aside
       className={cn(
-        "fixed left-0 top-16 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-64"
+        'fixed left-0 top-16 bottom-0 bg-background border-r border-border z-40 transition-all duration-300 ease-in-out',
+        isCollapsed ? 'w-16' : 'w-64'
       )}
     >
       <div className="flex flex-col justify-between h-full">
@@ -532,9 +555,5 @@ export function Sidebar() {
     </aside>
   );
 
-  return (
-    <>
-      {isMobile ? <MobileSidebar /> : <DesktopSidebar />}
-    </>
-  );
+  return <>{isMobile ? <MobileSidebar /> : <DesktopSidebar />}</>;
 }

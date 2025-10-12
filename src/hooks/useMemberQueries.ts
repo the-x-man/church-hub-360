@@ -545,13 +545,13 @@ export function useCreateMember() {
 
   return useMutation({
     mutationFn: async (data: CreateMemberData): Promise<Member> => {
-      const { form_data, ...memberData } = data;
+      const { custom_form_data, ...memberData } = data;
 
       const { data: member, error } = await supabase
         .from('members')
         .insert({
           ...memberData,
-          form_data: form_data || {},
+          custom_form_data: custom_form_data || {},
         })
         .select()
         .single();
@@ -585,11 +585,11 @@ export function useUpdateMember() {
 
   return useMutation({
     mutationFn: async (data: UpdateMemberData): Promise<Member> => {
-      const { id, form_data, ...memberData } = data;
+      const { id, custom_form_data, ...memberData } = data;
 
       const updateData: any = { ...memberData };
-      if (form_data !== undefined) {
-        updateData.form_data = form_data;
+      if (custom_form_data !== undefined) {
+        updateData.custom_form_data = custom_form_data;
       }
 
       const { data: member, error } = await supabase

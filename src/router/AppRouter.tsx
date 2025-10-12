@@ -30,7 +30,7 @@ import { ActivityLogs } from '../pages/ActivityLogs';
 
 // People section pages
 import { People } from '../pages/people';
-import { PeopleConfigurations } from '../pages/people/Configurations';
+import { Committees } from '../pages/people/Committees';
 import { Tags } from '../pages/people/Tags';
 import { AddMember } from '../pages/people/AddMember';
 import { MemberDetail } from '../pages/people/MemberDetail';
@@ -45,6 +45,7 @@ import Expenses from '../pages/finance/Expenses';
 import Contributions from '../pages/finance/Contributions';
 import { Pledges } from '../pages/finance/Pledges';
 import BudgetPlanning from '../pages/finance/BudgetPlanning';
+import { MembershipFormBuilder } from '@/pages/people/MembershipFormBuilder';
 
 function AppRoutes() {
   return (
@@ -109,7 +110,8 @@ function AppRoutes() {
         {/* People section with nested routes */}
         <Route path="people" element={<People />}>
           <Route path="tags" element={<Tags />} />
-          <Route path="configurations" element={<PeopleConfigurations />} />
+          <Route path="committee" element={<Committees />} />
+          <Route path="form-builder" element={<MembershipFormBuilder />} />
           <Route path="membership" element={<Membership />}>
             <Route index element={<MembershipList />} />
             <Route path="add" element={<AddMember />} />

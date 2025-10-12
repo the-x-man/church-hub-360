@@ -1,22 +1,15 @@
-import { useState } from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription } from '../../components/ui/alert';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../../components/ui/tabs';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { useOrganization } from '../../contexts/OrganizationContext';
-import { useLocalCommitteesSchema } from '../../hooks/useLocalCommitteesSchema';
 import {
-  ConfigurationsHeader,
+  CommitteesHeader,
   FixedUpdateButton,
 } from '../../components/people/configurations';
-import { CommitteesListPanel } from '../../components/people/configurations/CommitteesListPanel';
 import { CommitteeDetailsPanel } from '../../components/people/configurations/CommitteeDetailsPanel';
-import { MembershipFormBuilder } from '../../components/people/configurations/MembershipFormBuilder';
+import { CommitteesListPanel } from '../../components/people/configurations/CommitteesListPanel';
+import { Alert, AlertDescription } from '../../components/ui/alert';
+import { useOrganization } from '../../contexts/OrganizationContext';
+import { useLocalCommitteesSchema } from '../../hooks/useLocalCommitteesSchema';
 
 import { CommitteeModal } from '../../components/people/CommitteeModal';
 import { DeleteConfirmationDialog } from '../../components/shared/DeleteConfirmationDialog';
@@ -26,7 +19,7 @@ import type {
   CommitteeFormData,
 } from '../../types/people-configurations';
 
-export function PeopleConfigurations() {
+export function Committees() {
   const { currentOrganization } = useOrganization();
 
   // Committees management
@@ -43,9 +36,6 @@ export function PeopleConfigurations() {
     syncChangesToServer: syncCommitteesToServer,
     resetLocalChanges: resetCommitteesChanges,
   } = useLocalCommitteesSchema();
-
-  // UI state
-  const [activeTab, setActiveTab] = useState('committees');
 
   // Committees state
   const [selectedCommittee, setSelectedCommittee] = useState<string | null>(
@@ -195,59 +185,39 @@ export function PeopleConfigurations() {
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <ConfigurationsHeader
+      <CommitteesHeader
         hasUnsavedChanges={committeesHasChanges}
         changes={{ ...committeesChanges }}
+        onAddCommittee={() => setShowAddCommittee(true)}
       />
 
-      {/* Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-6"
-      >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="committees">Committees</TabsTrigger>
-          <TabsTrigger value="membership-form">Membership Form</TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <CommitteesListPanel
+            committees={committees}
+            selectedCommittee={selectedCommittee}
+            editingCommittee={editingCommittee}
+            onSelectCommittee={setSelectedCommittee}
+            onAddCommittee={() => setShowAddCommittee(true)}
+            onEditCommittee={startEditingCommittee}
+            onDeleteCommittee={handleDeleteCommittee}
+          />
+        </div>
 
-        {/* Committees Tab */}
-        <TabsContent value="committees" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Committees List */}
-            <div className="lg:col-span-1">
-              <CommitteesListPanel
-                committees={committees}
-                selectedCommittee={selectedCommittee}
-                editingCommittee={editingCommittee}
-                onSelectCommittee={setSelectedCommittee}
-                onAddCommittee={() => setShowAddCommittee(true)}
-                onEditCommittee={startEditingCommittee}
-                onDeleteCommittee={handleDeleteCommittee}
-              />
-            </div>
-
-            {/* Committee Details */}
-            <div className="lg:col-span-2">
-              <CommitteeDetailsPanel
-                selectedCommittee={selectedCommittee}
-                selectedCommitteeData={selectedCommitteeData}
-                onUpdateCommittee={(
-                  committeeId: string,
-                  updates: Partial<Committee>
-                ) => {
-                  updateCommittee(committeeId, updates);
-                }}
-              />
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Membership Form Tab */}
-        <TabsContent value="membership-form" className="space-y-6">
-          <MembershipFormBuilder />
-        </TabsContent>
-      </Tabs>
+        {/* Committee Details */}
+        <div className="lg:col-span-2">
+          <CommitteeDetailsPanel
+            selectedCommittee={selectedCommittee}
+            selectedCommitteeData={selectedCommitteeData}
+            onUpdateCommittee={(
+              committeeId: string,
+              updates: Partial<Committee>
+            ) => {
+              updateCommittee(committeeId, updates);
+            }}
+          />
+        </div>
+      </div>
 
       {/* Fixed Update Button */}
       <FixedUpdateButton

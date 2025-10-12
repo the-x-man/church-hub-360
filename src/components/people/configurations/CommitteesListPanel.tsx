@@ -1,11 +1,4 @@
-import {
-  Calendar,
-  Edit,
-  Plus,
-  Trash2,
-  User,
-  Users,
-} from 'lucide-react';
+import { Calendar, Edit, Plus, Trash2, User, Users } from 'lucide-react';
 import type { Committee } from '../../../types/people-configurations';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
@@ -54,7 +47,7 @@ export function CommitteesListPanel({
             onClick={onAddCommittee}
           >
             <Plus className="h-4 w-4" />
-            Add Committee
+            Add
           </Button>
         </CardTitle>
         <CardDescription>
@@ -66,7 +59,9 @@ export function CommitteesListPanel({
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
             <p>No committees yet</p>
-            <p className="text-sm">Create your first committee to get started</p>
+            <p className="text-sm">
+              Create your first committee to get started
+            </p>
           </div>
         ) : (
           Object.entries(committees)
@@ -96,7 +91,9 @@ export function CommitteesListPanel({
                               <span>•</span>
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>{committee.positions.length} positions</span>
+                                <span>
+                                  {committee.positions.length} positions
+                                </span>
                               </div>
                             </>
                           )}
@@ -104,7 +101,9 @@ export function CommitteesListPanel({
                         {committee.created_date && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                             <Calendar className="h-3 w-3" />
-                            <span>Created: {formatDate(committee.created_date)}</span>
+                            <span>
+                              Created: {formatDate(committee.created_date)}
+                            </span>
                           </div>
                         )}
                       </div>

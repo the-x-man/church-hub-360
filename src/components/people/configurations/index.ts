@@ -1,3 +1,3 @@
 export { DefaultSchemasDialog } from './DefaultSchemasDialog';
-export { ConfigurationsHeader } from './ConfigurationsHeader';
+export { CommitteesHeader } from './CommitteesHeader';
 export { FixedUpdateButton } from './FixedUpdateButton';
