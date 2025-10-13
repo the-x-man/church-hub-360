@@ -1,3 +1,4 @@
 export { DefaultSchemasDialog } from './DefaultSchemasDialog';
+export { CommitteesListPanel } from './CommitteesListPanel';
 export { CommitteesHeader } from './CommitteesHeader';
-export { FixedUpdateButton } from './FixedUpdateButton';
+export { CommitteeDetailsPanel } from './CommitteeDetailsPanel';

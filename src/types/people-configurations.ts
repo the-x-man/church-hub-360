@@ -83,28 +83,12 @@ export interface CommitteePosition {
   display_order?: number;
 }
 
-// Committees schema structure (for future use)
-export interface CommitteesSchema {
-  committees: {
-    [committeeKey: string]: {
-      name: string;
-      description: string;
-      members: string[];
-      positions: CommitteePosition[];
-      is_active: boolean;
-      created_date: string;
-      end_date?: string;
-    };
-  };
-}
-
 
 
 // Main people configurations database record
 export interface PeopleConfiguration {
   id: string;
   organization_id: string;
-  committees_schema?: CommitteesSchema;
   membership_form_schema?: MembershipFormSchema;
   created_at: string;
   updated_at: string;
@@ -155,36 +139,14 @@ export interface CreateMemberTagItemRequest {
 }
 export interface CreatePeopleConfigurationRequest {
   organization_id: string;
-  committees_schema?: CommitteesSchema;
   membership_form_schema?: MembershipFormSchema;
 }
 
 export interface UpdatePeopleConfigurationRequest {
-  committees_schema?: CommitteesSchema;
   membership_form_schema?: MembershipFormSchema;
 }
 
 // Tag form data types
-
-
-// Committee form data types
-export interface CommitteeFormData {
-  name: string;
-  description: string;
-  is_active: boolean;
-  end_date?: string;
-}
-
-// Committee interface for local state management
-export interface Committee {
-  name: string;
-  description: string;
-  members: string[];
-  positions: CommitteePosition[];
-  is_active: boolean;
-  created_date: string;
-  end_date?: string;
-}
 
 // Utility types for tag management
 export interface TagWithKey extends Tag {
@@ -301,18 +263,7 @@ export interface UsePeopleConfigurationReturn {
 
 
 
-export interface UseCommitteesManagementReturn {
-  committeesSchema: CommitteesSchema | null;
-  loading: boolean;
-  operationLoading: boolean;
-  error: string | null;
-  updateCommitteesSchema: (newCommitteesSchema: CommitteesSchema, skipOptimistic?: boolean) => Promise<void>;
-  createCommittee: (committeeKey: string, committee: CommitteeFormData) => Promise<void>;
-  updateCommittee: (committeeKey: string, committee: Partial<CommitteeFormData>) => Promise<void>;
-  deleteCommittee: (committeeKey: string) => Promise<void>;
-  addMember: (committeeKey: string, memberId: string) => Promise<void>;
-  removeMember: (committeeKey: string, memberId: string) => Promise<void>;
-}
+
 
 export interface UseMembershipFormManagementReturn {
   membershipFormSchema: MembershipFormSchema | null;

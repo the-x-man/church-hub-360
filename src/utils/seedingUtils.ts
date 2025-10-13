@@ -4,7 +4,6 @@ import { supabase } from './supabase';
 import type { 
   PeopleConfiguration, 
   // TagsSchema, // Removed - using relational tags now
-  CommitteesSchema, 
   MembershipFormSchema 
 } from '../types/people-configurations';
 
@@ -17,8 +16,6 @@ export interface SeedingOptions {
   useMinimalSchema?: boolean;
   /** Custom tags schema to override defaults - DEPRECATED: Use relational tags */
   // customTagsSchema?: TagsSchema;
-  /** Custom committees schema */
-  customCommitteesSchema?: CommitteesSchema;
   /** Custom membership form schema */
   customMembershipFormSchema?: MembershipFormSchema;
   /** User ID for audit trail */
@@ -40,9 +37,6 @@ export async function seedOrganizationWithDefaults(
   
   try {
     const {
-      // useMinimalSchema = false,
-      // customTagsSchema,
-      customCommitteesSchema = {},
       customMembershipFormSchema = {},
       userId
     } = options;
@@ -52,7 +46,6 @@ export async function seedOrganizationWithDefaults(
     const configurationData = {
       organization_id: organizationId,
       // tags_schema: {}, // Remove tags_schema for now
-      committees_schema: customCommitteesSchema,
       membership_form_schema: customMembershipFormSchema,
       created_by: userId,
       last_updated_by: userId,
@@ -153,9 +146,6 @@ export async function updateOrganizationWithDefaults(
   
   try {
     const {
-      // useMinimalSchema = false,
-      // customTagsSchema,
-      customCommitteesSchema,
       customMembershipFormSchema,
       userId
     } = options;
@@ -171,10 +161,7 @@ export async function updateOrganizationWithDefaults(
       throw fetchError;
     }
 
-    // TODO: Implement updating with relational tag system
     const updateData = {
-      // tags_schema: {}, // Remove tags_schema for now
-      ...(customCommitteesSchema && { committees_schema: customCommitteesSchema }),
       ...(customMembershipFormSchema && { membership_form_schema: customMembershipFormSchema }),
       last_updated_by: userId,
     };

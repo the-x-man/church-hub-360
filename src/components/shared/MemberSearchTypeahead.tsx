@@ -24,6 +24,8 @@ export interface MemberSearchTypeaheadProps {
   searchFields?: ('name' | 'email' | 'phone' | 'membershipId')[];
   emptyMessage?: string;
   loadingMessage?: string;
+  branchId?: string; // Optional branch filtering - disabled by default for backward compatibility
+  excludeMembers?: string[]; // Array of member IDs to exclude from search results
 }
 
 // Individual member item component
@@ -144,7 +146,9 @@ export function MemberSearchTypeahead({
   includeInactive = false,
   searchFields = ['name', 'email', 'phone', 'membershipId'],
   emptyMessage = "No members found",
-  loadingMessage = "Searching members..."
+  loadingMessage = "Searching members...",
+  branchId, // Optional branch filtering
+  excludeMembers = [] // Array of member IDs to exclude from search results
 }: MemberSearchTypeaheadProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -164,7 +168,8 @@ export function MemberSearchTypeahead({
     searchTerm: debouncedSearchTerm,
     limit: 10,
     includeInactive,
-    searchFields
+    searchFields,
+    branchId // Pass branch filtering to the hook
   });
 
   // Handle member selection
@@ -233,9 +238,9 @@ export function MemberSearchTypeahead({
     inputRef.current?.focus();
   };
 
-  // Filter out already selected members from search results
+  // Filter out only excluded members from search results, but keep selected members visible
   const filteredResults = searchResults.filter(
-    member => !value.some(selected => selected.id === member.id)
+    member => !excludeMembers.includes(member.id)
   );
 
   // Check if member is selected

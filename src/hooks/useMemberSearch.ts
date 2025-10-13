@@ -5,8 +5,8 @@ import type { MemberSummary } from '../types/members';
 // Query Keys for member search
 export const memberSearchKeys = {
   all: ['member-search'] as const,
-  search: (organizationId: string, searchTerm: string) => 
-    [...memberSearchKeys.all, 'search', organizationId, searchTerm] as const,
+  search: (organizationId: string, searchTerm: string, branchId?: string) => 
+    [...memberSearchKeys.all, 'search', organizationId, searchTerm, branchId] as const,
 };
 
 // Interface for member search options
@@ -16,6 +16,7 @@ export interface MemberSearchOptions {
   limit?: number;
   includeInactive?: boolean;
   searchFields?: ('name' | 'email' | 'phone' | 'membershipId')[];
+  branchId?: string; // Optional branch filtering
 }
 
 // Interface for member search result
@@ -34,10 +35,11 @@ export function useMemberSearch({
   searchTerm,
   limit = 50,
   includeInactive = false,
-  searchFields = ['name', 'email', 'phone', 'membershipId']
+  searchFields = ['name', 'email', 'phone', 'membershipId'],
+  branchId
 }: MemberSearchOptions) {
   return useQuery({
-    queryKey: memberSearchKeys.search(organizationId, searchTerm),
+    queryKey: memberSearchKeys.search(organizationId, searchTerm, branchId),
     queryFn: async (): Promise<MemberSearchResult[]> => {
       if (!organizationId) throw new Error('Organization ID is required');
       if (!searchTerm.trim()) return [];
@@ -53,6 +55,11 @@ export function useMemberSearch({
       // Filter by active status if needed
       if (!includeInactive) {
         query = query.eq('is_active', true);
+      }
+
+      // Filter by branch if specified
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
       }
 
       // Build search conditions based on enabled search fields
