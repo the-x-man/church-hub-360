@@ -202,62 +202,6 @@ export function useMembers(
   });
 }
 
-// Hook for member search in attendance context
-export function useAttendanceMemberSearch(
-  organizationId: string | undefined,
-  searchTerm: string,
-  searchMode?: 'phone' | 'email' | 'membershipId' | 'all'
-) {
-  return useQuery({
-    queryKey: [...memberKeys.organizationMembers(organizationId || ''), 'attendance-search', searchTerm, searchMode],
-    queryFn: async () => {
-      if (!organizationId) throw new Error('Organization ID is required');
-      if (!searchTerm.trim()) return [];
-
-      const searchLower = searchTerm.toLowerCase();
-      
-      let query = supabase
-        .from('members')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('is_active', true)
-        .limit(50);
-
-      // Apply search based on mode
-      switch (searchMode) {
-        case 'phone':
-          query = query.ilike('phone', `%${searchLower}%`);
-          break;
-        case 'email':
-          query = query.ilike('email', `%${searchLower}%`);
-          break;
-        case 'membershipId':
-          query = query.ilike('membership_id', `%${searchLower}%`);
-          break;
-        default:
-          // Search across all fields
-          query = query.or(`first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%,full_name.ilike.%${searchLower}%,email.ilike.%${searchLower}%,phone.ilike.%${searchLower}%,membership_id.ilike.%${searchLower}%`);
-      }
-
-      // Limit results for performance
-      query = query.limit(50);
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      
-      // Transform MemberSummary to AttendanceMemberResult format
-      return (data || []).map(member => ({
-        ...member,
-        
-        attendance_status: 'not_marked' as const,
-        last_attendance: undefined,
-      }));
-    },
-    enabled: !!organizationId && !!searchTerm.trim(),
-    staleTime: 30000, // Cache for 30 seconds
-  });
-}
 
 // Hook to fetch members summary (for card/table views)
 export function useMembersSummary(organizationId: string | undefined) {
