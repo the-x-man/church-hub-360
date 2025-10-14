@@ -495,7 +495,10 @@ export function MembershipFormBuilder({
                       }`}
                     >
                       {row.columns.map((column) => (
-                        <div key={column.id} className="space-y-3">
+                        <div
+                          key={column.id}
+                          className="space-y-3 bg-white dark:bg-neutral-800/30"
+                        >
                           <FormColumn
                             component={column.component || undefined}
                             isPreviewMode={isPreviewMode}

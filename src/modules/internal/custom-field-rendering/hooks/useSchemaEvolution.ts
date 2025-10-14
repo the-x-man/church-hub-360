@@ -122,9 +122,9 @@ export function useSchemaEvolution(
   const migrationReport = useMemo(() => {
     const report = generateSchemaEvolutionReport(evolutionResult);
     
-    if (config.logReports && report.trim() !== '=== Schema Evolution Report ===\nValid fields: 0\nOrphaned fields: 0\nMigrated fields: 0') {
-      console.log(report);
-    }
+    // if (config.logReports && report.trim() !== '=== Schema Evolution Report ===\nValid fields: 0\nOrphaned fields: 0\nMigrated fields: 0') {
+    //   console.log(report);
+    // }
     
     return report;
   }, [evolutionResult, config.logReports]);

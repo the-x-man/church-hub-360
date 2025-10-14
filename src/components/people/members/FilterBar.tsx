@@ -89,10 +89,11 @@ export default function FilterBar({
   }, [debouncedSearchValue]);
 
   const updateFilter = (key: keyof MemberFilters, value: any) => {
-    onFiltersChange({
+    const newFilters = {
       ...filters,
       [key]: value,
-    });
+    };
+    onFiltersChange(newFilters);
   };
 
   const clearFilters = () => {
@@ -150,6 +151,7 @@ export default function FilterBar({
     if (filters.membership_type && filters.membership_type !== 'all') count++;
     if (filters.branch_id && filters.branch_id !== 'all') count++;
     if (filters.gender && filters.gender !== 'all') count++;
+    if (filters.tag_items && filters.tag_items.length > 0) count++;
     if (filters.age_range) count++;
     if (filters.date_joined_range) count++;
     if (filters.is_active !== 'all' && filters.is_active !== undefined) count++;
@@ -309,20 +311,27 @@ export default function FilterBar({
                 <TagFilter
                   tags={tags}
                   value={
-                    filters.tag_items && filters.tag_filter_mode
+                    filters.tag_items && filters.tag_items.length > 0
                       ? {
                           tag_items: filters.tag_items,
-                          tag_filter_mode: filters.tag_filter_mode,
+                          tag_filter_mode: filters.tag_filter_mode || 'any',
                         }
                       : undefined
                   }
                   onChange={(value) => {
                     if (value) {
-                      updateFilter('tag_items', value.tag_items);
-                      updateFilter('tag_filter_mode', value.tag_filter_mode);
+                      // Update both properties at once to avoid overwriting
+                      onFiltersChange({
+                        ...filters,
+                        tag_items: value.tag_items,
+                        tag_filter_mode: value.tag_filter_mode,
+                      });
                     } else {
-                      updateFilter('tag_items', undefined);
-                      updateFilter('tag_filter_mode', undefined);
+                      // Clear both properties at once
+                      const newFilters = { ...filters };
+                      delete newFilters.tag_items;
+                      delete newFilters.tag_filter_mode;
+                      onFiltersChange(newFilters);
                     }
                   }}
                 />
@@ -594,7 +603,25 @@ export default function FilterBar({
           )}
           {filters.tag_items && filters.tag_items.length > 0 && (
             <Badge variant="secondary" className="gap-1">
-              Tags: {filters.tag_items.length} selected ({filters.tag_filter_mode || 'any'})
+              {(() => {
+                // Get the selected tag item names
+                const selectedTagNames = tags
+                  .flatMap(
+                    (tag) =>
+                      tag.tag_items?.filter((item) =>
+                        filters.tag_items?.includes(item.id)
+                      ) || []
+                  )
+                  .map((item) => item.name);
+
+                if (selectedTagNames.length <= 2) {
+                  return `Tags: ${selectedTagNames.join(', ')}`;
+                } else {
+                  return `Tags: ${selectedTagNames.slice(0, 2).join(', ')}, +${
+                    selectedTagNames.length - 2
+                  } more`;
+                }
+              })()}
               <Button
                 variant="ghost"
                 size="sm"

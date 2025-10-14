@@ -9,6 +9,7 @@ import type {
   MemberStatistics,
 } from '../types/members';
 import type { MembershipStatus } from '../types/members';
+import { matchesTagFilter } from '../utils/tagFormatUtils';
 
 // Query Keys
 export const memberKeys = {
@@ -277,89 +278,13 @@ export function useMembersSummaryPaginated(
     queryFn: async (): Promise<{ members: MemberSummary[]; total: number }> => {
       if (!organizationId) throw new Error('Organization ID is required');
 
-      // Check if we need to filter by tags
-      const hasTagFilter = filters?.tag_items && filters.tag_items.length > 0;
+      // Start with the base query using the enhanced members_summary view
+      let query = supabase
+        .from('members_summary')
+        .select('*', { count: 'exact' })
+        .eq('organization_id', organizationId);
 
-      let query;
-      
-      if (hasTagFilter && filters.tag_items) {
-        // Use a more complex query with joins when filtering by tags
-        const tagFilterMode = filters.tag_filter_mode || 'any';
-        
-        if (tagFilterMode === 'all') {
-          // For 'all' mode, we need members who have ALL specified tags
-          // Try to use RPC function first, fallback to manual filtering
-          try {
-            const { data: memberIds, error: tagError } = await supabase
-              .rpc('get_members_with_all_tags', {
-                p_organization_id: organizationId,
-                p_tag_item_ids: filters.tag_items
-              });
-
-            if (tagError) throw tagError;
-
-            // Use RPC result
-            if (!memberIds || memberIds.length === 0) {
-              return { members: [], total: 0 };
-            }
-            
-            query = supabase
-              .from('members_summary')
-              .select('*', { count: 'exact' })
-              .eq('organization_id', organizationId)
-              .in('id', memberIds);
-          } catch (rpcError) {
-            // Fallback to manual filtering if RPC doesn't exist
-            const { data: tagAssignments, error: fallbackError } = await supabase
-              .from('member_tag_items')
-              .select('member_id')
-              .in('tag_item_id', filters.tag_items);
-
-            if (fallbackError) throw fallbackError;
-
-            // Group by member_id and count occurrences
-            const memberTagCounts = tagAssignments?.reduce((acc, assignment) => {
-              acc[assignment.member_id] = (acc[assignment.member_id] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>) || {};
-
-            // Filter members who have all required tags
-            const validMemberIds = Object.entries(memberTagCounts)
-              .filter(([_, count]) => count === filters.tag_items!.length)
-              .map(([memberId]) => memberId);
-
-            if (validMemberIds.length === 0) {
-              return { members: [], total: 0 };
-            }
-
-            query = supabase
-              .from('members_summary')
-              .select('*', { count: 'exact' })
-              .eq('organization_id', organizationId)
-              .in('id', validMemberIds);
-          }
-        } else {
-          // For 'any' mode, we can use a simpler join
-          query = supabase
-            .from('members_summary')
-            .select(`
-              *,
-              member_tag_items!inner(
-                tag_item_id
-              )
-            `, { count: 'exact' })
-            .eq('organization_id', organizationId)
-            .in('member_tag_items.tag_item_id', filters.tag_items);
-        }
-      } else {
-        // Standard query without tag filtering
-        query = supabase
-          .from('members_summary')
-          .select('*', { count: 'exact' })
-          .eq('organization_id', organizationId);
-      }
-
-      // Apply other filters
+      // Apply other filters first
       if (filters?.search) {
         query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,membership_id.ilike.%${filters.search}%`);
       }
@@ -414,15 +339,39 @@ export function useMembersSummaryPaginated(
 
       if (error) throw error;
 
-      // Clean up the data if we used joins (remove nested objects)
-      const cleanedData = hasTagFilter && filters.tag_filter_mode === 'any' 
-        ? data?.map(member => {
-            const { member_tag_items, ...cleanMember } = member as any;
-            return cleanMember;
-          })
-        : data;
+      let filteredMembers = data || [];
 
-      return { members: cleanedData || [], total: count || 0 };
+      // Apply tag filtering on the client side using the new tag fields
+      // This is more efficient than complex joins since we now have pre-aggregated tag data
+      if (filters?.tag_items && filters.tag_items.length > 0) {
+        // First, get the tag item names from the IDs
+        const { data: tagItems, error: tagError } = await supabase
+          .from('tag_items')
+          .select('id, name')
+          .in('id', filters.tag_items);
+
+        if (tagError) throw tagError;
+
+        const tagNames = tagItems?.map(item => item.name) || [];
+        
+        if (tagNames.length > 0) {
+          const tagFilterMode = filters.tag_filter_mode || 'any';
+          
+          filteredMembers = filteredMembers.filter(member => {
+            const assignedTags = member.assigned_tags || '';
+            
+            // Use the proper matchesTagFilter function for exact tag matching
+            return matchesTagFilter(assignedTags, tagNames, tagFilterMode === 'all');
+          });
+        }
+      }
+
+      return { 
+        members: filteredMembers, 
+        total: filters?.tag_items && filters.tag_items.length > 0 
+          ? filteredMembers.length  // Use filtered count when tag filtering is applied
+          : count || 0              // Use database count when no tag filtering
+      };
     },
     enabled: !!organizationId,
   });

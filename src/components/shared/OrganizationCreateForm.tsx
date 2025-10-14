@@ -45,8 +45,6 @@ export function OrganizationCreateForm({
     e.preventDefault();
     if (!createForm.name.trim()) return;
 
-    console.log(createForm);
-
     try {
       setIsCreating(true);
       await createOrganization({

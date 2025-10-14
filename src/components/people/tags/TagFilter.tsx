@@ -88,14 +88,15 @@ export function TagFilter({
       newItems = [...currentItems, itemId];
     }
 
-    if (newItems.length === 0) {
-      onChange?.(undefined);
-    } else {
-      onChange?.({
-        tag_items: newItems,
-        tag_filter_mode: value?.tag_filter_mode || 'any',
-      });
-    }
+    const newValue =
+      newItems.length === 0
+        ? undefined
+        : {
+            tag_items: newItems,
+            tag_filter_mode: value?.tag_filter_mode || 'any',
+          };
+
+    onChange?.(newValue);
   };
 
   const handleModeChange = (mode: 'any' | 'all') => {
@@ -200,7 +201,7 @@ export function TagFilter({
               onValueChange={handleModeChange}
               disabled={!hasSelection}
             >
-              <SelectTrigger className="h-8">
+              <SelectTrigger className="h-8 w-full text-left py-6">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -246,6 +247,10 @@ export function TagFilter({
                           <CommandItem
                             key={item.id}
                             onSelect={() => handleItemToggle(item.id)}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
                             className="flex items-center gap-2 cursor-pointer"
                           >
                             <Check

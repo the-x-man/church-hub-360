@@ -217,6 +217,20 @@ export const mockAttendanceMembers: AttendanceMemberResult[] = [
     updated_at: '2024-01-01T00:00:00Z',
     age: 38,
     membership_years: 4,
+    // Address fields
+    address_line_1: '123 Main Street',
+    address_line_2: 'Apt 4B',
+    city: 'Springfield',
+    state: 'IL',
+    postal_code: '62701',
+    country: 'Ghana',
+    // Branch information
+    branch_name: 'Main Campus',
+    branch_location: 'Downtown Springfield',
+    // Tag fields
+    assigned_tags: 'Leadership, Choir, Men Ministry',
+    tag_count: 3,
+    tags_with_categories: 'Positions: Leadership | Ministries: Choir | Ministries: Men Ministry',
     tags: [
       { id: 'tag-1', name: 'Leadership', color: '#3b82f6' },
       { id: 'tag-2', name: 'Choir', color: '#10b981' },
@@ -246,6 +260,20 @@ export const mockAttendanceMembers: AttendanceMemberResult[] = [
     updated_at: '2024-01-01T00:00:00Z',
     age: 33,
     membership_years: 3,
+    // Address fields
+    address_line_1: '456 Oak Avenue',
+    address_line_2: null,
+    city: 'Springfield',
+    state: 'IL',
+    postal_code: '62702',
+    country: 'USA',
+    // Branch information
+    branch_name: 'Main Campus',
+    branch_location: 'Downtown Springfield',
+    // Tag fields
+    assigned_tags: 'Youth Ministry, Sunday School, Women Ministry',
+    tag_count: 3,
+    tags_with_categories: 'Ministries: Youth Ministry | Ministries: Sunday School | Ministries: Women Ministry',
     tags: [
       { id: 'tag-3', name: 'Youth Ministry', color: '#f59e0b' },
       { id: 'tag-4', name: 'Sunday School', color: '#8b5cf6' },
@@ -264,22 +292,36 @@ export const mockAttendanceMembers: AttendanceMemberResult[] = [
     full_name: 'Michael Brown',
     email: 'michael.brown@email.com',
     phone: '+1-555-0103',
-    date_of_birth: '1978-11-05',
+    date_of_birth: '1975-11-30',
     gender: 'male',
     membership_status: 'active',
     membership_type: 'Regular',
-    date_joined: '2019-06-20',
+    date_joined: '2019-08-15',
     is_active: true,
     profile_image_url: '/avatars/AV3.png',
-    created_at: '2019-06-20T00:00:00Z',
+    created_at: '2019-08-15T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-    age: 45,
+    age: 48,
     membership_years: 5,
+    // Address fields
+    address_line_1: '789 Pine Street',
+    address_line_2: 'Apt 4B',
+    city: 'Springfield',
+    state: 'IL',
+    postal_code: '62703',
+    country: 'USA',
+    // Branch information
+    branch_name: 'North Campus',
+    branch_location: 'North Springfield',
+    // Tag fields
+    assigned_tags: 'Elder, Board Member, Finance Committee',
+    tag_count: 3,
+    tags_with_categories: 'Leadership Levels: Elder | Positions: Board Member | Departments: Finance Committee',
     tags: [
-      { id: 'tag-5', name: 'Deacon', color: '#dc2626' },
-      { id: 'tag-6', name: 'Finance Committee', color: '#059669' },
+      { id: 'tag-5', name: 'Elder', color: '#dc2626' },
+      { id: 'tag-6', name: 'Board Member', color: '#7c3aed' },
     ],
-    attendance_status: 'not_marked',
+    attendance_status: 'present',
     last_attendance: '2024-01-07',
   },
   {
@@ -304,6 +346,20 @@ export const mockAttendanceMembers: AttendanceMemberResult[] = [
     updated_at: '2024-01-01T00:00:00Z',
     age: 28,
     membership_years: 1,
+    // Address fields
+    address_line_1: '321 Elm Drive',
+    address_line_2: null,
+    city: 'Springfield',
+    state: 'IL',
+    postal_code: '62704',
+    country: 'USA',
+    // Branch information
+    branch_name: 'Main Campus',
+    branch_location: 'Downtown Springfield',
+    // Tag fields
+    assigned_tags: 'New Member, Volunteer, Children Ministry',
+    tag_count: 3,
+    tags_with_categories: 'Ministries: Children Ministry | Positions: New Member | Positions: Volunteer',
     tags: [
       { id: 'tag-7', name: 'New Member', color: '#06b6d4' },
       { id: 'tag-8', name: 'Volunteer', color: '#84cc16' },
@@ -333,6 +389,20 @@ export const mockAttendanceMembers: AttendanceMemberResult[] = [
     updated_at: '2024-01-01T00:00:00Z',
     age: 58,
     membership_years: 9,
+    // Address fields
+    address_line_1: '654 Maple Lane',
+    address_line_2: null,
+    city: 'Riverside',
+    state: 'IL',
+    postal_code: '62705',
+    country: 'USA',
+    // Branch information
+    branch_name: 'North Branch',
+    branch_location: 'Riverside Community Center',
+    // Tag fields
+    assigned_tags: 'Elder, Trustee, Men Ministry',
+    tag_count: 3,
+    tags_with_categories: 'Leadership Levels: Elder | Positions: Trustee | Ministries: Men Ministry',
     tags: [
       { id: 'tag-9', name: 'Elder', color: '#7c3aed' },
       { id: 'tag-10', name: 'Trustee', color: '#be185d' },

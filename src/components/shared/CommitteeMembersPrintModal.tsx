@@ -46,7 +46,7 @@ export const CommitteeMembersPrintModal = ({
     contentRef: printRef,
     documentTitle: `${committee.name} - Members Directory`,
     onAfterPrint: () => {
-      console.log('Print completed');
+      // log activity
     },
   });
 

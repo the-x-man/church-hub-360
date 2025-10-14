@@ -404,7 +404,6 @@ export const DefaultMembershipForm = forwardRef<
     // Create a debounced version of onFormDataChange with 1 second delay
     const { debouncedCallback: debouncedOnFormDataChange } = useDebounce(
       (data: DefaultMembershipFormData) => {
-        // console.log('Debounced::::', data);
         onFormDataChange?.(data);
       },
       2000

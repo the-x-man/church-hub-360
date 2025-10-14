@@ -18,11 +18,13 @@ interface FlattenedFieldData {
 interface CustomFieldRendererProps {
   formData: FlattenedFieldData[] | Record<string, FlattenedFieldData>;
   className?: string;
+  printMode?: boolean;
 }
 
 const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
   formData,
   className = '',
+  printMode = false,
 }) => {
   const { currentOrganization: organization } = useOrganization();
   const { membershipFormSchema } = useMembershipFormManagement(
@@ -60,6 +62,9 @@ const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
 
     switch (fieldType) {
       case 'file':
+        if (printMode) {
+          return <span className="text-sm">Provided</span>;
+        }
         if (typeof value === 'string' && value.startsWith('http')) {
           return <FileRenderer url={value} />;
         }
@@ -123,15 +128,7 @@ const CustomFieldRenderer: React.FC<CustomFieldRendererProps> = ({
   );
 
   if (validFields.length === 0) {
-    return (
-      <Card className={className}>
-        <CardContent className="p-4">
-          <p className="text-muted-foreground">
-            No valid custom fields data available
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   return (

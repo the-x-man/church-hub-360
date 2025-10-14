@@ -105,7 +105,6 @@ export function AddMember() {
     try {
       // Use wrapper's comprehensive processing method
       const processingResult = await formRef.current.processFormForSubmission('create');
-      console.log(processingResult)
       
       if (!processingResult.isValid) {
         if (processingResult.errors?.defaultFields) {

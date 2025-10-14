@@ -21,3 +21,6 @@ export * from './theme-util';
 
 // User update utilities
 export * from './user-update-utils';
+
+// Tag formatting utilities
+export * from './tagFormatUtils';

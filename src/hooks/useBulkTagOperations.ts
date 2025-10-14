@@ -105,7 +105,6 @@ export function useBulkTagOperations() {
           .map(result => result.error.message);
 
         if (errors.length > 0) {
-          console.log('errors', errors);
           throw new Error(`Operations failed: ${errors.join(', ')}`);
         }
 

@@ -21,17 +21,20 @@ import { cn } from '@/lib/utils';
 import type { MemberSummary, MembershipStatus } from '@/types';
 import {
   ArrowUpDown,
+  CreditCard,
   Eye,
+  FileText,
   Mail,
   MoreVertical,
   Phone,
-  Printer,
   Trash2,
   UserCheck,
   UserX,
 } from 'lucide-react';
 import { useState } from 'react';
-import { PrintMemberModal } from './PrintMemberModal';
+import { MembershipCardModal } from '@/components/shared/MembershipCardModal';
+import { MembershipDetailsPrintModal } from '@/components/shared/MembershipDetailsPrintModal';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface MemberTableProps {
   members: MemberSummary[];
@@ -71,13 +74,19 @@ export function MemberTable({
   onSort,
   className,
 }: MemberTableProps) {
+  const { currentOrganization } = useOrganization();
   const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
-  const [printMember, setPrintMember] = useState<MemberSummary | null>(null);
+  const [printDetailsMember, setPrintDetailsMember] = useState<MemberSummary | null>(null);
+  const [printCardMember, setPrintCardMember] = useState<MemberSummary | null>(null);
 
-  const handlePrint = (member: MemberSummary) => {
-    setPrintMember(member);
+  const handlePrintDetails = (member: MemberSummary) => {
+    setPrintDetailsMember(member);
     // Call the original onPrint if provided for backward compatibility
     onPrint?.(member);
+  };
+
+  const handlePrintCard = (member: MemberSummary) => {
+    setPrintCardMember(member);
   };
 
   const handleAction = async (
@@ -318,15 +327,26 @@ export function MemberTable({
                       )}
 
                       {onPrint && (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAction(member.id, () => handlePrint(member));
-                          }}
-                        >
-                          <Printer className="mr-2 h-4 w-4" />
-                          Print Details
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(member.id, () => handlePrintDetails(member));
+                            }}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Print Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAction(member.id, () => handlePrintCard(member));
+                            }}
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Print Card
+                          </DropdownMenuItem>
+                        </>
                       )}
                       {onToggleStatus && (
                         <>
@@ -379,12 +399,58 @@ export function MemberTable({
         </TableBody>
       </Table>
 
-      {/* Print Modal */}
-      {printMember && (
-        <PrintMemberModal
-          member={printMember}
-          isOpen={!!printMember}
-          onClose={() => setPrintMember(null)}
+      {/* Print Modals */}
+      {printDetailsMember && currentOrganization && (
+        <MembershipDetailsPrintModal
+          isOpen={!!printDetailsMember}
+          onClose={() => setPrintDetailsMember(null)}
+          member={{
+            ...printDetailsMember,
+            organization_id: currentOrganization.id,
+            branch_id: printDetailsMember.branch_id,
+            middle_name: null,
+            marital_status: null,
+            address_line_1: printDetailsMember.address_line_1,
+            address_line_2: printDetailsMember.address_line_2,
+            city: printDetailsMember.city,
+            state: printDetailsMember.state,
+            postal_code: printDetailsMember.postal_code,
+            country: printDetailsMember.country,
+            baptism_date: null,
+            confirmation_date: null,
+            emergency_contact_name: null,
+            emergency_contact_phone: null,
+            emergency_contact_relationship: null,
+            custom_form_data: {
+              // Include tag information in custom form data for display
+              assigned_tags: printDetailsMember.assigned_tags,
+              tags_with_categories: printDetailsMember.tags_with_categories,
+              tag_count: printDetailsMember.tag_count,
+            },
+            notes: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: null,
+            last_updated_by: null,
+          }}
+          organization={currentOrganization}
+        />
+      )}
+
+      {printCardMember && (
+        <MembershipCardModal
+          isOpen={!!printCardMember}
+          onClose={() => setPrintCardMember(null)}
+          member={{
+            first_name: printCardMember.first_name,
+            last_name: printCardMember.last_name,
+            email: printCardMember.email,
+            membership_id: printCardMember.membership_id,
+            date_of_birth: printCardMember.date_of_birth,
+            gender: printCardMember.gender,
+            profile_image_url: printCardMember.profile_image_url,
+            date_joined: printCardMember.date_joined,
+          }}
         />
       )}
     </div>

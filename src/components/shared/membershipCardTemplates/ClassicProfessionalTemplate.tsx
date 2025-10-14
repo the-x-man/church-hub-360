@@ -17,8 +17,6 @@ export function ClassicProfessionalTemplate({ member, organization }: CardTempla
     ? format(new Date(member.date_joined), 'MMM yyyy')
     : format(new Date(), 'MMM yyyy');
 
-    console.log('organization', organization);
-
   // Always use light theme colors for consistent printing
   const brandColors = organization.brand_colors;
   const colorScheme = brandColors?.light;

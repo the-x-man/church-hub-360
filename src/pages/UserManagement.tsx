@@ -19,7 +19,6 @@ import { useUsersPreferences } from '@/hooks/useUsersPreferences';
 import type { UserAction, UserWithRelations } from '@/types/user-management';
 import {
   detectUserChanges,
-  logUserChanges,
   transformUserUpdateData,
 } from '@/utils/user-update-utils';
 import { Search } from 'lucide-react';
@@ -179,7 +178,9 @@ export default function UserManagement() {
       branchIds: userData.assignAllBranches
         ? isBranchAdmin()
           ? userAssignedBranchIds
-          : availableBranches?.filter((b: any) => b.is_active).map((b: any) => b.id) || []
+          : availableBranches
+              ?.filter((b: any) => b.is_active)
+              .map((b: any) => b.id) || []
         : allowedBranchIds || (userData.branchId ? [userData.branchId] : []),
       // Remove the form-specific fields
       assignAllBranches: undefined,
@@ -207,9 +208,6 @@ export default function UserManagement() {
 
     // Detect what has actually changed
     const changes = detectUserChanges(editingUser, userData, activeBranchIds);
-
-    // Log changes for debugging
-    logUserChanges(changes, editingUser.id);
 
     // If no changes detected, show message and return
     if (!changes.hasAnyChanges) {
@@ -241,11 +239,7 @@ export default function UserManagement() {
   };
 
   // Use custom hook for filtering, sorting, and pagination
-  const {
-    paginatedUsers,
-    totalUsers,
-    totalPages,
-  } = useUserFiltering({
+  const { paginatedUsers, totalUsers, totalPages } = useUserFiltering({
     users,
     searchTerm: debouncedSearchTerm,
     filters,
@@ -326,8 +320,8 @@ export default function UserManagement() {
       </div>
 
       {/* User Display - Hide when status filter is 'inactive' */}
-      {filters.status !== 'inactive' && (
-        isLoading ? (
+      {filters.status !== 'inactive' &&
+        (isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             <p className="mt-2 text-muted-foreground">Loading users...</p>
@@ -360,12 +354,11 @@ export default function UserManagement() {
               onPageSizeChange={setPageSize}
             />
           </>
-        )
-      )}
+        ))}
 
       {/* Inactive Users Section - Show based on status filter */}
       {(filters.status === 'all' || filters.status === 'inactive') && (
-        <InactiveUsersSection 
+        <InactiveUsersSection
           filters={filters}
           searchTerm={debouncedSearchTerm}
           isDefaultOpen={filters.status === 'inactive'}

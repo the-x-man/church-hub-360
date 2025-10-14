@@ -111,8 +111,6 @@ export async function seedOrganizationIfNeeded(
     const hasConfig = await hasExistingConfiguration(organizationId);
     
     if (hasConfig) {
-      console.log(`Organization ${organizationId} already has configuration, skipping seeding`);
-      
       // Return existing configuration
       const { data } = await supabase
         .from('people_configurations')

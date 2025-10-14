@@ -75,6 +75,23 @@ export interface MemberSummary {
   updated_at: string;
   age: number | null;
   membership_years: number | null;
+  
+  // Address fields (added in enhanced view)
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  
+  // Branch information (added via JOIN)
+  branch_name: string | null;
+  branch_location: string | null;
+  
+  // Tag information (added in enhanced members_summary view)
+  assigned_tags: string;
+  tag_count: number;
+  tags_with_categories: string;
 }
 
 // Membership status enum

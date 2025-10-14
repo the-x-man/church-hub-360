@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,21 +9,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { MemberSummary, MembershipStatus } from '@/types';
 import {
-  User,
-  Mail,
-  Phone,
   Calendar,
-  MoreVertical,
-  Trash2,
+  CreditCard,
   Eye,
+  FileText,
+  Mail,
+  MoreVertical,
+  Phone,
+  Trash2,
+  User,
   UserCheck,
   UserX,
-  Printer,
 } from 'lucide-react';
-import type { MemberSummary, MembershipStatus } from '@/types';
-import { cn } from '@/lib/utils';
-import { PrintMemberModal } from './PrintMemberModal';
+import { useState } from 'react';
+import { MembershipCardModal } from '@/components/shared/MembershipCardModal';
+import { MembershipDetailsPrintModal } from '@/components/shared/MembershipDetailsPrintModal';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface MemberCardProps {
   member: MemberSummary;
@@ -57,13 +60,19 @@ export function MemberCard({
   onClick,
   className,
 }: MemberCardProps) {
+  const { currentOrganization } = useOrganization();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showPrintDetailsModal, setShowPrintDetailsModal] = useState(false);
+  const [showPrintCardModal, setShowPrintCardModal] = useState(false);
 
-  const handlePrint = () => {
-    setShowPrintModal(true);
+  const handlePrintDetails = () => {
+    setShowPrintDetailsModal(true);
     // Call the original onPrint if provided for backward compatibility
     onPrint?.(member);
+  };
+
+  const handlePrintCard = () => {
+    setShowPrintCardModal(true);
   };
 
   const handleAction = async (action: () => void | Promise<void>) => {
@@ -101,14 +110,15 @@ export function MemberCard({
   };
 
   return (
-    <Card
-      className={cn(
-        'hover:shadow-md transition-shadow duration-200',
-        onClick &&
-          'cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/70',
-        className
-      )}
-      onClick={() => onClick?.(member.id)}
+    <>
+      <Card
+        className={cn(
+          'hover:shadow-md transition-shadow duration-200',
+          onClick &&
+            'cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800/70',
+          className
+        )}
+        onClick={() => onClick?.(member.id)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -136,6 +146,7 @@ export function MemberCard({
                   size="sm"
                   className="h-8 w-8 p-0"
                   disabled={isLoading}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -143,7 +154,10 @@ export function MemberCard({
               <DropdownMenuContent align="end" className="w-48">
                 {onView && (
                   <DropdownMenuItem
-                    onClick={() => handleAction(() => onView(member))}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAction(() => onView(member));
+                    }}
                   >
                     <Eye className="mr-2 h-4 w-4" />
                     View Details
@@ -151,18 +165,35 @@ export function MemberCard({
                 )}
 
                 {onPrint && (
-                  <DropdownMenuItem
-                    onClick={() => handleAction(() => handlePrint())}
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print Details
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(() => handlePrintDetails());
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Print Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(() => handlePrintCard());
+                      }}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Print Card
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {onToggleStatus && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => handleAction(() => onToggleStatus(member))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(() => onToggleStatus(member));
+                      }}
                     >
                       {member.is_active ? (
                         <>
@@ -182,7 +213,10 @@ export function MemberCard({
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={() => handleAction(() => onDelete(member.id))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction(() => onDelete(member.id));
+                      }}
                       className="text-destructive focus:text-destructive"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
@@ -249,13 +283,62 @@ export function MemberCard({
           )}
         </div>
       </CardContent>
+      </Card>
 
-      {/* Print Modal */}
-      <PrintMemberModal
-        member={member}
-        isOpen={showPrintModal}
-        onClose={() => setShowPrintModal(false)}
-      />
-    </Card>
+      {/* Modals placed outside the Card to prevent event bubbling */}
+      {showPrintDetailsModal && currentOrganization && (
+        <MembershipDetailsPrintModal
+          isOpen={showPrintDetailsModal}
+          onClose={() => setShowPrintDetailsModal(false)}
+          member={{
+            ...member,
+            organization_id: currentOrganization.id,
+            branch_id: member.branch_id,
+            middle_name: null,
+            marital_status: null,
+            address_line_1: member.address_line_1,
+            address_line_2: member.address_line_2,
+            city: member.city,
+            state: member.state,
+            postal_code: member.postal_code,
+            country: member.country,
+            baptism_date: null,
+            confirmation_date: null,
+            emergency_contact_name: null,
+            emergency_contact_phone: null,
+            emergency_contact_relationship: null,
+            custom_form_data: {
+              // Include tag information in custom form data for display
+              assigned_tags: member.assigned_tags,
+              tags_with_categories: member.tags_with_categories,
+              tag_count: member.tag_count,
+            },
+            notes: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: null,
+            last_updated_by: null,
+          }}
+          organization={currentOrganization}
+        />
+      )}
+
+      {showPrintCardModal && (
+        <MembershipCardModal
+          isOpen={showPrintCardModal}
+          onClose={() => setShowPrintCardModal(false)}
+          member={{
+            first_name: member.first_name,
+            last_name: member.last_name,
+            email: member.email,
+            membership_id: member.membership_id,
+            date_of_birth: member.date_of_birth,
+            gender: member.gender,
+            profile_image_url: member.profile_image_url,
+            date_joined: member.date_joined,
+          }}
+        />
+      )}
+    </>
   );
 }

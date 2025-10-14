@@ -91,9 +91,6 @@ function MemberItem({ member, isSelected, multiSelect, onSelect, onDeselect }: M
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <Badge variant="secondary" className="text-xs">
-          {member.membership_status}
-        </Badge>
         {!multiSelect && isSelected && (
           <Check className="h-4 w-4 text-primary" />
         )}
@@ -331,7 +328,7 @@ export function MemberSearchTypeahead({
       {/* Custom Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-md">
-          <ScrollArea className="max-h-[300px]">
+          <ScrollArea className="h-[300px] pr-4">
             {isLoading ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 {loadingMessage}

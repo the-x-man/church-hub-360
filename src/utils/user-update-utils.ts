@@ -114,32 +114,3 @@ export function transformUserUpdateData(
     Object.entries(transformedData).filter(([_, value]) => value !== undefined)
   );
 }
-
-/**
- * Logs the detected changes for debugging purposes
- * @param changes - The detected changes object
- * @param userId - The user ID for logging context
- */
-export function logUserChanges(changes: UserChanges, userId: string) {
-  if (!changes.hasAnyChanges) {
-    console.log(`No changes detected for user ${userId}`);
-    return;
-  }
-
-  console.log(`Changes detected for user ${userId}:`);
-  
-  if (Object.keys(changes.profileChanges).length > 0) {
-    console.log('Profile changes:', changes.profileChanges);
-  }
-  
-  if (changes.roleChanged) {
-    console.log('Role changed to:', changes.newRole);
-  }
-  
-  if (changes.branchChanges.hasChanges) {
-    console.log('Branch changes:', {
-      added: changes.branchChanges.added,
-      removed: changes.branchChanges.removed
-    });
-  }
-}

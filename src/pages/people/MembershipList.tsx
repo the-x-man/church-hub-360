@@ -1,10 +1,12 @@
 import {
   FilterBar,
   MemberCard,
+  MemberExportButtons,
   MemberPagination,
   MemberStatistics,
   MemberTable,
 } from '@/components/people/members';
+import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +18,7 @@ import {
   useMemberStatistics,
 } from '@/hooks/useMemberQueries';
 import { useRelationalTags } from '@/hooks/useRelationalTags';
-import { Download, Grid, Plus, Table, Upload } from 'lucide-react';
+import { Grid, Plus, Table } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -47,6 +49,16 @@ export default function MembershipList() {
   // State management
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<MemberFilters>({});
+
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    memberId: string | null;
+    memberName: string;
+  }>({
+    isOpen: false,
+    memberId: null,
+    memberName: '',
+  });
 
   // Hooks
   const { preferences, setViewMode, setPageSize } = useMemberPreferences(
@@ -80,13 +92,42 @@ export default function MembershipList() {
   };
 
   const handleDeleteMember = async (memberId: string) => {
+    // Find the member to get their name for the confirmation dialog
+    const member = membersData?.members.find((m) => m.id === memberId);
+    const memberName = member
+      ? `${member.first_name} ${member.last_name}`
+      : 'this member';
+
+    setDeleteConfirmation({
+      isOpen: true,
+      memberId,
+      memberName,
+    });
+  };
+
+  const confirmDeleteMember = async () => {
+    if (!deleteConfirmation.memberId) return;
+
     try {
-      await deleteMemberMutation.mutateAsync(memberId);
+      await deleteMemberMutation.mutateAsync(deleteConfirmation.memberId);
       toast.success('Member deleted successfully');
+      setDeleteConfirmation({
+        isOpen: false,
+        memberId: null,
+        memberName: '',
+      });
     } catch (error) {
       toast.error('Failed to delete member');
       console.error('Error deleting member:', error);
     }
+  };
+
+  const cancelDeleteMember = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      memberId: null,
+      memberName: '',
+    });
   };
 
   const handleViewMember = (member: MemberSummary) => {
@@ -94,8 +135,7 @@ export default function MembershipList() {
   };
 
   const handlePrintMember = (_member: MemberSummary) => {
-    // TODO: Implement print functionality
-    console.log('Print member functionality not implemented yet');
+    // Default to printing details when using the single print handler
   };
 
   const totalPages = Math.ceil(
@@ -114,14 +154,14 @@ export default function MembershipList() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          {/* <Button variant="outline" size="sm">
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
           <Button onClick={() => navigate('/people/membership/add')}>
             <Plus className="h-4 w-4 mr-2" />
             Add Member
@@ -143,26 +183,34 @@ export default function MembershipList() {
           <div className="flex justify-between items-center gap-4">
             <CardTitle>Members</CardTitle>
 
-            {/* View Toggle */}
             <div className="flex items-center gap-2">
-              <Button
-                variant={
-                  preferences.view_mode === 'table' ? 'default' : 'outline'
-                }
-                size="sm"
-                onClick={() => setViewMode('table')}
-              >
-                <Table className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={
-                  preferences.view_mode === 'card' ? 'default' : 'outline'
-                }
-                size="sm"
-                onClick={() => setViewMode('card')}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
+              {/* Export Buttons */}
+              <MemberExportButtons
+                members={membersData?.members || []}
+                className="mr-2"
+              />
+
+              {/* View Toggle */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={
+                    preferences.view_mode === 'table' ? 'default' : 'outline'
+                  }
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                >
+                  <Table className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={
+                    preferences.view_mode === 'card' ? 'default' : 'outline'
+                  }
+                  size="sm"
+                  onClick={() => setViewMode('card')}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -244,6 +292,17 @@ export default function MembershipList() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
+        onClose={cancelDeleteMember}
+        onConfirm={confirmDeleteMember}
+        title="Delete Member"
+        description={`Are you sure you want to delete ${deleteConfirmation.memberName}? This action cannot be undone.`}
+        confirmButtonText="Delete Member"
+        isLoading={deleteMemberMutation.isPending}
+      />
     </div>
   );
 }
