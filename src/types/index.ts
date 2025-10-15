@@ -9,6 +9,7 @@ export * from './organizations';
 export * from './branches';
 export * from './people-configurations';
 export * from './members';
+export * from './attendance';
 
 // Add other type exports here as the application grows
 // export * from './user-types';
