@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
-import type { Committee } from '@/hooks/useCommittees';
+import type { Group } from '@/hooks/useGroups';
 
-interface CommitteeMember {
+interface GroupMember {
   id: string;
   member_id: string;
   member_full_name: string;
@@ -11,17 +11,17 @@ interface CommitteeMember {
   assigned_at: string;
 }
 
-interface CommitteeMembersPrintViewProps {
-  committee: Committee;
-  members: CommitteeMember[];
+interface GroupMembersPrintViewProps {
+  group: Group;
+  members: GroupMember[];
   organizationName?: string;
   branchName?: string;
 }
 
-export const CommitteeMembersPrintView = forwardRef<
+export const GroupMembersPrintView = forwardRef<
   HTMLDivElement,
-  CommitteeMembersPrintViewProps
->(({ committee, members, organizationName, branchName }, ref) => {
+  GroupMembersPrintViewProps
+>(({ group, members, organizationName, branchName }, ref) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -40,19 +40,19 @@ export const CommitteeMembersPrintView = forwardRef<
         {branchName && (
           <h2 className="text-xl text-gray-600 mb-4">{branchName}</h2>
         )}
-        <h3 className="text-lg font-semibold mb-4">{committee.name}</h3>
-        {committee.description && (
-          <p className="text-gray-500 mb-4">{committee.description}</p>
+        <h3 className="text-lg font-semibold mb-4">{group.name}</h3>
+        {group.description && (
+          <p className="text-gray-500 mb-4">{group.description}</p>
         )}
         <div className="flex justify-center gap-8 text-sm text-gray-500">
-          {committee.start_date && (
+          {group.start_date && (
             <div>
-              <strong>Start Date:</strong> {formatDate(committee.start_date)}
+              <strong>Start Date:</strong> {formatDate(group.start_date)}
             </div>
           )}
-          {committee.end_date && (
+          {group.end_date && (
             <div>
-              <strong>End Date:</strong> {formatDate(committee.end_date)}
+              <strong>End Date:</strong> {formatDate(group.end_date)}
             </div>
           )}
           <div>
@@ -90,7 +90,7 @@ export const CommitteeMembersPrintView = forwardRef<
                   colSpan={5}
                   className="border border-gray-300 px-4 py-8 text-center text-gray-500"
                 >
-                  No members assigned to this committee
+                  No members assigned to this group
                 </td>
               </tr>
             ) : (
@@ -153,4 +153,4 @@ export const CommitteeMembersPrintView = forwardRef<
   );
 });
 
-CommitteeMembersPrintView.displayName = 'CommitteeMembersPrintView';
+GroupMembersPrintView.displayName = 'GroupMembersPrintView';

@@ -1,4 +1,4 @@
 export { DefaultSchemasDialog } from './DefaultSchemasDialog';
-export { CommitteesListPanel } from './CommitteesListPanel';
-export { CommitteesHeader } from './CommitteesHeader';
-export { CommitteeDetailsPanel } from './CommitteeDetailsPanel';
+export { GroupsListPanel } from './GroupsListPanel';
+export { GroupsHeader } from './GroupsHeader';
+export { GroupDetailsPanel } from './GroupDetailsPanel';

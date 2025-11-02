@@ -72,9 +72,9 @@ const navItems: NavItem[] = [
         label: 'Tags',
       },
       {
-        to: '/people/committee',
+        to: '/people/groups',
         icon: Settings,
-        label: 'Committees',
+        label: 'Groups',
       },
       {
         to: '/people/membership',

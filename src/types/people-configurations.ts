@@ -75,8 +75,8 @@ export interface TagItemWithTag extends TagItem {
 
 
 
-// Position interface for committee roles
-export interface CommitteePosition {
+// Position interface for group roles
+export interface GroupPosition {
   id: string;
   name: string;
   description?: string;

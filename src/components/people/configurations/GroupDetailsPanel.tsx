@@ -26,19 +26,19 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useOrganization } from '../../../contexts/OrganizationContext';
-import type { Committee } from '../../../hooks/useCommittees';
+import type { Group } from '../../../hooks/useGroups';
 import {
-  useAssignMemberToCommittee,
-  useBulkAssignMembersToCommittee,
-  useCloseCommittee,
-  useCommitteeMembers,
-  useRemoveMemberFromCommittee,
+  useAssignMemberToGroup,
+  useBulkAssignMembersToGroup,
+  useCloseGroup,
+  useGroupMembers,
+  useRemoveMemberFromGroup,
   useUpdateMemberPosition,
-} from '../../../hooks/useCommittees';
+} from '../../../hooks/useGroups';
 import { useBranches } from '../../../hooks/useBranchQueries';
 import type { MemberSearchResult } from '../../../hooks/useMemberSearch';
 import { MemberSearchTypeahead } from '../../shared/MemberSearchTypeahead';
-import { CommitteeMembersPrintModal } from '../../shared/CommitteeMembersPrintModal';
+import { GroupMembersPrintModal } from '../../shared/GroupMembersPrintModal';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import {
@@ -57,15 +57,15 @@ import {
   SelectValue,
 } from '../../ui/select';
 
-interface CommitteeDetailsPanelProps {
-  committee: Committee | null;
+interface GroupDetailsPanelProps {
+  group: Group | null;
   isLoading?: boolean;
 }
 
-export function CommitteeDetailsPanel({
-  committee,
+export function GroupDetailsPanel({
+  group,
   isLoading = false,
-}: CommitteeDetailsPanelProps) {
+}: GroupDetailsPanelProps) {
   const { user } = useAuth();
   const { currentOrganization } = useOrganization();
   const { data: branches } = useBranches(currentOrganization?.id || '');
@@ -79,15 +79,14 @@ export function CommitteeDetailsPanel({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
 
-  const {
-    data: committeeMembers,
-    isLoading: membersLoading,
-  } = useCommitteeMembers(committee?.id || '');
-  const assignMemberMutation = useAssignMemberToCommittee();
-  const bulkAssignMembersMutation = useBulkAssignMembersToCommittee();
-  const removeMemberMutation = useRemoveMemberFromCommittee();
+  const { data: groupMembers, isLoading: membersLoading } = useGroupMembers(
+    group?.id || ''
+  );
+  const assignMemberMutation = useAssignMemberToGroup();
+  const bulkAssignMembersMutation = useBulkAssignMembersToGroup();
+  const removeMemberMutation = useRemoveMemberFromGroup();
   const updatePositionMutation = useUpdateMemberPosition();
-  const closeCommitteeMutation = useCloseCommittee();
+  const closeGroupMutation = useCloseGroup();
 
   if (isLoading) {
     return (
@@ -95,20 +94,20 @@ export function CommitteeDetailsPanel({
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-center text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Loading committee details...</p>
+            <p>Loading group details...</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!committee) {
+  if (!group) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-center text-muted-foreground">
             <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Select a committee to view and manage its details</p>
+            <p>Select a group to view and manage its details</p>
           </div>
         </CardContent>
       </Card>
@@ -121,27 +120,25 @@ export function CommitteeDetailsPanel({
   };
 
   const handleAddMember = async () => {
-    if (selectedMembers.length === 0 || !committee || !user?.id) return;
+    if (selectedMembers.length === 0 || !group || !user?.id) return;
 
     try {
-      // Filter out members who are already assigned to the committee
+      // Filter out members who are already assigned to the group
       const assignedMemberIds = new Set(
-        committeeMembers?.map((m) => m.member_id) || []
+        groupMembers?.map((m) => m.member_id) || []
       );
       const membersToAssign = selectedMembers.filter(
         (member) => !assignedMemberIds.has(member.id)
       );
 
       if (membersToAssign.length === 0) {
-        toast.error(
-          'All selected members are already assigned to this committee'
-        );
+        toast.error('All selected members are already assigned to this group');
         return;
       }
 
-      // Bulk assign all new members to the committee
+      // Bulk assign all new members to the group
       await bulkAssignMembersMutation.mutateAsync({
-        committeeId: committee.id,
+        groupId: group.id,
         memberAssignments: membersToAssign.map((member) => ({
           memberId: member.id,
           position: memberPosition || 'Member',
@@ -153,20 +150,20 @@ export function CommitteeDetailsPanel({
       setMemberPosition('');
       setIsAddingMember(false);
     } catch (error) {
-      console.error('Failed to assign member(s) to committee:', error);
+      console.error('Failed to assign member(s) to group:', error);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!committee) return;
+    if (!group) return;
 
     try {
       await removeMemberMutation.mutateAsync({
-        committeeId: committee.id,
+        groupId: group.id,
         memberId,
       });
     } catch (error) {
-      console.error('Failed to remove member from committee:', error);
+      console.error('Failed to remove member from group:', error);
     }
   };
 
@@ -182,11 +179,11 @@ export function CommitteeDetailsPanel({
   };
 
   const handleSavePosition = async (memberId: string) => {
-    if (!committee) return;
+    if (!group) return;
 
     try {
       await updatePositionMutation.mutateAsync({
-        committeeId: committee.id,
+        groupId: group.id,
         memberId,
         position: editPositionValue.trim() || 'Member',
       });
@@ -202,18 +199,18 @@ export function CommitteeDetailsPanel({
     setEditPositionValue('');
   };
 
-  const handleCloseCommittee = () => {
+  const handleCloseGroup = () => {
     setIsCloseConfirmOpen(true);
   };
 
-  const handleConfirmCloseCommittee = async () => {
-    if (!committee || !user?.id) return;
+  const handleConfirmCloseGroup = async () => {
+    if (!group || !user?.id) return;
 
     try {
-      await closeCommitteeMutation.mutateAsync(committee.id);
+      await closeGroupMutation.mutateAsync(group.id);
       setIsCloseConfirmOpen(false);
     } catch (error) {
-      console.error('Failed to close committee:', error);
+      console.error('Failed to close group:', error);
     }
   };
 
@@ -221,20 +218,20 @@ export function CommitteeDetailsPanel({
     setIsPrintModalOpen(true);
   };
 
-  const getCommitteeStatusBadge = () => {
-    if (committee.is_closed) {
+  const getGroupStatusBadge = () => {
+    if (group.is_closed) {
       return <Badge variant="destructive">Closed</Badge>;
     }
-    if (!committee.is_active) {
+    if (!group.is_active) {
       return <Badge variant="secondary">Inactive</Badge>;
     }
     return <Badge variant="default">Active</Badge>;
   };
 
-  const getCommitteeTypeBadge = () => {
+  const getGroupTypeBadge = () => {
     return (
       <Badge variant="outline" className="capitalize">
-        {committee.type}
+        {group.type}
       </Badge>
     );
   };
@@ -246,14 +243,14 @@ export function CommitteeDetailsPanel({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              {committee.name}
+              {group.name}
               <div className="flex gap-2">
-                {getCommitteeStatusBadge()}
-                {getCommitteeTypeBadge()}
+                <span key="status-badge">{getGroupStatusBadge()}</span>
+                <span key="type-badge">{getGroupTypeBadge()}</span>
               </div>
             </CardTitle>
-            {committee.description && (
-              <CardDescription>{committee.description}</CardDescription>
+            {group.description && (
+              <CardDescription>{group.description}</CardDescription>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -268,16 +265,16 @@ export function CommitteeDetailsPanel({
               <Printer className="h-3 w-3" />
               Print
             </Button>
-            {/* Close Committee Button - Only show for temporal committees that are not closed */}
-            {committee.type === 'temporal' && !committee.is_closed && (
+            {/* Close Group Button - Only show for temporal groups that are not closed */}
+            {group.type === 'temporal' && !group.is_closed && (
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
-                onClick={handleCloseCommittee}
-                disabled={closeCommitteeMutation.isPending}
+                onClick={handleCloseGroup}
+                disabled={closeGroupMutation.isPending}
               >
-                {closeCommitteeMutation.isPending ? (
+                {closeGroupMutation.isPending ? (
                   <>
                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
                     Closing...
@@ -295,16 +292,16 @@ export function CommitteeDetailsPanel({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Committee Members */}
+          {/* Group Members */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Committee Members</Label>
+              <Label className="text-sm font-medium">Group Members</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAddingMember(true)}
-                disabled={isAddingMember || committee.is_closed}
+                disabled={isAddingMember || group.is_closed}
                 className="h-8"
               >
                 <UserPlus className="h-3 w-3 mr-1" />
@@ -319,14 +316,14 @@ export function CommitteeDetailsPanel({
                   <div className="space-y-2">
                     <Label htmlFor="member-search">Select Members</Label>
                     <MemberSearchTypeahead
-                      organizationId={committee.organization_id}
+                      organizationId={group.organization_id}
                       value={selectedMembers}
                       onChange={setSelectedMembers}
                       placeholder="Search for members..."
-                      branchId={committee.branch_id || undefined}
+                      branchId={group.branch_id || undefined}
                       multiSelect={true}
                       excludeMembers={
-                        committeeMembers?.map((m) => m.member_id) || []
+                        groupMembers?.map((m) => m.member_id) || []
                       }
                     />
                   </div>
@@ -387,13 +384,13 @@ export function CommitteeDetailsPanel({
                     Loading members...
                   </p>
                 </div>
-              ) : !committeeMembers || committeeMembers.length === 0 ? (
+              ) : !groupMembers || groupMembers.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground text-sm">
-                  No members assigned to this committee yet.
+                  No members assigned to this group yet.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {committeeMembers.map((member) => (
+                  {groupMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center justify-between p-3 border rounded-lg group"
@@ -448,7 +445,7 @@ export function CommitteeDetailsPanel({
                           ) : (
                             <div className="flex items-center gap-1">
                               <span>{member.position}</span>
-                              {!committee.is_closed && (
+                              {!group.is_closed && (
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -471,7 +468,7 @@ export function CommitteeDetailsPanel({
                           </span>
                         </div>
                       </div>
-                      {!committee.is_closed && (
+                      {!group.is_closed && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -489,27 +486,27 @@ export function CommitteeDetailsPanel({
             </div>
           </div>
 
-          {/* Committee Information */}
+          {/* Group Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-            {committee.start_date && (
+            {group.start_date && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <Label className="text-sm font-medium">Start Date</Label>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(committee.start_date)}
+                    {formatDate(group.start_date)}
                   </p>
                 </div>
               </div>
             )}
 
-            {committee.end_date && (
+            {group.end_date && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <Label className="text-sm font-medium">End Date</Label>
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(committee.end_date)}
+                    {formatDate(group.end_date)}
                   </p>
                 </div>
               </div>
@@ -520,7 +517,7 @@ export function CommitteeDetailsPanel({
               <div>
                 <Label className="text-sm font-medium">Total Members</Label>
                 <p className="text-sm text-muted-foreground">
-                  {committeeMembers?.length || 0}
+                  {groupMembers?.length || 0}
                 </p>
               </div>
             </div>
@@ -530,7 +527,7 @@ export function CommitteeDetailsPanel({
               <div>
                 <Label className="text-sm font-medium">Created</Label>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(committee.created_at)}
+                  {formatDate(group.created_at)}
                 </p>
               </div>
             </div>
@@ -539,39 +536,40 @@ export function CommitteeDetailsPanel({
       </CardContent>
 
       {/* Print Modal */}
-      {committee && (
-        <CommitteeMembersPrintModal
+      {group && (
+        <GroupMembersPrintModal
           isOpen={isPrintModalOpen}
           onClose={() => setIsPrintModalOpen(false)}
-          committee={committee}
-          members={committeeMembers || []}
+          group={group}
+          members={groupMembers || []}
           organizationName={currentOrganization?.name}
           branchName={
-            branches?.find((branch) => branch.id === committee.branch_id)?.name
+            branches?.find((branch) => branch.id === group.branch_id)?.name ||
+            'Unknown Branch'
           }
         />
       )}
 
-      {/* Close Committee Confirmation Dialog */}
+      {/* Close Group Confirmation Dialog */}
       <AlertDialog
         open={isCloseConfirmOpen}
         onOpenChange={setIsCloseConfirmOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Close Committee</AlertDialogTitle>
+            <AlertDialogTitle>Close Group</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to close this committee? It will be marked
-              as closed and you can no longer update it.
+              Are you sure you want to close this group? It will be marked as
+              closed and you can no longer update it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmCloseCommittee}
+              onClick={handleConfirmCloseGroup}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Close Committee
+              Close Group
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

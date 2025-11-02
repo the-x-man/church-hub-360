@@ -5,14 +5,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Committee } from '@/hooks/useCommittees';
+import type { Group } from '@/hooks/useGroups';
 import { toPng } from 'html-to-image';
 import { Download, Printer } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { CommitteeMembersPrintView } from './CommitteeMembersPrintView';
+import { GroupMembersPrintView } from './GroupMembersPrintView';
 
-interface CommitteeMember {
+interface GroupMember {
   id: string;
   member_id: string;
   member_full_name: string;
@@ -22,29 +22,29 @@ interface CommitteeMember {
   assigned_at: string;
 }
 
-interface CommitteeMembersPrintModalProps {
+interface GroupMembersPrintModalProps {
   isOpen: boolean;
   onClose: () => void;
-  committee: Committee;
-  members: CommitteeMember[];
+  group: Group;
+  members: GroupMember[];
   organizationName?: string;
   branchName?: string;
 }
 
-export const CommitteeMembersPrintModal = ({
+export const GroupMembersPrintModal = ({
   isOpen,
   onClose,
-  committee,
+  group,
   members,
   organizationName,
   branchName,
-}: CommitteeMembersPrintModalProps) => {
+}: GroupMembersPrintModalProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `${committee.name} - Members Directory`,
+    documentTitle: `${group.name} - Members Directory`,
     onAfterPrint: () => {
       // log activity
     },
@@ -61,7 +61,7 @@ export const CommitteeMembersPrintModal = ({
       });
 
       const link = document.createElement('a');
-      link.download = `${committee.name}-members-directory.png`;
+      link.download = `${group.name}-members-directory.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
@@ -76,7 +76,7 @@ export const CommitteeMembersPrintModal = ({
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Print Committee Members</span>
+            <span>Print Group Members</span>
             <div className="flex gap-2 px-4">
               <Button
                 onClick={handlePrint}
@@ -102,9 +102,9 @@ export const CommitteeMembersPrintModal = ({
         </DialogHeader>
 
         <div className="mt-4 printable-content">
-          <CommitteeMembersPrintView
+          <GroupMembersPrintView
             ref={printRef}
-            committee={committee}
+            group={group}
             members={members}
             organizationName={organizationName}
             branchName={branchName}

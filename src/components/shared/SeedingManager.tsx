@@ -19,14 +19,17 @@ import {
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Badge } from '../ui/badge';
-import { 
-  Database, 
-  RefreshCw, 
-  CheckCircle, 
+import {
+  Database,
+  RefreshCw,
+  CheckCircle,
   AlertCircle,
-  Info
+  Info,
 } from 'lucide-react';
-import { useOrganizationSeeding, useSeedingMonitoring } from '../../hooks/useSeedingOperations';
+import {
+  useOrganizationSeeding,
+  useSeedingMonitoring,
+} from '../../hooks/useSeedingOperations';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { toast } from 'sonner';
 
@@ -36,14 +39,14 @@ interface SeedingManagerProps {
   compact?: boolean;
 }
 
-export function SeedingManager({ 
-  organizationId, 
-  showStats = true, 
-  compact = false 
+export function SeedingManager({
+  organizationId,
+  showStats = true,
+  compact = false,
 }: SeedingManagerProps) {
   const { currentOrganization } = useOrganization();
   const targetOrgId = organizationId || currentOrganization?.id;
-  
+
   const {
     hasConfiguration,
     isCheckingConfiguration,
@@ -96,7 +99,7 @@ export function SeedingManager({
         });
         toast.success('Organization seeded successfully');
       }
-      
+
       await refetchHasConfiguration();
       await refetchStats();
       setIsDialogOpen(false);
@@ -132,9 +135,9 @@ export function SeedingManager({
   const SeedingDialog = () => (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant={hasConfiguration ? "outline" : "default"} 
-          size={compact ? "sm" : "default"}
+        <Button
+          variant={hasConfiguration ? 'outline' : 'default'}
+          size={compact ? 'sm' : 'default'}
           className="gap-2"
         >
           <Database className="h-4 w-4" />
@@ -147,13 +150,12 @@ export function SeedingManager({
             {hasConfiguration ? 'Update' : 'Seed'} People Configuration
           </DialogTitle>
           <DialogDescription>
-            {hasConfiguration 
+            {hasConfiguration
               ? 'Update the existing people configuration with new defaults.'
-              : 'Initialize this organization with default people management categories and tags.'
-            }
+              : 'Initialize this organization with default people management categories and tags.'}
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -166,11 +168,14 @@ export function SeedingManager({
               id="minimal-schema"
               checked={seedingOptions.useMinimalSchema}
               onCheckedChange={(checked) =>
-                setSeedingOptions(prev => ({ ...prev, useMinimalSchema: checked }))
+                setSeedingOptions((prev) => ({
+                  ...prev,
+                  useMinimalSchema: checked,
+                }))
               }
             />
           </div>
-          
+
           {hasConfiguration && (
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -183,7 +188,10 @@ export function SeedingManager({
                 id="force-update"
                 checked={seedingOptions.forceUpdate}
                 onCheckedChange={(checked) =>
-                  setSeedingOptions(prev => ({ ...prev, forceUpdate: checked }))
+                  setSeedingOptions((prev) => ({
+                    ...prev,
+                    forceUpdate: checked,
+                  }))
                 }
               />
             </div>
@@ -193,14 +201,16 @@ export function SeedingManager({
             <div className="flex items-start gap-2">
               <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
               <div className="text-xs text-muted-foreground">
-                <p className="font-medium text-foreground mb-1">What will be created:</p>
+                <p className="font-medium text-foreground mb-1">
+                  What will be created:
+                </p>
                 <ul className="space-y-1">
                   <li>• Membership categories and status</li>
                   {!seedingOptions.useMinimalSchema && (
                     <>
                       <li>• Leadership levels and positions</li>
                       <li>• Ministry and department categories</li>
-                      <li>• Fellowship groups and committees</li>
+                      <li>• Fellowship groups</li>
                     </>
                   )}
                 </ul>
@@ -218,11 +228,7 @@ export function SeedingManager({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSeed}
-            disabled={isSeeding}
-            className="gap-2"
-          >
+          <Button onClick={handleSeed} disabled={isSeeding} className="gap-2">
             {isSeeding ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -281,7 +287,11 @@ export function SeedingManager({
               disabled={isCheckingConfiguration}
               className="gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${isCheckingConfiguration ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${
+                  isCheckingConfiguration ? 'animate-spin' : ''
+                }`}
+              />
               Refresh
             </Button>
           </div>
@@ -292,31 +302,37 @@ export function SeedingManager({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Seeding Statistics</CardTitle>
-            <CardDescription>
-              Overview of seeded organizations
-            </CardDescription>
+            <CardDescription>Overview of seeded organizations</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{stats.totalSeeded}</p>
+                <p className="text-2xl font-bold text-primary">
+                  {stats.totalSeeded}
+                </p>
                 <p className="text-xs text-muted-foreground">Total Seeded</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{stats.recentlySeeded}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.recentlySeeded}
+                </p>
                 <p className="text-xs text-muted-foreground">This Week</p>
               </div>
             </div>
-            
+
             {Object.keys(stats.categoriesDistribution).length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Popular Categories</p>
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(stats.categoriesDistribution)
-                    .sort(([,a], [,b]) => b - a)
+                    .sort(([, a], [, b]) => b - a)
                     .slice(0, 5)
                     .map(([category, count]) => (
-                      <Badge key={category} variant="secondary" className="text-xs">
+                      <Badge
+                        key={category}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         {category.replace(/_/g, ' ')}: {count}
                       </Badge>
                     ))}

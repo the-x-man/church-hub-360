@@ -196,52 +196,7 @@ export const defaultTagCategories: Record<string, DefaultTagCategory> = {
         display_order: 5,
       },
     ],
-  },
-  groups: {
-    name: 'Groups',
-    description: 'Small groups and fellowship groups',
-    is_required: false,
-    component_style: 'multiselect',
-    display_order: 7,
-    items: [
-      {
-        label: "Men's Group",
-        description: 'Fellowship group for men',
-        color: '#3B82F6',
-        display_order: 1,
-      },
-      {
-        label: "Women's Group",
-        description: 'Fellowship group for women',
-        color: '#EC4899',
-        display_order: 2,
-      },
-      {
-        label: 'Young Adults',
-        description: 'Group for young adults (18-35)',
-        color: '#84CC16',
-        display_order: 3,
-      },
-      {
-        label: 'Seniors Group',
-        description: 'Fellowship group for senior members',
-        color: '#F59E0B',
-        display_order: 4,
-      },
-      {
-        label: 'Bible Study',
-        description: 'Weekly Bible study group',
-        color: '#8B5CF6',
-        display_order: 5,
-      },
-      {
-        label: 'Prayer Group',
-        description: 'Regular prayer meeting group',
-        color: '#10B981',
-        display_order: 6,
-      },
-    ],
-  },
+  }
 };
 
 /**

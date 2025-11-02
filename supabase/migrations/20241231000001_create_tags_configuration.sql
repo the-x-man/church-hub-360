@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS public.people_configurations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     organization_id UUID NOT NULL,
     tags_schema JSONB DEFAULT '{}',
-    committees_schema JSONB DEFAULT '{}',
+    groups_schema JSONB DEFAULT '{}',
     membership_form_schema JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.people_configurations (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_people_configurations_organization_id ON public.people_configurations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_people_configurations_tags_schema ON public.people_configurations USING GIN (tags_schema);
-CREATE INDEX IF NOT EXISTS idx_people_configurations_committees_schema ON public.people_configurations USING GIN (committees_schema);
+CREATE INDEX IF NOT EXISTS idx_people_configurations_groups_schema ON public.people_configurations USING GIN (groups_schema);
 CREATE INDEX IF NOT EXISTS idx_people_configurations_membership_form_schema ON public.people_configurations USING GIN (membership_form_schema);
 
 -- Create updated_at trigger function if it doesn't exist

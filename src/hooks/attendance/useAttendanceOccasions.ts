@@ -50,7 +50,8 @@ export function useAttendanceOccasions(
             last_name
           )
         `)
-        .eq('organization_id', currentOrganization.id);
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_deleted', false);
 
       // Apply filters
       if (filters?.branch_id) {
@@ -130,7 +131,8 @@ export function useAttendanceOccasion(id: string) {
         `)
         .eq('id', id)
         .eq('organization_id', currentOrganization.id)
-        .single();
+        .eq('is_deleted', false)
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -165,7 +167,8 @@ export function useAttendanceOccasionStats() {
       const { data, error } = await supabase
         .from('attendance_occasions')
         .select('id, is_active, recurrence_rule, default_duration_minutes')
-        .eq('organization_id', currentOrganization.id);
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_deleted', false);
 
       if (error) throw error;
 
@@ -306,6 +309,7 @@ export function useUpdateAttendanceOccasion() {
 export function useDeleteAttendanceOccasion() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
@@ -313,7 +317,10 @@ export function useDeleteAttendanceOccasion() {
 
       const { error } = await supabase
         .from('attendance_occasions')
-        .delete()
+        .update({ 
+          is_deleted: true, 
+          last_updated_by: user?.id || null  
+        })
         .eq('id', id)
         .eq('organization_id', currentOrganization.id);
 

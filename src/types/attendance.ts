@@ -131,3 +131,164 @@ export interface AttendanceOccasionStats {
   this_week_occasions: number;
   total_expected_attendance: number;
 }
+
+/**
+ * Location data for proximity checking
+ */
+export interface AttendanceLocation {
+  lat: number;
+  lng: number;
+  radius?: number; // in meters
+}
+
+/**
+ * Marking modes configuration
+ */
+export interface AttendanceMarkingModes {
+  email: boolean;
+  phone: boolean;
+  membership_id: boolean;
+  manual: boolean;
+  public_link: boolean;
+}
+
+/**
+ * Attendance Session
+ * Represents a specific instance of attendance marking derived from an occasion
+ */
+export interface AttendanceSession {
+  id: string;
+  organization_id: string;
+  occasion_id: string;
+  name?: string | null;
+  start_time: string; // ISO timestamp
+  end_time: string; // ISO timestamp
+  is_open: boolean;
+  allow_public_marking: boolean;
+  proximity_required: boolean;
+  location?: AttendanceLocation | null;
+  allowed_tags?: string[] | null;
+  marking_modes: AttendanceMarkingModes;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Create Attendance Session Input
+ * Data required to create a new attendance session
+ */
+export interface CreateAttendanceSessionInput {
+  organization_id: string;
+  occasion_id: string;
+  name?: string;
+  start_time: string;
+  end_time: string;
+  is_open?: boolean;
+  allow_public_marking?: boolean;
+  proximity_required?: boolean;
+  location?: AttendanceLocation;
+  allowed_tags?: string[];
+  marking_modes?: Partial<AttendanceMarkingModes>;
+}
+
+/**
+ * Update Attendance Session Input
+ * Data that can be updated for an attendance session
+ */
+export interface UpdateAttendanceSessionInput {
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  is_open?: boolean;
+  allow_public_marking?: boolean;
+  proximity_required?: boolean;
+  location?: AttendanceLocation | null;
+  allowed_tags?: string[] | null;
+  marking_modes?: Partial<AttendanceMarkingModes>;
+}
+
+/**
+ * Attendance Session with Relations
+ * Extended version with related data for display purposes
+ */
+export interface AttendanceSessionWithRelations extends AttendanceSession {
+  occasion_name?: string;
+  occasion_description?: string;
+  created_by_name?: string;
+  attendance_count?: number;
+  total_expected?: number;
+  attendance_rate?: number;
+  is_past?: boolean;
+  is_current?: boolean;
+  is_future?: boolean;
+}
+
+/**
+ * Session Status Types
+ */
+export type AttendanceSessionStatus = 'upcoming' | 'active' | 'closed' | 'past';
+
+/**
+ * Attendance Session Filters
+ * For filtering sessions in lists and queries
+ */
+export interface AttendanceSessionFilters {
+  occasion_id?: string;
+  is_open?: boolean;
+  allow_public_marking?: boolean;
+  proximity_required?: boolean;
+  status?: AttendanceSessionStatus;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  created_by?: string;
+}
+
+/**
+ * Attendance Session Sort Options
+ */
+export type AttendanceSessionSortField = 
+  | 'name' 
+  | 'start_time' 
+  | 'end_time'
+  | 'created_at' 
+  | 'updated_at'
+  | 'attendance_count';
+
+export interface AttendanceSessionSort {
+  field: AttendanceSessionSortField;
+  direction: 'asc' | 'desc';
+}
+
+/**
+ * Pagination for Attendance Sessions
+ */
+export interface AttendanceSessionPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+/**
+ * Attendance Session List Response
+ */
+export interface AttendanceSessionListResponse {
+  data: AttendanceSessionWithRelations[];
+  pagination: AttendanceSessionPagination;
+}
+
+/**
+ * Attendance Session Statistics
+ */
+export interface AttendanceSessionStats {
+  total_sessions: number;
+  active_sessions: number;
+  upcoming_sessions: number;
+  past_sessions: number;
+  today_sessions: number;
+  this_week_sessions: number;
+  average_attendance_rate: number;
+  total_attendance_records: number;
+}

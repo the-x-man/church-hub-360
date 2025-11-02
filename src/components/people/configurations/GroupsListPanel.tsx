@@ -1,5 +1,5 @@
 import { Calendar, Edit, Trash2, Users, Loader2 } from 'lucide-react';
-import type { Committee } from '../../../hooks/useCommittees';
+import type { Group } from '../../../hooks/useGroups';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import {
@@ -10,37 +10,37 @@ import {
   CardTitle,
 } from '../../ui/card';
 
-interface CommitteesListPanelProps {
-  committees: Committee[];
-  selectedCommittee: string | null;
-  onSelectCommittee: (committeeId: string) => void;
-  onEditCommittee: (committeeId: string, committee: Committee) => void;
-  onDeleteCommittee: (committeeId: string) => void;
+interface GroupsListPanelProps {
+  groups: Group[];
+  selectedGroup: string | null;
+  onSelectGroup: (groupId: string) => void;
+  onEditGroup: (groupId: string, group: Group) => void;
+  onDeleteGroup: (groupId: string) => void;
   isLoading?: boolean;
 }
 
-export function CommitteesListPanel({
-  committees,
-  selectedCommittee,
-  onSelectCommittee,
-  onEditCommittee,
-  onDeleteCommittee,
+export function GroupsListPanel({
+  groups,
+  selectedGroup,
+  onSelectGroup,
+  onEditGroup,
+  onDeleteGroup,
   isLoading = false,
-}: CommitteesListPanelProps) {
+}: GroupsListPanelProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getCommitteeStatusBadge = (committee: Committee) => {
-    if (committee.is_closed) {
+  const getGroupStatusBadge = (group: Group) => {
+    if (group.is_closed) {
       return (
         <Badge variant="destructive" className="text-xs">
           Closed
         </Badge>
       );
     }
-    if (!committee.is_active) {
+    if (!group.is_active) {
       return (
         <Badge variant="secondary" className="text-xs">
           Inactive
@@ -50,10 +50,10 @@ export function CommitteesListPanel({
     return null;
   };
 
-  const getCommitteeTypeBadge = (committee: Committee) => {
+  const getGroupTypeBadge = (group: Group) => {
     return (
       <Badge variant="outline" className="text-xs capitalize">
-        {committee.type}
+        {group.type}
       </Badge>
     );
   };
@@ -64,16 +64,16 @@ export function CommitteesListPanel({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Committees
+            Groups
           </CardTitle>
           <CardDescription>
-            Manage church committees and their members
+            Manage church groups and their members
           </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-            <p>Loading committees...</p>
+            <p>Loading groups...</p>
           </div>
         </CardContent>
       </Card>
@@ -85,62 +85,54 @@ export function CommitteesListPanel({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Committees
+          Groups
         </CardTitle>
         <CardDescription>
-          Manage church committees and their members
+          Manage church groups and their members
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {committees.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No committees yet</p>
-            <p className="text-sm">
-              Create your first committee to get started
-            </p>
+            <p>No groups yet</p>
+            <p className="text-sm">Create your first group to get started</p>
           </div>
         ) : (
-          committees
+          groups
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((committee) => {
-              const isSelected = selectedCommittee === committee.id;
+            .map((group) => {
+              const isSelected = selectedGroup === group.id;
 
               return (
                 <div
-                  key={committee.id}
+                  key={group.id}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors overflow-hidden ${
                     isSelected
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-primary/50'
                   }`}
-                  onClick={() => onSelectCommittee(committee.id)}
+                  onClick={() => onSelectGroup(group.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-1">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">
-                            {committee.name}
-                          </p>
+                          <p className="font-medium text-sm">{group.name}</p>
                           <div className="flex gap-1">
-                            {getCommitteeStatusBadge(committee)}
-                            {getCommitteeTypeBadge(committee)}
+                            {getGroupStatusBadge(group)}
+                            {getGroupTypeBadge(group)}
                           </div>
                         </div>
-                        {(committee.start_date || committee.end_date) && (
+                        {(group.start_date || group.end_date) && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                             <Calendar className="h-3 w-3" />
-                            <span>
-                              Started: {formatDate(committee.start_date)}
-                            </span>
-                            {committee.end_date && (
+                            <span>Started: {formatDate(group.start_date)}</span>
+                            {group.end_date && (
                               <>
                                 <span>•</span>
-                                <span>
-                                  Ends: {formatDate(committee.end_date)}
-                                </span>
+                                <span>Ends: {formatDate(group.end_date)}</span>
                               </>
                             )}
                           </div>
@@ -153,9 +145,9 @@ export function CommitteesListPanel({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEditCommittee(committee.id, committee);
+                          onEditGroup(group.id, group);
                         }}
-                        disabled={committee.is_closed}
+                        disabled={group.is_closed}
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -164,16 +156,16 @@ export function CommitteesListPanel({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteCommittee(committee.id);
+                          onDeleteGroup(group.id);
                         }}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-                  {committee.description && (
+                  {group.description && (
                     <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                      {committee.description}
+                      {group.description}
                     </p>
                   )}
                 </div>

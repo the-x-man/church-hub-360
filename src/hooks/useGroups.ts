@@ -4,8 +4,8 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Types for committee data
-export interface Committee {
+// Types for group data
+export interface Group {
   id: string;
   organization_id: string;
   branch_id: string | null;
@@ -22,7 +22,7 @@ export interface Committee {
   last_updated_by: string | null;
 }
 
-export interface CommitteeFormData {
+export interface GroupFormData {
   name: string;
   description?: string;
   type: 'temporal' | 'permanent';
@@ -31,9 +31,9 @@ export interface CommitteeFormData {
   end_date?: string;
 }
 
-export interface CommitteeMember {
+export interface GroupMember {
   id: string;
-  committee_id: string;
+  group_id: string;
   member_id: string;
   position: string | null;
   assigned_at: string;
@@ -51,31 +51,31 @@ export interface CommitteeMember {
 }
 
 // Query keys
-export const committeeKeys = {
-  all: ['committees'] as const,
-  lists: () => [...committeeKeys.all, 'list'] as const,
+export const groupKeys = {
+  all: ['groups'] as const,
+  lists: () => [...groupKeys.all, 'list'] as const,
   list: (organizationId: string, branchId?: string) => 
-    [...committeeKeys.lists(), organizationId, branchId] as const,
-  details: () => [...committeeKeys.all, 'detail'] as const,
-  detail: (id: string) => [...committeeKeys.details(), id] as const,
-  members: () => [...committeeKeys.all, 'members'] as const,
-  committeeMembers: (committeeId: string) => 
-    [...committeeKeys.members(), committeeId] as const,
+    [...groupKeys.lists(), organizationId, branchId] as const,
+  details: () => [...groupKeys.all, 'detail'] as const,
+  detail: (id: string) => [...groupKeys.details(), id] as const,
+  members: () => [...groupKeys.all, 'members'] as const,
+  groupMembers: (groupId: string) => 
+    [...groupKeys.members(), groupId] as const,
 };
 
 /**
- * Hook to fetch committees for an organization
+ * Hook to fetch groups for an organization
  */
-export function useCommittees(branchId?: string) {
+export function useGroups(branchId?: string) {
   const { currentOrganization } = useOrganization();
   
   return useQuery({
-    queryKey: committeeKeys.list(currentOrganization?.id || '', branchId),
-    queryFn: async (): Promise<Committee[]> => {
+    queryKey: groupKeys.list(currentOrganization?.id || '', branchId),
+    queryFn: async (): Promise<Group[]> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
       let query = supabase
-        .from('committees')
+        .from('groups')
         .select('*')
         .eq('organization_id', currentOrganization.id)
         .eq('is_active', true)
@@ -97,67 +97,67 @@ export function useCommittees(branchId?: string) {
 }
 
 /**
- * Hook to fetch a single committee by ID
+ * Hook to fetch a single group by ID
  */
-export function useCommittee(committeeId: string | null) {
+export function useGroup(groupId: string | null) {
   return useQuery({
-    queryKey: committeeKeys.detail(committeeId || ''),
-    queryFn: async (): Promise<Committee | null> => {
-      if (!committeeId) return null;
+    queryKey: groupKeys.detail(groupId || ''),
+    queryFn: async (): Promise<Group | null> => {
+      if (!groupId) return null;
 
       const { data, error } = await supabase
-        .from('committees')
+        .from('groups')
         .select('*')
-        .eq('id', committeeId)
+        .eq('id', groupId)
         .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!committeeId,
+    enabled: !!groupId,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 }
 
 /**
- * Hook to fetch committee members
+ * Hook to fetch group members
  */
-export function useCommitteeMembers(committeeId: string | null) {
+export function useGroupMembers(groupId: string | null) {
   return useQuery({
-    queryKey: committeeKeys.committeeMembers(committeeId || ''),
-    queryFn: async (): Promise<CommitteeMember[]> => {
-      if (!committeeId) return [];
+    queryKey: groupKeys.groupMembers(groupId || ''),
+    queryFn: async (): Promise<GroupMember[]> => {
+      if (!groupId) return [];
 
       const { data, error } = await supabase
-        .from('committee_members_view')
+        .from('group_members_view')
         .select('*')
-        .eq('committee_id', committeeId)
+        .eq('group_id', groupId)
         .order('member_full_name');
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!committeeId,
+    enabled: !!groupId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
- * Hook to create a new committee
+ * Hook to create a new group
  */
-export function useCreateCommittee() {
+export function useCreateGroup() {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
 
   return useMutation({
-    mutationFn: async (formData: CommitteeFormData): Promise<Committee> => {
+    mutationFn: async (formData: GroupFormData): Promise<Group> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
       const { data, error } = await supabase
-        .from('committees')
+        .from('groups')
         .insert({
           organization_id: currentOrganization.id,
           branch_id: formData.branch_id || null,
@@ -178,33 +178,33 @@ export function useCreateCommittee() {
       return data;
     },
     onSuccess: () => {
-      // Invalidate committees list
-      queryClient.invalidateQueries({ queryKey: committeeKeys.lists() });
-      toast.success('Committee created successfully');
+      // Invalidate groups list
+      queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
+      toast.success('Group created successfully');
     },
     onError: (error) => {
-      console.error('Failed to create committee:', error);
-      toast.error('Failed to create committee');
+      console.error('Failed to create group:', error);
+      toast.error('Failed to create group');
     },
   });
 }
 
 /**
- * Hook to update a committee
+ * Hook to update a group
  */
-export function useUpdateCommittee() {
+export function useUpdateGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ 
-      committeeId, 
+      groupId, 
       updates 
     }: { 
-      committeeId: string; 
-      updates: Partial<CommitteeFormData> 
-    }): Promise<Committee> => {
+      groupId: string; 
+      updates: Partial<GroupFormData> 
+    }): Promise<Group> => {
       const { data, error } = await supabase
-        .from('committees')
+        .from('groups')
         .update({
           name: updates.name,
           description: updates.description || null,
@@ -213,7 +213,7 @@ export function useUpdateCommittee() {
           start_date: updates.start_date || null,
           end_date: updates.end_date || null,
         })
-        .eq('id', committeeId)
+        .eq('id', groupId)
         .select()
         .single();
 
@@ -222,57 +222,57 @@ export function useUpdateCommittee() {
     },
     onSuccess: (data) => {
       // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: committeeKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: committeeKeys.detail(data.id) });
-      toast.success('Committee updated successfully');
+      queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: groupKeys.detail(data.id) });
+      toast.success('Group updated successfully');
     },
     onError: (error) => {
-      console.error('Failed to update committee:', error);
-      toast.error('Failed to update committee');
+      console.error('Failed to update group:', error);
+      toast.error('Failed to update group');
     },
   });
 }
 
 /**
- * Hook to delete a committee
+ * Hook to delete a group
  */
-export function useDeleteCommittee() {
+export function useDeleteGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (committeeId: string): Promise<void> => {
+    mutationFn: async (groupId: string): Promise<void> => {
       const { error } = await supabase
-        .from('committees')
+        .from('groups')
         .update({ is_active: false })
-        .eq('id', committeeId);
+        .eq('id', groupId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      // Invalidate committees list
-      queryClient.invalidateQueries({ queryKey: committeeKeys.lists() });
-      toast.success('Committee deleted successfully');
+      // Invalidate groups list
+      queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
+      toast.success('Group deleted successfully');
     },
     onError: (error) => {
-      console.error('Failed to delete committee:', error);
-      toast.error('Failed to delete committee');
+      console.error('Failed to delete group:', error);
+      toast.error('Failed to delete group');
     },
   });
 }
 
 /**
- * Hook to assign multiple members to a committee in bulk
+ * Hook to assign multiple members to a group in bulk
  */
-export function useBulkAssignMembersToCommittee() {
+export function useBulkAssignMembersToGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      committeeId,
+      groupId,
       memberAssignments,
       createdBy,
     }: {
-      committeeId: string;
+      groupId: string;
       memberAssignments: Array<{
         memberId: string;
         position?: string;
@@ -282,10 +282,10 @@ export function useBulkAssignMembersToCommittee() {
       if (memberAssignments.length === 0) return;
 
       const { error } = await supabase
-        .from('member_assigned_committees')
+        .from('member_assigned_groups')
         .insert(
           memberAssignments.map(assignment => ({
-            committee_id: committeeId,
+            group_id: groupId,
             member_id: assignment.memberId,
             position: assignment.position || null,
             assigned_by: createdBy,
@@ -295,41 +295,41 @@ export function useBulkAssignMembersToCommittee() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      // Invalidate committee members
+      // Invalidate group members
       queryClient.invalidateQueries({ 
-        queryKey: committeeKeys.committeeMembers(variables.committeeId) 
+        queryKey: groupKeys.groupMembers(variables.groupId) 
       });
-      toast.success(`${variables.memberAssignments.length} member(s) assigned to committee successfully`);
+      toast.success(`${variables.memberAssignments.length} member(s) assigned to group successfully`);
     },
     onError: (error) => {
-      console.error('Failed to assign members to committee:', error);
-      toast.error('Failed to assign members to committee');
+      console.error('Failed to assign members to group:', error);
+      toast.error('Failed to assign members to group');
     },
   });
 }
 
 /**
- * Hook to assign a member to a committee
+ * Hook to assign a member to a group
  */
-export function useAssignMemberToCommittee() {
+export function useAssignMemberToGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      committeeId,
+      groupId,
       memberId,
       position,
       createdBy,
     }: {
-      committeeId: string;
+      groupId: string;
       memberId: string;
       position?: string;
       createdBy: string;
     }): Promise<void> => {
       const { error } = await supabase
-        .from('member_assigned_committees')
+        .from('member_assigned_groups')
         .insert({
-          committee_id: committeeId,
+          group_id: groupId,
           member_id: memberId,
           position: position || null,
           assigned_by: createdBy,
@@ -338,83 +338,83 @@ export function useAssignMemberToCommittee() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      // Invalidate committee members
+      // Invalidate group members
       queryClient.invalidateQueries({ 
-        queryKey: committeeKeys.committeeMembers(variables.committeeId) 
+        queryKey: groupKeys.groupMembers(variables.groupId) 
       });
-      toast.success('Member assigned to committee successfully');
+      toast.success('Member assigned to group successfully');
     },
     onError: (error) => {
-      console.error('Failed to assign member to committee:', error);
-      toast.error('Failed to assign member to committee');
+      console.error('Failed to assign member to group:', error);
+      toast.error('Failed to assign member to group');
     },
   });
 }
 
 /**
- * Hook to remove a member from a committee
+ * Hook to remove a member from a group
  */
-export function useRemoveMemberFromCommittee() {
+export function useRemoveMemberFromGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      committeeId,
+      groupId,
       memberId,
     }: {
-      committeeId: string;
+      groupId: string;
       memberId: string;
     }): Promise<void> => {
       const { error } = await supabase
-        .from('member_assigned_committees')
+        .from('member_assigned_groups')
         .delete()
-        .eq('committee_id', committeeId)
+        .eq('group_id', groupId)
         .eq('member_id', memberId);
 
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      // Invalidate committee members
+      // Invalidate group members
       queryClient.invalidateQueries({ 
-        queryKey: committeeKeys.committeeMembers(variables.committeeId) 
+        queryKey: groupKeys.groupMembers(variables.groupId) 
       });
-      toast.success('Member removed from committee successfully');
+      toast.success('Member removed from group successfully');
     },
     onError: (error) => {
-      console.error('Failed to remove member from committee:', error);
-      toast.error('Failed to remove member from committee');
+      console.error('Failed to remove member from group:', error);
+      toast.error('Failed to remove member from group');
     },
   });
 }
 
 /**
- * Hook to update a member's position in a committee
+ * Hook to update a member's position in a group
  */
 export function useUpdateMemberPosition() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      committeeId,
+      groupId,
       memberId,
       position,
     }: {
-      committeeId: string;
+      groupId: string;
       memberId: string;
       position: string;
     }): Promise<void> => {
       const { error } = await supabase
-        .from('member_assigned_committees')
+        .from('member_assigned_groups')
         .update({ position })
-        .eq('committee_id', committeeId)
+        .eq('group_id', groupId)
         .eq('member_id', memberId);
 
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      // Invalidate committee members
+      // Invalidate group members
       queryClient.invalidateQueries({ 
-        queryKey: committeeKeys.committeeMembers(variables.committeeId) 
+        queryKey: groupKeys.groupMembers(variables.groupId) 
       });
       toast.success('Member position updated successfully');
     },
@@ -426,18 +426,18 @@ export function useUpdateMemberPosition() {
 }
 
 /**
- * Hook to close a committee
+ * Hook to close a group
  */
-export function useCloseCommittee() {
+export function useCloseGroup() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (committeeId: string): Promise<Committee> => {
+    mutationFn: async (groupId: string): Promise<Group> => {
       const { data, error } = await supabase
-        .from('committees')
+        .from('groups')
         .update({ is_closed: true, last_updated_by: user?.id })
-        .eq('id', committeeId)
+        .eq('id', groupId)
         .select()
         .single();
 
@@ -446,13 +446,13 @@ export function useCloseCommittee() {
     },
     onSuccess: (data) => {
       // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: committeeKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: committeeKeys.detail(data.id) });
-      toast.success('Committee closed successfully');
+      queryClient.invalidateQueries({ queryKey: groupKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: groupKeys.detail(data.id) });
+      toast.success('Group closed successfully');
     },
     onError: (error) => {
-      console.error('Failed to close committee:', error);
-      toast.error('Failed to close committee');
+      console.error('Failed to close group:', error);
+      toast.error('Failed to close group');
     },
   });
 }
