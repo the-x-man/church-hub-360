@@ -45,6 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
   assigned_tags: 'All Tags',
   tag_count: 'Tag Count',
   tags_with_categories: 'Tags by Category',
+  groups: 'Groups',
 };
 
 // Print component for PDF export
@@ -115,6 +116,14 @@ function MembersPrintView({
     if (fieldKey === 'assigned_tags') {
       const tags = parseAssignedTags(member.assigned_tags || '');
       return tags.length > 0 ? tags.join(', ') : 'No tags assigned';
+    }
+
+    // Handle groups from summary view
+    if (fieldKey === 'groups') {
+      const groups = Array.isArray(member.member_groups)
+        ? member.member_groups
+        : [];
+      return groups.length > 0 ? groups.join(' | ') : 'No groups assigned';
     }
 
     const value = member[fieldKey as keyof MemberSummary];
@@ -363,6 +372,13 @@ export function MemberExportService({
       return tags.length > 0 ? tags.join(', ') : 'No tags assigned';
     }
 
+    if (fieldKey === 'groups' && member) {
+      const groups = Array.isArray(member.member_groups)
+        ? member.member_groups
+        : [];
+      return groups.length > 0 ? groups.join(' | ') : 'No groups assigned';
+    }
+
     // Format dates for export
     if (fieldKey.includes('date') || fieldKey === 'created_at') {
       try {
@@ -399,6 +415,9 @@ export function MemberExportService({
             return formatValueForExport(null, fieldKey, member);
           }
           if (fieldKey === 'branch_name') {
+            return formatValueForExport(null, fieldKey, member);
+          }
+          if (fieldKey === 'groups') {
             return formatValueForExport(null, fieldKey, member);
           }
 
@@ -467,6 +486,8 @@ export function MemberExportService({
           if (fieldKey === 'address') {
             row[label] = formatValueForExport(null, fieldKey, member);
           } else if (fieldKey === 'branch_name') {
+            row[label] = formatValueForExport(null, fieldKey, member);
+          } else if (fieldKey === 'groups') {
             row[label] = formatValueForExport(null, fieldKey, member);
           } else {
             const value = member[fieldKey as keyof MemberSummary];

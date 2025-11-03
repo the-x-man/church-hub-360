@@ -63,6 +63,9 @@ export const AVAILABLE_EXPORT_FIELDS: ExportField[] = [
   { key: 'tag_count', label: 'Tag Count', category: 'membership' },
   { key: 'tags_with_categories', label: 'Tags by Category', category: 'membership' },
 
+  // Groups from summary view
+  { key: 'groups', label: 'Groups', category: 'membership' },
+
   // Dates
   { key: 'date_joined', label: 'Join Date', category: 'dates' },
   { key: 'created_at', label: 'Created Date', category: 'dates' },

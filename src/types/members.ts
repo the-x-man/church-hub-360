@@ -93,6 +93,9 @@ export interface MemberSummary {
   tag_count: number;
   tags_with_categories: string;
   tags_array: string[]; // Array of tag names for efficient filtering
+
+  // Member groups (from members_summary view)
+  member_groups: string[]; // Array of 'Group Name - Position'
 }
 
 // Membership status enum
