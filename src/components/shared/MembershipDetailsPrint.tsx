@@ -10,6 +10,7 @@ import {
   parseAssignedTags,
   parseTagsWithCategories,
 } from '@/utils/tagFormatUtils';
+import { useMemberGroupAssignments } from '@/hooks/useGroups';
 import { format } from 'date-fns';
 import { Mail, Phone } from 'lucide-react';
 
@@ -36,6 +37,12 @@ export function MembershipDetailsPrint({
       acc[tagName].push(assignment);
       return acc;
     }, {} as Record<string, MemberTagAssignment[]>) || {};
+
+  // Fetch group memberships for the member
+  const {
+    data: groupAssignments,
+    isLoading: isGroupsLoading,
+  } = useMemberGroupAssignments(member.id);
 
   const printDate = format(new Date(), 'PPP');
   const printTime = format(new Date(), 'p');
@@ -448,6 +455,35 @@ export function MembershipDetailsPrint({
             </div>
           ) : null}
 
+          {/* Groups Section */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold mb-2 bg-neutral-100 dark:bg-neutral-800/50 px-2 py-1 print:text-lg">
+              Groups
+            </h3>
+
+            {isGroupsLoading ? (
+              <p className="text-sm text-gray-500 print:text-xs">
+                Loading groups…
+              </p>
+            ) : groupAssignments && groupAssignments.length > 0 ? (
+              <div className="flex flex-wrap gap-2 print:gap-1">
+                {groupAssignments.map((g) => (
+                  <span
+                    key={`${g.group_id}-${g.member_id}-${
+                      g.assigned_at ?? g.assignment_id ?? g.id ?? Math.random()
+                    }`}
+                    className="px-3 py-1 rounded-full text-xs font-medium  bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90 border border-primary/20 print:px-2 print:py-0.5 print:text-xs"
+                  >
+                    {g.group_name || 'Unnamed Group'}
+                    {g.position ? ` — ${g.position}` : ''}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 print:text-xs">No groups assigned</p>
+            )}
+          </div>
+
           {/* Additional Information (Form Data) */}
           {'custom_form_data' in member &&
             member.custom_form_data &&
@@ -461,21 +497,7 @@ export function MembershipDetailsPrint({
               </div>
             )}
 
-          {/* Notes */}
-          {'notes' in member && member.notes && (
-            <div className="mb-8">
-              <h3 className="text-xl font-bold mb-2 bg-neutral-100 dark:bg-neutral-800/50 px-2 py-1 print:text-lg">
-                Notes
-              </h3>
-
-              <textarea
-                className="print:text-xs w-full border p-4 rounded-md outline-0"
-                readOnly
-              >
-                {member.notes}
-              </textarea>
-            </div>
-          )}
+          
 
           {/* Footer */}
           <Separator className="my-8 print:my-4" />

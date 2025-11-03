@@ -66,10 +66,12 @@ export function GroupsRenderer({
   });
 
   // Sort groups by name
-  const sortedGroups = availableGroups.sort((a, b) => a.name.localeCompare(b.name));
+  const sortedGroups = availableGroups.sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
-  const selectedGroupIds = value.map(assignment => assignment.groupId);
-  const selectedGroups = sortedGroups.filter(group => 
+  const selectedGroupIds = value.map((assignment) => assignment.groupId);
+  const selectedGroups = sortedGroups.filter((group) =>
     selectedGroupIds.includes(group.id)
   );
 
@@ -85,16 +87,16 @@ export function GroupsRenderer({
       onChange([...value, newAssignment]);
     } else {
       // Remove group assignment
-      onChange(value.filter(assignment => assignment.groupId !== groupId));
+      onChange(value.filter((assignment) => assignment.groupId !== groupId));
     }
   };
 
   const handlePositionChange = (groupId: string, position: string) => {
     if (!onChange) return;
 
-    const updatedAssignments = value.map(assignment => 
-      assignment.groupId === groupId 
-        ? { ...assignment, position: position === 'none' ? undefined : position }
+    const updatedAssignments = value.map((assignment) =>
+      assignment.groupId === groupId
+        ? { ...assignment, position: position === 'none' ? 'Member' : position }
         : assignment
     );
     onChange(updatedAssignments);
@@ -102,7 +104,7 @@ export function GroupsRenderer({
 
   const handleRemoveAssignment = (groupId: string) => {
     if (!onChange) return;
-    onChange(value.filter(assignment => assignment.groupId !== groupId));
+    onChange(value.filter((assignment) => assignment.groupId !== groupId));
   };
 
   const renderMultiselect = () => {
@@ -154,9 +156,13 @@ export function GroupsRenderer({
               <ScrollArea className="h-[300px]">
                 {sortedGroups.map((group) => {
                   const isSelected = selectedGroupIds.includes(group.id);
-                  const isDisabled = Boolean(disabled || 
-                    (!isSelected && maxSelections && value.length >= maxSelections));
-                  
+                  const isDisabled = Boolean(
+                    disabled ||
+                      (!isSelected &&
+                        maxSelections &&
+                        value.length >= maxSelections)
+                  );
+
                   return (
                     <CommandItem
                       key={group.id}
@@ -183,8 +189,10 @@ export function GroupsRenderer({
                             </div>
                           )}
                         </div>
-                        <Badge 
-                          variant={group.type === 'permanent' ? 'default' : 'secondary'}
+                        <Badge
+                          variant={
+                            group.type === 'permanent' ? 'default' : 'secondary'
+                          }
                           className="text-xs"
                         >
                           {group.type}
@@ -207,8 +215,8 @@ export function GroupsRenderer({
     return (
       <div className="mt-3 space-y-2">
         {selectedGroups.map((group) => {
-          const assignment = value.find(a => a.groupId === group.id);
-          
+          const assignment = value.find((a) => a.groupId === group.id);
+
           return (
             <div
               key={group.id}
@@ -221,36 +229,40 @@ export function GroupsRenderer({
                   {group.type} group
                 </div>
               </div>
-              
+
               {allowPositions && (
                 <div className="flex items-center gap-2">
                   <Select
                     value={assignment?.position || 'Member'}
-                    onValueChange={(position) => handlePositionChange(group.id, position)}
+                    onValueChange={(position) =>
+                      handlePositionChange(group.id, position)
+                    }
                     disabled={disabled}
                   >
                     <SelectTrigger className="w-32 h-8 text-xs">
                       <SelectValue placeholder="Position" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(POSITION_GROUPS).map(([groupName, positions], groupIndex) => (
-                        <div key={groupName}>
-                          {groupIndex > 0 && <Separator className="my-2" />}
-                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                            {groupName}
+                      {Object.entries(POSITION_GROUPS).map(
+                        ([groupName, positions], groupIndex) => (
+                          <div key={groupName}>
+                            {groupIndex > 0 && <Separator className="my-2" />}
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              {groupName}
+                            </div>
+                            {positions.map((position) => (
+                              <SelectItem key={position} value={position}>
+                                {position}
+                              </SelectItem>
+                            ))}
                           </div>
-                          {positions.map((position) => (
-                            <SelectItem key={position} value={position}>
-                              {position}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ))}
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
               )}
-              
+
               {onChange && (
                 <Button
                   variant="ghost"
@@ -272,9 +284,7 @@ export function GroupsRenderer({
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">
-          Group Assignments
-        </Label>
+        <Label className="text-sm font-medium">Group Assignments</Label>
         {maxSelections && (
           <span className="text-xs text-muted-foreground">
             {value.length}/{maxSelections} selected

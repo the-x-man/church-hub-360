@@ -626,9 +626,6 @@ export function MemberDetail() {
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                   <p className="text-muted-foreground">No groups assigned to this member</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">
-                    Groups help organize members into ministries and committees
-                  </p>
                 </div>
               )}
             </CardContent>
