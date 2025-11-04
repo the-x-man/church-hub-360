@@ -17,6 +17,7 @@ interface DatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  formatDateLabel?: (date: Date) => string;
   id?: string;
   captionLayout?: "dropdown" | "dropdown-years" | "dropdown-months" | "label";
   fromYear?: number;
@@ -35,6 +36,7 @@ export function DatePicker({
   placeholder = "Select date",
   className = "w-full",
   disabled = false,
+  formatDateLabel,
   id,
   captionLayout = "dropdown",
   fromYear = 1900,
@@ -102,7 +104,9 @@ export function DatePicker({
             className={`${className} justify-between font-normal`}
             disabled={disabled}
           >
-            {selectedDate ? selectedDate.toLocaleDateString() : placeholder}
+            {selectedDate
+              ? (formatDateLabel ? formatDateLabel(selectedDate) : selectedDate.toLocaleDateString())
+              : placeholder}
             <ChevronDownIcon className="h-4 w-4" />
           </Button>
         </PopoverTrigger>

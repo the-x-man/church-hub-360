@@ -332,6 +332,61 @@ export function useCreateAttendanceSession() {
 }
 
 /**
+ * Hook to create multiple attendance sessions in a single insert (bulk operation)
+ */
+export function useBulkCreateAttendanceSessions() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (inputs: CreateAttendanceSessionInput[]): Promise<AttendanceSession[]> => {
+      if (!currentOrganization?.id) throw new Error('Organization ID is required');
+      if (!user?.id) throw new Error('User authentication required');
+
+      const payload = inputs.map((input) => ({
+        ...input,
+        organization_id: currentOrganization.id,
+        created_by: user.id,
+        marking_modes: {
+          email: true,
+          phone: true,
+          membership_id: true,
+          manual: true,
+          public_link: false,
+          ...input.marking_modes,
+        },
+      }));
+
+      const { data, error } = await supabase
+        .from('attendance_sessions')
+        .insert(payload)
+        .select();
+
+      if (error) throw error;
+      return data || [];
+    },
+    onSuccess: () => {
+      // Invalidate and refetch sessions list
+      queryClient.invalidateQueries({
+        queryKey: attendanceSessionKeys.lists(),
+      });
+
+      // Invalidate stats
+      queryClient.invalidateQueries({
+        queryKey: attendanceSessionKeys.stats(),
+      });
+
+      toast.success('Attendance sessions created successfully');
+    },
+    onError: (error) => {
+      console.error('Error creating attendance sessions (bulk):', error);
+      toast.error('Failed to create attendance sessions');
+    },
+  });
+}
+
+/**
  * Hook to update an attendance session
  */
 export function useUpdateAttendanceSession() {

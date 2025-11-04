@@ -7,12 +7,13 @@ const locationSchema = z.object({
   radius: z.number().min(1, 'Radius must be at least 1 meter').max(10000, 'Radius cannot exceed 10km').optional(),
 }).optional();
 
-// Marking modes validation
+// Marking modes validation (updated to align with AttendanceMarkingModes)
 const markingModesSchema = z.object({
   manual: z.boolean(),
-  qr_code: z.boolean(),
-  proximity: z.boolean(),
-  self_checkin: z.boolean(),
+  email: z.boolean(),
+  phone: z.boolean(),
+  membership_id: z.boolean(),
+  public_link: z.boolean(),
 }).refine(
   (modes) => Object.values(modes).some(Boolean),
   'At least one marking mode must be enabled'
@@ -54,6 +55,10 @@ export const attendanceSessionSchema = z.object({
   
   allowed_tags: z.array(z.string().uuid('Invalid tag ID')).optional(),
   
+  // Optional scoping to groups and members
+  allowed_groups: z.array(z.string().uuid('Invalid group ID')).optional(),
+  allowed_members: z.array(z.string().uuid('Invalid member ID')).optional(),
+  
   marking_modes: markingModesSchema,
 }).refine(
   (data) => {
@@ -77,18 +82,6 @@ export const attendanceSessionSchema = z.object({
     message: 'Location is required when proximity checking is enabled',
     path: ['location'],
   }
-).refine(
-  (data) => {
-    // If proximity marking mode is enabled, proximity_required should be true
-    if (data.marking_modes.proximity && !data.proximity_required) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: 'Proximity checking must be enabled when proximity marking mode is selected',
-    path: ['proximity_required'],
-  }
 );
 
 // Schema for creating a new session
@@ -111,8 +104,9 @@ export const defaultSessionFormValues: Partial<AttendanceSessionFormData> = {
   proximity_required: false,
   marking_modes: {
     manual: true,
-    qr_code: false,
-    proximity: false,
-    self_checkin: false,
+    email: true,
+    phone: true,
+    membership_id: true,
+    public_link: false,
   },
 };

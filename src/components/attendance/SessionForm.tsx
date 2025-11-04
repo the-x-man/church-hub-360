@@ -83,22 +83,15 @@ export function SessionForm({
      onSubmit(data);
    };
 
-  const handleMarkingModeChange = (mode: keyof typeof markingModes, checked: boolean) => {
+  const handleMarkingModeChange = (
+    mode: 'manual' | 'email' | 'phone' | 'membership_id' | 'public_link',
+    checked: boolean
+  ) => {
     setValue(`marking_modes.${mode}`, checked);
-    
-    // If proximity mode is enabled, automatically enable proximity_required
-    if (mode === 'proximity' && checked) {
-      setValue('proximity_required', true);
-    }
   };
 
   const handleProximityRequiredChange = (checked: boolean) => {
     setValue('proximity_required', checked);
-    
-    // If proximity is disabled, also disable proximity marking mode
-    if (!checked && markingModes?.proximity) {
-      setValue('marking_modes.proximity', false);
-    }
   };
 
   return (
@@ -375,34 +368,45 @@ export function SessionForm({
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="qr_code"
-                checked={markingModes?.qr_code || false}
-                onCheckedChange={(checked) => handleMarkingModeChange('qr_code', checked as boolean)}
+                id="email"
+                checked={markingModes?.email || false}
+                onCheckedChange={(checked) => handleMarkingModeChange('email', checked as boolean)}
               />
-              <Label htmlFor="qr_code" className="text-sm font-normal">
-                QR code scanning
+              <Label htmlFor="email" className="text-sm font-normal">
+                Email verification
               </Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="proximity"
-                checked={markingModes?.proximity || false}
-                onCheckedChange={(checked) => handleMarkingModeChange('proximity', checked as boolean)}
+                id="phone"
+                checked={markingModes?.phone || false}
+                onCheckedChange={(checked) => handleMarkingModeChange('phone', checked as boolean)}
               />
-              <Label htmlFor="proximity" className="text-sm font-normal">
-                Proximity-based marking
+              <Label htmlFor="phone" className="text-sm font-normal">
+                Phone verification
               </Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="self_checkin"
-                checked={markingModes?.self_checkin || false}
-                onCheckedChange={(checked) => handleMarkingModeChange('self_checkin', checked as boolean)}
+                id="membership_id"
+                checked={markingModes?.membership_id || false}
+                onCheckedChange={(checked) => handleMarkingModeChange('membership_id', checked as boolean)}
               />
-              <Label htmlFor="self_checkin" className="text-sm font-normal">
-                Self check-in
+              <Label htmlFor="membership_id" className="text-sm font-normal">
+                Membership ID
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="public_link"
+                checked={markingModes?.public_link || false}
+                onCheckedChange={(checked) => handleMarkingModeChange('public_link', checked as boolean)}
+              />
+              <Label htmlFor="public_link" className="text-sm font-normal">
+                Public link (self check-in)
               </Label>
             </div>
           </div>

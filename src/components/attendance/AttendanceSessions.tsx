@@ -35,6 +35,7 @@ import {
   useUpdateAttendanceSession,
 } from '@/hooks/attendance/useAttendanceSessions';
 import { SessionForm } from './SessionForm';
+import { SessionCreationWizard } from './SessionCreationWizard';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import type { AttendanceSessionFormData } from '@/schemas/attendanceSessionSchema';
@@ -420,16 +421,17 @@ export function AttendanceSessions() {
       {viewMode === 'editor' && (
         <Card>
           <CardContent className="pt-6">
-            <SessionForm
-              mode={editorSession ? 'edit' : 'create'}
-              initialData={editorSession ?? undefined}
-              onSubmit={handleEditorSubmit}
-              onCancel={handleEditorCancel}
-              isLoading={
-                createSessionMutation.isPending ||
-                updateSessionMutation.isPending
-              }
-            />
+            {editorSession ? (
+              <SessionForm
+                mode="edit"
+                initialData={editorSession}
+                onSubmit={handleEditorSubmit}
+                onCancel={handleEditorCancel}
+                isLoading={updateSessionMutation.isPending}
+              />
+            ) : (
+              <SessionCreationWizard onCancel={handleEditorCancel} />
+            )}
           </CardContent>
         </Card>
       )}

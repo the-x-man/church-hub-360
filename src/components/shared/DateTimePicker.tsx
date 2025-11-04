@@ -23,6 +23,9 @@ interface DateTimePickerProps {
   timePlaceholder?: string;
   className?: string;
   disabled?: boolean;
+  disableDate?: boolean;
+  disableTime?: boolean;
+  formatDateLabel?: (date: Date) => string;
   id?: string;
   captionLayout?: 'dropdown' | 'dropdown-years' | 'dropdown-months' | 'label';
   fromYear?: number;
@@ -44,6 +47,9 @@ export function DateTimePicker({
   timePlaceholder = 'Select time',
   className = '',
   disabled = false,
+  disableDate = false,
+  disableTime = false,
+  formatDateLabel,
   id,
   captionLayout = 'dropdown',
   fromYear = 1900,
@@ -135,9 +141,11 @@ export function DateTimePicker({
               variant="outline"
               id={datePickerId}
               className="w-full min-w-32 justify-between font-normal"
-              disabled={disabled}
+              disabled={disabled || disableDate}
             >
-              {dateTime ? dateTime.toLocaleDateString() : datePlaceholder}
+              {dateTime
+                ? (formatDateLabel ? formatDateLabel(dateTime) : dateTime.toLocaleDateString())
+                : datePlaceholder}
               <ChevronDownIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
@@ -166,7 +174,7 @@ export function DateTimePicker({
           value={timeOnly}
           onChange={handleTimeChange}
           placeholder={timePlaceholder}
-          disabled={disabled}
+          disabled={disabled || disableTime}
           className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
         />
       </div>
