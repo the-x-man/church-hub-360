@@ -343,6 +343,7 @@ export function useDeleteAttendanceOccasion() {
 export function useToggleAttendanceOccasionStatus() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ 
@@ -356,7 +357,7 @@ export function useToggleAttendanceOccasionStatus() {
 
       const { data, error } = await supabase
         .from('attendance_occasions')
-        .update({ is_active: isActive })
+        .update({ is_active: isActive, last_updated_by: user?.id || null })
         .eq('id', id)
         .eq('organization_id', currentOrganization.id)
         .select()

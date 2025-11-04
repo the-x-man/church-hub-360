@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
   proximity_required boolean DEFAULT false NOT NULL,
   location jsonb,
   allowed_tags uuid[],
+  allowed_groups uuid[],
+  allowed_members uuid[],
   marking_modes jsonb DEFAULT '{"email": true, "phone": true, "membership_id": true, "manual": true, "public_link": false}'::jsonb,
   created_by uuid NOT NULL,
   created_at timestamptz DEFAULT NOW() NOT NULL,

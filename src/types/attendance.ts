@@ -168,6 +168,8 @@ export interface AttendanceSession {
   proximity_required: boolean;
   location?: AttendanceLocation | null;
   allowed_tags?: string[] | null;
+  allowed_groups?: string[] | null;
+  allowed_members?: string[] | null;
   marking_modes: AttendanceMarkingModes;
   created_by: string;
   created_at: string;
@@ -188,7 +190,9 @@ export interface CreateAttendanceSessionInput {
   allow_public_marking?: boolean;
   proximity_required?: boolean;
   location?: AttendanceLocation;
-  allowed_tags?: string[];
+  allowed_tags?: string[] | null;
+  allowed_groups?: string[] | null;
+  allowed_members?: string[] | null;
   marking_modes?: Partial<AttendanceMarkingModes>;
 }
 
@@ -205,6 +209,8 @@ export interface UpdateAttendanceSessionInput {
   proximity_required?: boolean;
   location?: AttendanceLocation | null;
   allowed_tags?: string[] | null;
+  allowed_groups?: string[] | null;
+  allowed_members?: string[] | null;
   marking_modes?: Partial<AttendanceMarkingModes>;
 }
 

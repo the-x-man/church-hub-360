@@ -4,7 +4,12 @@
  */
 
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../components/ui/tabs';
 import { AttendanceStats } from '../../components/attendance/AttendanceStats';
 import { OccasionsServices } from '../../components/attendance/OccasionsServices';
 import { AttendanceSessions } from '../../components/attendance/AttendanceSessions';
@@ -30,9 +35,11 @@ export function Attendance() {
       {/* Header */}
       <div className="flex items-center justify-between bg-neutral-100 dark:bg-neutral-800/50 px-6 py-4 rounded-lg border">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Comprehensive attendance tracking and management system
+          <h1 className="text-3xl font-bold tracking-tight">
+            Attendance Management
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Attendance tracking and management
           </p>
         </div>
       </div>
