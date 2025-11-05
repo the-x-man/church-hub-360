@@ -18,7 +18,7 @@ import {
 import { Settings, Clock, MapPin, Loader2 } from 'lucide-react';
 import { useAttendanceOccasions } from '@/hooks/attendance/useAttendanceOccasions';
 import { useRelationalTags } from '@/hooks/useRelationalTags';
-import { TagRenderer } from '@/components/people/tags/TagRenderer';
+import { TagMultiCheckboxRenderer } from '@/components/people/tags/TagMultiCheckboxRenderer';
 import { GroupsRenderer, type GroupAssignment } from '@/components/people/groups/GroupsRenderer';
 import { useAllGroups } from '@/hooks/useGroups';
 import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
@@ -60,7 +60,7 @@ export function SessionForm({
   const groups = groupsResponse || [];
 
   // Local UI states for per-tag values, group assignments, and member selections
-  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string | string[]>>({});
+  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string[]>>({});
   const [groupAssignments, setGroupAssignments] = useState<GroupAssignment[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<MemberSearchResult[]>([]);
   const [tagsInitialized, setTagsInitialized] = useState(false);
@@ -118,18 +118,13 @@ export function SessionForm({
   // Initialize per-tag values from flattened allowed_tags once tags load
   useEffect(() => {
     if (!tagsInitialized && tags.length > 0) {
-      const byTag: Record<string, string | string[]> = {};
+      const byTag: Record<string, string[]> = {};
       const selectedIds = Array.isArray(watchedAllowedTags) ? watchedAllowedTags : [];
 
       tags.forEach((tag) => {
         const itemIds = (tag.tag_items || []).map((ti) => ti.id);
         const matches = selectedIds.filter((id) => itemIds.includes(id));
-
-        if (tag.component_style === 'dropdown' || tag.component_style === 'radio' || tag.component_style === 'list') {
-          byTag[tag.id] = matches[0] || '';
-        } else {
-          byTag[tag.id] = matches;
-        }
+        byTag[tag.id] = matches;
       });
 
       setAllowedTagsByTag(byTag);
@@ -167,24 +162,20 @@ export function SessionForm({
   }, [memberDetails, mode]);
 
   // Helper to flatten per-tag values back into allowed_tags for the form
-  const flattenAllowedTags = (mapping: Record<string, string | string[]>, allTags: RelationalTagWithItems[]) => {
+  const flattenAllowedTags = (mapping: Record<string, string[]>, allTags: RelationalTagWithItems[]) => {
     const flattened: string[] = [];
     allTags.forEach((tag) => {
       const val = mapping[tag.id];
       const validIds = (tag.tag_items || []).map((ti) => ti.id);
       if (!val) return;
-      if (Array.isArray(val)) {
-        val.forEach((id) => {
-          if (validIds.includes(id)) flattened.push(id);
-        });
-      } else if (typeof val === 'string' && val) {
-        if (validIds.includes(val)) flattened.push(val);
-      }
+      val.forEach((id) => {
+        if (validIds.includes(id)) flattened.push(id);
+      });
     });
     return flattened;
   };
 
-  const handleAllowedTagChange = (tagId: string, value: string | string[]) => {
+  const handleAllowedTagChange = (tagId: string, value: string[]) => {
     const next = { ...allowedTagsByTag, [tagId]: value };
     setAllowedTagsByTag(next);
     const flattened = flattenAllowedTags(next, tags);
@@ -306,18 +297,19 @@ export function SessionForm({
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {tags.map((tag: RelationalTagWithItems) => (
-              <div key={tag.id} className="space-y-2">
-                <TagRenderer
-                  tag={tag}
-                  tagKey={tag.id}
-                  value={allowedTagsByTag[tag.id] ?? (tag.component_style === 'dropdown' || tag.component_style === 'radio' || tag.component_style === 'list' ? '' : [])}
-                  onChange={(newValue) => handleAllowedTagChange(tag.id, newValue)}
-                  error={errors.allowed_tags?.message}
-                  className="w-full"
-                />
-              </div>
-            ))}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              {tags.map((tag: RelationalTagWithItems) => (
+                <div key={tag.id} className="space-y-2 border border-border p-4 rounded-md">
+                  <TagMultiCheckboxRenderer
+                    tag={tag}
+                    tagKey={tag.id}
+                    value={allowedTagsByTag[tag.id] ?? []}
+                    onChange={(vals) => handleAllowedTagChange(tag.id, vals)}
+                    className="w-full"
+                  />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

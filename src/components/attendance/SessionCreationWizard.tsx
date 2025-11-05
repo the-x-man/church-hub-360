@@ -91,8 +91,8 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
   const [markingModes, setMarkingModes] = useState<AttendanceMarkingModes>({
     email: true, phone: true, membership_id: true, manual: true,
   });
-  // Store allowed tags per tag category to avoid clearing selections
-  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string | string[]>>({});
+  // Store allowed tags per tag category (always multi-select for attendance)
+  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string[]>>({});
   const [allowedGroups, setAllowedGroups] = useState<GroupAssignment[]>([]);
   const [allowedMembers, setAllowedMembers] = useState<MemberSearchResult[]>([]);
 
@@ -165,7 +165,7 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
 
   const flattenAllowedTags = (): string[] | undefined => {
     const ids = Object.values(allowedTagsByTag)
-      .flatMap((v) => Array.isArray(v) ? v : (v ? [v] : []))
+      .flatMap((v) => v)
       .filter(Boolean) as string[];
     return ids.length ? ids : undefined;
   };

@@ -3,9 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { Settings } from 'lucide-react';
-import { TagRenderer } from '@/components/people/tags/TagRenderer';
+import { TagMultiCheckboxRenderer } from '@/components/people/tags/TagMultiCheckboxRenderer';
 import { GroupsRenderer, type GroupAssignment } from '@/components/people/groups/GroupsRenderer';
 import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
 import type { AttendanceMarkingModes } from '@/types/attendance';
@@ -22,9 +21,9 @@ interface GlobalSettingsStepProps {
   globalEndISO: string;
   onChangeGlobalEndISO: (v: string) => void;
   tags: RelationalTagWithItems[];
-  // Per-tag values: single-select uses string, multi-select uses string[]
-  allowedTagsByTag: Record<string, string | string[]>;
-  onChangeAllowedTagForTag: (tagId: string, v: string | string[]) => void;
+  // Per-tag values: always multi-select for attendance settings
+  allowedTagsByTag: Record<string, string[]>;
+  onChangeAllowedTagForTag: (tagId: string, v: string[]) => void;
   groups: Group[];
   allowedGroups: GroupAssignment[];
   onChangeAllowedGroups: (v: GroupAssignment[]) => void;
@@ -128,31 +127,34 @@ export function GlobalSettingsStep({
           </div>
         </div>
 
-        <Separator className='my-6' />
-
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-8 py-10'>
+      
           {/* Allowed Tags */}
-          {tags.length > 0 && (
-            <div className="space-y-2">
-              <Label>Allowed Tags (Optional)</Label>
-              {tags.map((tag: RelationalTagWithItems) => (
-                <div key={tag.id} className="space-y-2">
-                  <TagRenderer
-                    tag={tag}
-                    tagKey={tag.id}
-                    value={allowedTagsByTag[tag.id] ?? []}
-                    onChange={(val) => onChangeAllowedTagForTag(tag.id, val)}
-                    className="w-full"
-                  />
+            {tags.length > 0 && (
+              <div className="space-y-2 my-12">
+                <Label>Allowed Tags (Optional)</Label>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Restrict attendance to members with specific tags
+                </p>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {tags.map((tag: RelationalTagWithItems) => (
+                  <div key={tag.id} className="space-y-2 border border-border p-4 rounded-md">
+                    <TagMultiCheckboxRenderer
+                      tag={tag}
+                      tagKey={tag.id}
+                      value={allowedTagsByTag[tag.id] ?? []}
+                      onChange={(val) => onChangeAllowedTagForTag(tag.id, val)}
+                      className="w-full"
+                    />
+                  </div>
+                ) )}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            )}
 
-          <div className='pace-y-6'>
+          <div className='pace-y-6 mt-12'>
             {/* Allowed Groups */}
             <div className="space-y-2 mb-6">
-              <Label>Allowed Groups (Optional)</Label>
+              <Label className='mb-4'>Allowed Groups (Optional)</Label>
               <GroupsRenderer
                 groups={groups}
                 value={allowedGroups}
@@ -175,7 +177,7 @@ export function GlobalSettingsStep({
               </div>
             )}
           </div>
-        </div>
+       
 
         {/* Marking Modes */}
         <Card className="space-y-2 my-8">
