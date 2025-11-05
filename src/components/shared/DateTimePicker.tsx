@@ -63,19 +63,19 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
 
-  // Parse the ISO string to get date and time parts
-  const dateTime = value ? new Date(value) : undefined;
-  const dateOnly = dateTime ? dateTime.toISOString().split('T')[0] : '';
-  const timeOnly = dateTime ? dateTime.toTimeString().split(' ')[0] : '';
+  // Safely parse ISO value using string operations to avoid invalid Date errors
+  const iso = value ?? '';
+  const [dateOnlyRaw, timeOnlyRaw] = iso.includes('T') ? iso.split('T') : [iso, ''];
+  const dateOnly = dateOnlyRaw || '';
+  // Display minutes precision to match native behavior elsewhere (HH:MM)
+  const timeOnly = timeOnlyRaw ? timeOnlyRaw.split(/[Z+\-]/)[0].slice(0, 5) : '';
+  const selectedDate = dateOnly ? new Date(`${dateOnly}T00:00:00`) : undefined;
 
-  const handleDateSelect = (selectedDate: Date | undefined) => {
-    if (selectedDate) {
-      // Preserve existing time or use current time
-      const existingTime = timeOnly || new Date().toTimeString().split(' ')[0];
-      const newDateTime = `${
-        selectedDate.toISOString().split('T')[0]
-      }T${existingTime}`;
-      onChange(newDateTime);
+  const handleDateSelect = (picked: Date | undefined) => {
+    if (picked) {
+      const datePart = picked.toISOString().slice(0, 10);
+      const timePart = timeOnly && /^\d{2}:\d{2}$/.test(timeOnly) ? `${timeOnly}:00` : '00:00:00';
+      onChange(`${datePart}T${timePart}`);
     } else {
       onChange('');
     }
@@ -83,16 +83,13 @@ export function DateTimePicker({
   };
 
   const handleTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = event.target.value;
-    if (dateOnly) {
-      const newDateTime = `${dateOnly}T${newTime}`;
-      onChange(newDateTime);
-    } else {
-      // If no date is selected, use today's date
-      const today = new Date().toISOString().split('T')[0];
-      const newDateTime = `${today}T${newTime}`;
-      onChange(newDateTime);
+    const newTime = event.target.value; // expected format HH:MM
+    if (!newTime || newTime.length < 5) {
+      // Avoid producing invalid ISO during partial edits
+      return;
     }
+    const datePart = dateOnly || new Date().toISOString().slice(0, 10);
+    onChange(`${datePart}T${newTime}:00`);
   };
 
   const getDisabledDates = (date: Date) => {
@@ -143,8 +140,8 @@ export function DateTimePicker({
               className="w-full min-w-32 justify-between font-normal"
               disabled={disabled || disableDate}
             >
-              {dateTime
-                ? (formatDateLabel ? formatDateLabel(dateTime) : dateTime.toLocaleDateString())
+              {selectedDate
+                ? (formatDateLabel ? formatDateLabel(selectedDate) : selectedDate.toLocaleDateString())
                 : datePlaceholder}
               <ChevronDownIcon className="h-4 w-4" />
             </Button>
@@ -152,13 +149,13 @@ export function DateTimePicker({
           <PopoverContent className="w-auto overflow-hidden p-0" align={align}>
             <Calendar
               mode="single"
-              selected={dateTime}
+              selected={selectedDate}
               captionLayout={captionLayout}
               onSelect={handleDateSelect}
               disabled={getDisabledDates}
               fromYear={fromYear}
               toYear={toYear}
-              defaultMonth={dateTime || new Date()}
+              defaultMonth={selectedDate || new Date()}
             />
           </PopoverContent>
         </Popover>
@@ -170,12 +167,12 @@ export function DateTimePicker({
         <Input
           type="time"
           id={timePickerId}
-          step="1"
+          step="60"
           value={timeOnly}
           onChange={handleTimeChange}
           placeholder={timePlaceholder}
           disabled={disabled || disableTime}
-          className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+          className="bg-background appearance-none "
         />
       </div>
     </div>

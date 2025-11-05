@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
   allowed_tags uuid[],
   allowed_groups uuid[],
   allowed_members uuid[],
-  marking_modes jsonb DEFAULT '{"email": true, "phone": true, "membership_id": true, "manual": true, "public_link": false}'::jsonb,
+  marking_modes jsonb DEFAULT '{"email": true, "phone": true, "membership_id": true, "manual": true}'::jsonb,
   created_by uuid NOT NULL,
   created_at timestamptz DEFAULT NOW() NOT NULL,
   updated_at timestamptz DEFAULT NOW() NOT NULL,

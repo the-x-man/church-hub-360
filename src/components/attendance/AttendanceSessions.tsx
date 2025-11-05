@@ -128,6 +128,7 @@ export function AttendanceSessions() {
           updates: data,
         });
         setEditorSession(updated);
+        setViewMode('list');
       }
     } catch (e) {
       // Error handling is done in mutations via toast; keep UX consistent

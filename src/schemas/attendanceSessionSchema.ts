@@ -13,7 +13,6 @@ const markingModesSchema = z.object({
   email: z.boolean(),
   phone: z.boolean(),
   membership_id: z.boolean(),
-  public_link: z.boolean(),
 }).refine(
   (modes) => Object.values(modes).some(Boolean),
   'At least one marking mode must be enabled'
@@ -107,6 +106,5 @@ export const defaultSessionFormValues: Partial<AttendanceSessionFormData> = {
     email: true,
     phone: true,
     membership_id: true,
-    public_link: false,
   },
 };

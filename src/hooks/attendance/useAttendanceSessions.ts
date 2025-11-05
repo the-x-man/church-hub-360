@@ -42,6 +42,52 @@ function getSessionStatus(session: Pick<AttendanceSession, 'start_time' | 'end_t
 }
 
 /**
+ * Compute UTC day bounds [start, end] for the date of a given ISO timestamp
+ * We anchor conflicts to the same calendar date (UTC) as the new session's start.
+ */
+function getUtcDayBounds(isoTimestamp: string) {
+  const dt = new Date(isoTimestamp);
+  const start = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 0, 0, 0, 0));
+  const end = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate(), 23, 59, 59, 999));
+  return { startIso: start.toISOString(), endIso: end.toISOString() };
+}
+
+/**
+ * Query for existing sessions that overlap the provided [start_time, end_time]
+ * on the same UTC date within the current organization. Excludes soft-deleted.
+ */
+async function findConflictingSessions(
+  organizationId: string,
+  startTimeIso: string,
+  endTimeIso: string
+) {
+  const { startIso, endIso } = getUtcDayBounds(startTimeIso);
+
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select('id, name, occasion_id, start_time, end_time')
+    .eq('organization_id', organizationId)
+    .eq('is_deleted', false)
+    // same UTC calendar date by constraining start_time to that day
+    .gte('start_time', startIso)
+    .lte('start_time', endIso)
+    // time-range overlap condition: existing.start < new.end AND existing.end > new.start
+    .lt('start_time', endTimeIso)
+    .gt('end_time', startTimeIso);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Detect long conflict error messages to avoid noisy toasts in UI
+const CONFLICT_SINGLE_PREFIX = 'Conflicting session exists on the same date/time:';
+const CONFLICT_BULK_PREFIX = 'Conflicting sessions detected on the same date/time:';
+function isConflictErrorMessage(message: string | undefined) {
+  const m = (message || '').trim();
+  return m.startsWith(CONFLICT_SINGLE_PREFIX) || m.startsWith(CONFLICT_BULK_PREFIX);
+}
+
+/**
  * Hook to fetch attendance sessions for an organization
  */
 export function useAttendanceSessions(
@@ -66,7 +112,8 @@ export function useAttendanceSessions(
           )
         `)
         .eq('organization_id', currentOrganization.id)
-        .eq('is_deleted', false);
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false });
 
       // Apply filters
       if (filters?.occasion_id) {
@@ -297,10 +344,29 @@ export function useCreateAttendanceSession() {
           phone: true,
           membership_id: true,
           manual: true,
-          public_link: false,
           ...input.marking_modes,
         },
       };
+
+      // Conflict validation: prevent overlapping sessions on the same date
+      const conflicts = await findConflictingSessions(
+        currentOrganization.id,
+        sessionData.start_time,
+        sessionData.end_time
+      );
+      if (conflicts.length > 0) {
+        const summary = conflicts
+          .map(c => {
+            const s = new Date(c.start_time);
+            const e = new Date(c.end_time);
+            const date = s.toISOString().split('T')[0];
+            const sTime = s.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const eTime = e.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `${date} ${sTime}-${eTime}${c.name ? ` (${c.name})` : ''}`;
+          })
+          .join(', ');
+        throw new Error(`Conflicting session exists on the same date/time: ${summary}`);
+      }
 
       const { data, error } = await supabase
         .from('attendance_sessions')
@@ -326,7 +392,12 @@ export function useCreateAttendanceSession() {
     },
     onError: (error) => {
       console.error('Error creating attendance session:', error);
-      toast.error('Failed to create attendance session');
+      const message = error instanceof Error ? error.message : 'Failed to create attendance session';
+      if (isConflictErrorMessage(message)) {
+        // Inline wizard handles conflict details; skip toast to prevent clutter
+        return;
+      }
+      toast.error(message);
     },
   });
 }
@@ -344,6 +415,35 @@ export function useBulkCreateAttendanceSessions() {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
       if (!user?.id) throw new Error('User authentication required');
 
+      // Validate conflicts for each input before insert
+      const conflictsFound: { index: number; summary: string }[] = [];
+      for (let i = 0; i < inputs.length; i++) {
+        const inp = inputs[i];
+        const conflicts = await findConflictingSessions(
+          currentOrganization.id,
+          inp.start_time,
+          inp.end_time
+        );
+        if (conflicts.length > 0) {
+          const summaries = conflicts.map(c => {
+            const s = new Date(c.start_time);
+            const e = new Date(c.end_time);
+            const date = s.toISOString().split('T')[0];
+            const sTime = s.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const eTime = e.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return `${date} ${sTime}-${eTime}${c.name ? ` (${c.name})` : ''}`;
+          });
+          conflictsFound.push({ index: i, summary: summaries.join(', ') });
+        }
+      }
+
+      if (conflictsFound.length > 0) {
+        const details = conflictsFound
+          .map(c => `Draft #${c.index + 1}: ${c.summary}`)
+          .join(' | ');
+        throw new Error(`Conflicting sessions detected on the same date/time: ${details}`);
+      }
+
       const payload = inputs.map((input) => ({
         ...input,
         organization_id: currentOrganization.id,
@@ -353,7 +453,6 @@ export function useBulkCreateAttendanceSessions() {
           phone: true,
           membership_id: true,
           manual: true,
-          public_link: false,
           ...input.marking_modes,
         },
       }));
@@ -381,7 +480,12 @@ export function useBulkCreateAttendanceSessions() {
     },
     onError: (error) => {
       console.error('Error creating attendance sessions (bulk):', error);
-      toast.error('Failed to create attendance sessions');
+      const message = error instanceof Error ? error.message : 'Failed to create attendance sessions';
+      if (isConflictErrorMessage(message)) {
+        // Inline wizard handles conflict details; skip toast to prevent clutter
+        return;
+      }
+      toast.error(message);
     },
   });
 }

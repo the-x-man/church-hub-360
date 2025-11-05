@@ -19,6 +19,7 @@ import { DateSelectionStep } from './wizard/DateSelectionStep';
 import { GeneratedSessionsList } from './wizard/GeneratedSessionsList';
 import { GlobalSettingsStep } from './wizard/GlobalSettingsStep';
 import { OccasionModeStep } from './wizard/OccasionModeStep';
+import { ConflictErrorAlert, type ConflictErrorInfo } from './wizard/ConflictErrorAlert';
 
 interface SessionCreationWizardProps {
   onCancel: () => void;
@@ -88,15 +89,35 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
     return undefined;
   };
   const [markingModes, setMarkingModes] = useState<AttendanceMarkingModes>({
-    email: true, phone: true, membership_id: true, manual: true, public_link: false
+    email: true, phone: true, membership_id: true, manual: true,
   });
-  const [allowedTags, setAllowedTags] = useState<string[]>([]);
+  // Store allowed tags per tag category to avoid clearing selections
+  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string | string[]>>({});
   const [allowedGroups, setAllowedGroups] = useState<GroupAssignment[]>([]);
   const [allowedMembers, setAllowedMembers] = useState<MemberSearchResult[]>([]);
 
   // Draft sessions
   const [drafts, setDrafts] = useState<DraftSession[]>([]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [conflictError, setConflictError] = useState<ConflictErrorInfo | null>(null);
+
+  const parseConflictError = (message: string): ConflictErrorInfo | null => {
+    if (!message) return null;
+    const singlePrefix = 'Conflicting session exists on the same date/time:';
+    const bulkPrefix = 'Conflicting sessions detected on the same date/time:';
+    const trimmed = message.trim();
+    if (trimmed.startsWith(singlePrefix)) {
+      const details = trimmed.slice(singlePrefix.length).trim();
+      const items = details.split(', ').map((s) => s.trim()).filter(Boolean);
+      return { mode: 'single', items };
+    }
+    if (trimmed.startsWith(bulkPrefix)) {
+      const details = trimmed.slice(bulkPrefix.length).trim();
+      const items = details.split(' | ').map((s) => s.trim()).filter(Boolean);
+      return { mode: 'bulk', items };
+    }
+    return null;
+  };
 
   // Friendly date formatter: Mon, 10 Nov 2025
   const formatFriendlyDate = (date: Date) =>
@@ -135,15 +156,23 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
       allow_public_marking: allowPublicMarking,
       proximity_required: proximityRequired,
       location: getValidLocation(),
-      allowed_tags: allowedTags.length ? allowedTags : undefined,
+      allowed_tags: flattenAllowedTags(),
       allowed_groups: allowedGroups.length ? allowedGroups.map(g => g.groupId) : undefined,
       allowed_members: allowedMembers.length ? allowedMembers.map(m => m.id) : undefined,
       marking_modes: { ...markingModes },
     };
   };
 
+  const flattenAllowedTags = (): string[] | undefined => {
+    const ids = Object.values(allowedTagsByTag)
+      .flatMap((v) => Array.isArray(v) ? v : (v ? [v] : []))
+      .filter(Boolean) as string[];
+    return ids.length ? ids : undefined;
+  };
+
   const handleGenerateDrafts = () => {
     setValidationErrors([]);
+    setConflictError(null);
     if (!selectedOccasionId) {
       setValidationErrors(['Please select an occasion.']);
       return;
@@ -158,7 +187,7 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
       allow_public_marking: allowPublicMarking,
       proximity_required: proximityRequired,
       location: getValidLocation(),
-      allowed_tags: allowedTags.length ? allowedTags : undefined,
+      allowed_tags: flattenAllowedTags(),
       allowed_groups: allowedGroups.length ? allowedGroups.map(g => g.groupId) : undefined,
       allowed_members: allowedMembers.length ? allowedMembers.map(m => m.id) : undefined,
       marking_modes: { ...markingModes },
@@ -281,6 +310,7 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
     const errs = validateDrafts();
     setValidationErrors(errs);
     if (errs.length > 0) return;
+    setConflictError(null);
 
     const payload: CreateAttendanceSessionInput[] = drafts.map((d) => ({
       organization_id: currentOrganization?.id || '',
@@ -298,10 +328,21 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
       marking_modes: d.marking_modes,
     }));
 
-    if (payload.length === 1) {
-      await createSession.mutateAsync(payload[0]);
-    } else {
-      await bulkCreateSessions.mutateAsync(payload);
+    try {
+      if (payload.length === 1) {
+        await createSession.mutateAsync(payload[0]);
+      } else {
+        await bulkCreateSessions.mutateAsync(payload);
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '';
+      const parsed = parseConflictError(message);
+      if (parsed) {
+        setConflictError(parsed);
+        return; // Keep wizard open to let user resolve conflicts
+      }
+      // Non-conflict errors will be handled by mutation's onError toast
+      return;
     }
 
     onCancel();
@@ -356,8 +397,8 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
         globalEndISO={globalEnd}
         onChangeGlobalEndISO={setGlobalEnd}
         tags={tags as RelationalTagWithItems[]}
-        allowedTags={allowedTags}
-        onChangeAllowedTags={setAllowedTags}
+        allowedTagsByTag={allowedTagsByTag}
+        onChangeAllowedTagForTag={(tagId, v) => setAllowedTagsByTag((prev) => ({ ...prev, [tagId]: v }))}
         groups={groups}
         allowedGroups={allowedGroups}
         onChangeAllowedGroups={setAllowedGroups}
@@ -374,7 +415,7 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
         onChangeLocation={setLocation}
       />
 
-      <Card>
+      <Card className='shadow-none border-none'>
         <CardContent className='flex  items-center justify-between gap-4'>
           <span className="text-sm text-muted-foreground">Generate a preview of the sessions to be created.</span>
           <Button onClick={handleGenerateDrafts} variant="secondary" disabled={isSubmitting} className='border border-secondary-foreground/50'>
@@ -382,6 +423,14 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
           </Button>
         </CardContent>
       </Card>
+
+      {/* Conflict errors */}
+      {conflictError && (
+        <ConflictErrorAlert
+          info={conflictError}
+          onDismiss={() => setConflictError(null)}
+        />
+      )}
 
       {/* Generated drafts sessions */}
       <GeneratedSessionsList
@@ -393,7 +442,8 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
       />
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2">
+      {drafts.length !== 0 && (
+        <div className="flex items-center justify-end gap-2">
         <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
@@ -406,6 +456,7 @@ export function SessionCreationWizard({ onCancel }: SessionCreationWizardProps) 
           )}
         </Button>
       </div>
+        )}
     </div>
   );
 }

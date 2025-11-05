@@ -22,8 +22,9 @@ interface GlobalSettingsStepProps {
   globalEndISO: string;
   onChangeGlobalEndISO: (v: string) => void;
   tags: RelationalTagWithItems[];
-  allowedTags: string[];
-  onChangeAllowedTags: (v: string[]) => void;
+  // Per-tag values: single-select uses string, multi-select uses string[]
+  allowedTagsByTag: Record<string, string | string[]>;
+  onChangeAllowedTagForTag: (tagId: string, v: string | string[]) => void;
   groups: Group[];
   allowedGroups: GroupAssignment[];
   onChangeAllowedGroups: (v: GroupAssignment[]) => void;
@@ -50,8 +51,8 @@ export function GlobalSettingsStep({
   globalEndISO,
   onChangeGlobalEndISO,
   tags,
-  allowedTags,
-  onChangeAllowedTags,
+  allowedTagsByTag,
+  onChangeAllowedTagForTag,
   groups,
   allowedGroups,
   onChangeAllowedGroups,
@@ -127,56 +128,66 @@ export function GlobalSettingsStep({
           </div>
         </div>
 
-        <Separator />
+        <Separator className='my-6' />
 
-        {/* Allowed Tags */}
-        {tags.length > 0 && (
-          <div className="space-y-2">
-            <Label>Allowed Tags (Optional)</Label>
-            {tags.map((tag: RelationalTagWithItems) => (
-              <div key={tag.id} className="space-y-2">
-                <TagRenderer
-                  tag={tag}
-                  tagKey={tag.id}
-                  value={allowedTags}
-                  onChange={(val) => onChangeAllowedTags(Array.isArray(val) ? val : [])}
-                  className="w-full"
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-8 py-10'>
+          {/* Allowed Tags */}
+          {tags.length > 0 && (
+            <div className="space-y-2">
+              <Label>Allowed Tags (Optional)</Label>
+              {tags.map((tag: RelationalTagWithItems) => (
+                <div key={tag.id} className="space-y-2">
+                  <TagRenderer
+                    tag={tag}
+                    tagKey={tag.id}
+                    value={allowedTagsByTag[tag.id] ?? []}
+                    onChange={(val) => onChangeAllowedTagForTag(tag.id, val)}
+                    className="w-full"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className='pace-y-6'>
+            {/* Allowed Groups */}
+            <div className="space-y-2 mb-6">
+              <Label>Allowed Groups (Optional)</Label>
+              <GroupsRenderer
+                groups={groups}
+                value={allowedGroups}
+                onChange={onChangeAllowedGroups}
+                allowPositions={false}
+              />
+            </div>
+
+            {/* Allowed Members */}
+            {organizationId && (
+              <div className="space-y-2">
+                <Label>Allowed Members (Optional)</Label>
+                <MemberSearchTypeahead
+                  organizationId={organizationId}
+                  multiSelect
+                  value={allowedMembers as any}
+                  onChange={onChangeAllowedMembers as any}
+                  placeholder="Search and select members"
                 />
               </div>
-            ))}
+            )}
           </div>
-        )}
-
-        {/* Allowed Groups */}
-        <div className="space-y-2">
-          <Label>Allowed Groups (Optional)</Label>
-          <GroupsRenderer
-            groups={groups}
-            value={allowedGroups}
-            onChange={onChangeAllowedGroups}
-            allowPositions={false}
-          />
         </div>
 
-        {/* Allowed Members */}
-        {organizationId && (
-          <div className="space-y-2">
-            <Label>Allowed Members (Optional)</Label>
-            <MemberSearchTypeahead
-              organizationId={organizationId}
-              multiSelect
-              value={allowedMembers as any}
-              onChange={onChangeAllowedMembers as any}
-              placeholder="Search and select members"
-            />
-          </div>
-        )}
-
         {/* Marking Modes */}
-        <div className="space-y-2">
-          <Label>Marking Modes</Label>
+        <Card className="space-y-2 my-8">
+          <CardHeader>
+          <CardTitle>Marking Modes</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Select how attendance can be marked for this session
+          </p>
+        </CardHeader>
+          <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {(['manual', 'email', 'phone', 'membership_id', 'public_link'] as (keyof AttendanceMarkingModes)[]).map((mode) => (
+            {(['manual', 'email', 'phone', 'membership_id'] as (keyof AttendanceMarkingModes)[]).map((mode) => (
               <label key={mode} className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={markingModes[mode]}
@@ -186,36 +197,41 @@ export function GlobalSettingsStep({
               </label>
             ))}
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Public marking */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-2 border rounded-md">
-            <div>
-              <div className="text-sm font-medium">Allow Public Marking</div>
-              <div className="text-xs text-muted-foreground">Members can self check-in via link</div>
+        <Card className="my-4 shadow-none">
+          <CardContent className='space-y-2'>
+            <div className="flex items-center justify-between p-2 border rounded-md">
+              <div>
+                <div className="text-sm font-medium">Allow Public Marking</div>
+                <div className="text-xs text-muted-foreground">Members can self check-in via link</div>
+              </div>
+              <Switch checked={allowPublicMarking} onCheckedChange={onChangeAllowPublicMarking} />
             </div>
-            <Switch checked={allowPublicMarking} onCheckedChange={onChangeAllowPublicMarking} />
-          </div>
-        </div>
 
-        {/* Proximity */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-2 border rounded-md">
-            <div>
-              <div className="text-sm font-medium">Require Proximity</div>
-              <div className="text-xs text-muted-foreground">Validate location when marking attendance</div>
+       
+
+          {/* Proximity */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2 border rounded-md">
+              <div>
+                <div className="text-sm font-medium">Require Proximity</div>
+                <div className="text-xs text-muted-foreground">Validate location when marking attendance</div>
+              </div>
+              <Switch checked={proximityRequired} onCheckedChange={onChangeProximityRequired} />
             </div>
-            <Switch checked={proximityRequired} onCheckedChange={onChangeProximityRequired} />
+            {proximityRequired && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input type="number" placeholder="Latitude" value={location.lat ?? ''} onChange={(e) => onChangeLocation({ ...location, lat: Number(e.target.value) })} />
+                <Input type="number" placeholder="Longitude" value={location.lng ?? ''} onChange={(e) => onChangeLocation({ ...location, lng: Number(e.target.value) })} />
+                <Input type="number" placeholder="Radius (m)" value={location.radius ?? ''} onChange={(e) => onChangeLocation({ ...location, radius: Number(e.target.value) })} />
+              </div>
+            )}
           </div>
-          {proximityRequired && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input type="number" placeholder="Latitude" value={location.lat ?? ''} onChange={(e) => onChangeLocation({ ...location, lat: Number(e.target.value) })} />
-              <Input type="number" placeholder="Longitude" value={location.lng ?? ''} onChange={(e) => onChangeLocation({ ...location, lng: Number(e.target.value) })} />
-              <Input type="number" placeholder="Radius (m)" value={location.radius ?? ''} onChange={(e) => onChangeLocation({ ...location, radius: Number(e.target.value) })} />
-            </div>
-          )}
-        </div>
+         </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

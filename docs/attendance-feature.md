@@ -63,7 +63,7 @@ Column Type Description
 id uuid (PK)
 session_id uuid (FK → attendance_sessions.id)`The session attended member_id uuid (FK → members.id)` The member marked present
 marked_by uuid (FK → users.id)` The user (admin) who marked attendance
-marked_by_mode text How attendance was marked (email, phone, membership_id, manual, public_link)
+marked_by_mode text How attendance was marked (email, phone, membership_id, manual)
 marked_at timestamptz
 location jsonb Optional: location where member marked (for public link)
 notes text
@@ -73,7 +73,7 @@ is_valid boolean False if failed validation (e.g. not part of allowed tags)
 Each row = one attendance mark for one person in one session.
 You can count members, export reports, and compute participation rates easily.
 
-5. attendance_participants
+1. attendance_participants
 
 Used when a session is restricted to specific people or groups.
 

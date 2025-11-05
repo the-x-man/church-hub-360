@@ -149,7 +149,6 @@ export interface AttendanceMarkingModes {
   phone: boolean;
   membership_id: boolean;
   manual: boolean;
-  public_link: boolean;
 }
 
 /**

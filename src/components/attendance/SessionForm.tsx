@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Settings, Clock, MapPin, Users, Loader2 } from 'lucide-react';
+import { Settings, Clock, MapPin, Loader2 } from 'lucide-react';
 import { useAttendanceOccasions } from '@/hooks/attendance/useAttendanceOccasions';
 import { useRelationalTags } from '@/hooks/useRelationalTags';
 import { TagRenderer } from '@/components/people/tags/TagRenderer';
+import { GroupsRenderer, type GroupAssignment } from '@/components/people/groups/GroupsRenderer';
+import { useAllGroups } from '@/hooks/useGroups';
+import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
+import { useMemberDetails, type MemberSearchResult } from '@/hooks/useMemberSearch';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { DateTimePicker } from '@/components/shared/DateTimePicker';
 import { 
   attendanceSessionSchema, 
@@ -48,6 +54,16 @@ export function SessionForm({
   });
   
   const { tags = [] } = useRelationalTags();
+  const { currentOrganization } = useOrganization();
+  const organizationId = currentOrganization?.id;
+  const { data: groupsResponse } = useAllGroups();
+  const groups = groupsResponse || [];
+
+  // Local UI states for per-tag values, group assignments, and member selections
+  const [allowedTagsByTag, setAllowedTagsByTag] = useState<Record<string, string | string[]>>({});
+  const [groupAssignments, setGroupAssignments] = useState<GroupAssignment[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<MemberSearchResult[]>([]);
+  const [tagsInitialized, setTagsInitialized] = useState(false);
 
   const {
      register,
@@ -67,6 +83,8 @@ export function SessionForm({
        proximity_required: initialData.proximity_required,
        location: initialData.location || undefined,
        allowed_tags: initialData.allowed_tags || [],
+       allowed_groups: initialData.allowed_groups || [],
+       allowed_members: initialData.allowed_members || [],
        marking_modes: initialData.marking_modes,
      } : {
       ...defaultSessionFormValues,
@@ -78,13 +96,16 @@ export function SessionForm({
   const watchedValues = watch();
   const proximityRequired = watch('proximity_required');
   const markingModes = watch('marking_modes');
+  const watchedAllowedTags = watch('allowed_tags') || [];
+  const watchedAllowedGroups = watch('allowed_groups') || [];
+  const watchedAllowedMembers = watch('allowed_members') || [];
 
   const handleFormSubmit = (data: AttendanceSessionFormData) => {
      onSubmit(data);
    };
 
   const handleMarkingModeChange = (
-    mode: 'manual' | 'email' | 'phone' | 'membership_id' | 'public_link',
+    mode: 'manual' | 'email' | 'phone' | 'membership_id',
     checked: boolean
   ) => {
     setValue(`marking_modes.${mode}`, checked);
@@ -92,6 +113,82 @@ export function SessionForm({
 
   const handleProximityRequiredChange = (checked: boolean) => {
     setValue('proximity_required', checked);
+  };
+
+  // Initialize per-tag values from flattened allowed_tags once tags load
+  useEffect(() => {
+    if (!tagsInitialized && tags.length > 0) {
+      const byTag: Record<string, string | string[]> = {};
+      const selectedIds = Array.isArray(watchedAllowedTags) ? watchedAllowedTags : [];
+
+      tags.forEach((tag) => {
+        const itemIds = (tag.tag_items || []).map((ti) => ti.id);
+        const matches = selectedIds.filter((id) => itemIds.includes(id));
+
+        if (tag.component_style === 'dropdown' || tag.component_style === 'radio' || tag.component_style === 'list') {
+          byTag[tag.id] = matches[0] || '';
+        } else {
+          byTag[tag.id] = matches;
+        }
+      });
+
+      setAllowedTagsByTag(byTag);
+      setTagsInitialized(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags]);
+
+  // Seed group assignments from allowed_groups in edit mode (no form writes here to avoid loops)
+  useEffect(() => {
+    if (mode === 'edit' && groupAssignments.length === 0 && watchedAllowedGroups.length > 0) {
+      const seeded = watchedAllowedGroups.map((gid: string) => ({ groupId: gid }));
+      setGroupAssignments(seeded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedAllowedGroups, mode]);
+
+  // Removed form writes in effects to avoid update loops; members are synced via onChange and details seeding
+
+  // Fetch member details to seed typeahead value in edit mode
+  const { data: memberDetails = [] } = useMemberDetails(
+    Array.isArray(watchedAllowedMembers) ? watchedAllowedMembers : []
+  );
+
+  useEffect(() => {
+    if (mode === 'edit' && selectedMembers.length === 0 && memberDetails.length > 0) {
+      const seeded: MemberSearchResult[] = memberDetails.map((m: any) => ({
+        ...m,
+        display_name: m.full_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim(),
+        display_subtitle: [m.membership_id, m.email, m.phone].filter(Boolean).join(' • ')
+      }));
+      setSelectedMembers(seeded);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberDetails, mode]);
+
+  // Helper to flatten per-tag values back into allowed_tags for the form
+  const flattenAllowedTags = (mapping: Record<string, string | string[]>, allTags: RelationalTagWithItems[]) => {
+    const flattened: string[] = [];
+    allTags.forEach((tag) => {
+      const val = mapping[tag.id];
+      const validIds = (tag.tag_items || []).map((ti) => ti.id);
+      if (!val) return;
+      if (Array.isArray(val)) {
+        val.forEach((id) => {
+          if (validIds.includes(id)) flattened.push(id);
+        });
+      } else if (typeof val === 'string' && val) {
+        if (validIds.includes(val)) flattened.push(val);
+      }
+    });
+    return flattened;
+  };
+
+  const handleAllowedTagChange = (tagId: string, value: string | string[]) => {
+    const next = { ...allowedTagsByTag, [tagId]: value };
+    setAllowedTagsByTag(next);
+    const flattened = flattenAllowedTags(next, tags);
+    setValue('allowed_tags', flattened);
   };
 
   return (
@@ -123,6 +220,7 @@ export function SessionForm({
             <Select
               value={watchedValues.occasion_id}
               onValueChange={(value) => setValue('occasion_id', value)}
+              disabled={mode === 'edit'}
             >
               <SelectTrigger className={cn('w-full', errors.occasion_id ? 'border-red-500' : '')}>
                 <SelectValue placeholder="Select an occasion" />
@@ -199,39 +297,86 @@ export function SessionForm({
      
 
       {/* Allowed Tags */}
-       {tags.length > 0 && (
-         <Card>
-           <CardHeader>
-             <CardTitle>Tags (Optional)</CardTitle>
-             <p className="text-sm text-muted-foreground">
-               Restrict attendance to members with specific tags
-             </p>
-           </CardHeader>
-           <CardContent className="space-y-4">
-             {tags.map((tag: RelationalTagWithItems) => (
-               <div key={tag.id} className="space-y-2">
-                 <TagRenderer
-                   tag={tag}
-                   tagKey={tag.id}
-                   value={watchedValues.allowed_tags || []}
-                   onChange={(newValue) => {
-                     // TagRenderer returns the selected tag item IDs for multiselect
-                     setValue('allowed_tags', Array.isArray(newValue) ? newValue : []);
-                   }}
-                   error={errors.allowed_tags?.message}
-                   className="w-full"
-                 />
-               </div>
-             ))}
-           </CardContent>
-         </Card>
-       )}
+      {tags.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Allowed Tags (Optional)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Restrict attendance to members with specific tags
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {tags.map((tag: RelationalTagWithItems) => (
+              <div key={tag.id} className="space-y-2">
+                <TagRenderer
+                  tag={tag}
+                  tagKey={tag.id}
+                  value={allowedTagsByTag[tag.id] ?? (tag.component_style === 'dropdown' || tag.component_style === 'radio' || tag.component_style === 'list' ? '' : [])}
+                  onChange={(newValue) => handleAllowedTagChange(tag.id, newValue)}
+                  error={errors.allowed_tags?.message}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Allowed Groups */}
+      {groups.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Allowed Groups (Optional)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Restrict attendance to members in selected groups
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <GroupsRenderer
+              groups={groups}
+              value={groupAssignments}
+              onChange={(assignments) => {
+                setGroupAssignments(assignments);
+                setValue('allowed_groups', assignments.map((a) => a.groupId));
+              }}
+              allowPositions={false}
+            />
+            {errors.allowed_groups && (
+              <p className="text-sm text-red-500">{errors.allowed_groups.message as string}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Allowed Members */}
+      {organizationId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Allowed Members (Optional)</CardTitle>
+            <p className="text-sm text-muted-foreground">Select members permitted to mark attendance</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <MemberSearchTypeahead
+              organizationId={organizationId}
+              multiSelect
+              value={selectedMembers as any}
+              onChange={(members) => {
+                setSelectedMembers(members as MemberSearchResult[]);
+                setValue('allowed_members', members.map((m) => m.id));
+              }}
+              placeholder="Search and select members"
+            />
+            {errors.allowed_members && (
+              <p className="text-sm text-red-500">{errors.allowed_members.message as string}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
         {/* Session Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
             Session Settings
           </CardTitle>
         </CardHeader>
@@ -255,7 +400,7 @@ export function SessionForm({
             <div className="space-y-0.5">
               <Label>Allow Public Marking</Label>
               <p className="text-sm text-muted-foreground">
-                Allow non-members to mark attendance
+                Members can self check-in via link
               </p>
             </div>
             <Switch
@@ -348,7 +493,7 @@ export function SessionForm({
       {/* Marking Modes */}
       <Card>
         <CardHeader>
-          <CardTitle>Attendance Marking Modes</CardTitle>
+          <CardTitle>Marking Modes</CardTitle>
           <p className="text-sm text-muted-foreground">
             Select how attendance can be marked for this session
           </p>
@@ -362,7 +507,7 @@ export function SessionForm({
                 onCheckedChange={(checked) => handleMarkingModeChange('manual', checked as boolean)}
               />
               <Label htmlFor="manual" className="text-sm font-normal">
-                Manual marking by administrators
+                Manual
               </Label>
             </div>
 
@@ -373,7 +518,7 @@ export function SessionForm({
                 onCheckedChange={(checked) => handleMarkingModeChange('email', checked as boolean)}
               />
               <Label htmlFor="email" className="text-sm font-normal">
-                Email verification
+                Email
               </Label>
             </div>
 
@@ -384,7 +529,7 @@ export function SessionForm({
                 onCheckedChange={(checked) => handleMarkingModeChange('phone', checked as boolean)}
               />
               <Label htmlFor="phone" className="text-sm font-normal">
-                Phone verification
+                Phone
               </Label>
             </div>
 
@@ -399,16 +544,7 @@ export function SessionForm({
               </Label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="public_link"
-                checked={markingModes?.public_link || false}
-                onCheckedChange={(checked) => handleMarkingModeChange('public_link', checked as boolean)}
-              />
-              <Label htmlFor="public_link" className="text-sm font-normal">
-                Public link (self check-in)
-              </Label>
-            </div>
+            
           </div>
           {errors.marking_modes && (
             <p className="text-sm text-red-500">{errors.marking_modes.message}</p>

@@ -44,6 +44,7 @@ import { useState, useMemo } from 'react';
 import { useDebounceValue } from '@/hooks/useDebounce';
 import { CreateOccasionForm } from './CreateOccasionForm';
 import { EditOccasionForm } from './EditOccasionForm';
+import { cn } from '@/lib/utils';
 
 export function OccasionsServices() {
   const [filters, setFilters] = useState<AttendanceOccasionFilters>({
@@ -184,7 +185,7 @@ export function OccasionsServices() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="h-4 w-4 text-cyan-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -199,7 +200,7 @@ export function OccasionsServices() {
             <CardTitle className="text-sm font-medium">
               Expected Attendance
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-indigo-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -216,7 +217,7 @@ export function OccasionsServices() {
             <CardTitle className="text-sm font-medium">
               Recurring Services
             </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -356,21 +357,6 @@ export function OccasionsServices() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        handleToggleStatus(occasion.id, occasion.is_active)
-                      }
-                      disabled={toggleStatus.isPending}
-                    >
-                      {occasion.is_active ? (
-                        <ToggleRight className="w-3 h-3 mr-1" />
-                      ) : (
-                        <ToggleLeft className="w-3 h-3 mr-1" />
-                      )}
-                      {occasion.is_active ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => setEditingOccasion(occasion)}
                     >
                       <Edit className="w-3 h-3 mr-1" />
@@ -384,6 +370,27 @@ export function OccasionsServices() {
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleToggleStatus(occasion.id, occasion.is_active)
+                      }
+                      disabled={toggleStatus.isPending}
+                      className={cn(
+                        'border',
+                        occasion.is_active
+                          ? 'bg-red-600/5 text-red-500 border-red-200 hover:bg-red-600/10 hover:text-red-600 dark:text-red-500'
+                          : 'bg-green-600/5 text-green-500 border-green-200 hover:bg-green-600/10 hover:text-green-600 dark:text-green-500'
+                      )}
+                    >
+                      {occasion.is_active ? (
+                        <ToggleRight className="w-3 h-3 mr-1" />
+                      ) : (
+                        <ToggleLeft className="w-3 h-3 mr-1" />
+                      )}
+                      {occasion.is_active ? 'Deactivate' : 'Activate'}
                     </Button>
                   </div>
                 </div>
