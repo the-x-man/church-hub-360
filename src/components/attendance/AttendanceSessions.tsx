@@ -35,6 +35,7 @@ import {
   useUpdateAttendanceSession,
 } from '@/hooks/attendance/useAttendanceSessions';
 import { SessionForm } from './SessionForm';
+import { SessionDetailsView } from './SessionDetailsView';
 import { SessionCreationWizard } from './SessionCreationWizard';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -52,10 +53,11 @@ export function AttendanceSessions() {
     AttendanceSessionStatus | 'all'
   >('all');
   const [isOpenFilter, setIsOpenFilter] = useState<boolean | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'editor'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'editor' | 'details'>('list');
   const [editorSession, setEditorSession] = useState<AttendanceSession | null>(
     null
   );
+  const [detailsSession, setDetailsSession] = useState<AttendanceSessionWithRelations | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     sessionId: string | null;
@@ -106,6 +108,16 @@ export function AttendanceSessions() {
 
   const handleEditorCancel = () => {
     setEditorSession(null);
+    setViewMode('list');
+  };
+
+  const handleViewDetails = (session: AttendanceSessionWithRelations) => {
+    setDetailsSession(session);
+    setViewMode('details');
+  };
+
+  const handleDetailsBack = () => {
+    setDetailsSession(null);
     setViewMode('list');
   };
 
@@ -198,7 +210,9 @@ export function AttendanceSessions() {
               ? editorSession
                 ? 'Edit Attendance Session'
                 : 'Create New Attendance Session'
-              : 'Attendance Sessions'}
+              : viewMode === 'details'
+                ? 'Attendance Session Details'
+                : 'Attendance Sessions'}
           </h2>
         </div>
         {viewMode === 'editor' ? (
@@ -206,6 +220,14 @@ export function AttendanceSessions() {
             variant="outline"
             className="w-fit"
             onClick={handleEditorCancel}
+          >
+            Back to List
+          </Button>
+        ) : viewMode === 'details' ? (
+          <Button
+            variant="outline"
+            className="w-fit"
+            onClick={handleDetailsBack}
           >
             Back to List
           </Button>
@@ -364,7 +386,7 @@ export function AttendanceSessions() {
                             )}
                           </Button>
                         )}
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(session)}>
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -433,6 +455,14 @@ export function AttendanceSessions() {
             ) : (
               <SessionCreationWizard onCancel={handleEditorCancel} />
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {viewMode === 'details' && detailsSession && (
+        <Card>
+          <CardContent className="pt-6">
+            <SessionDetailsView session={detailsSession} onBack={handleDetailsBack} />
           </CardContent>
         </Card>
       )}
