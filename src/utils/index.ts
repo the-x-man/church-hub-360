@@ -10,9 +10,6 @@ export * from './external-url';
 // Logo upload utilities
 export * from './logo-upload';
 
-// Seeding utilities
-export * from './seedingUtils';
-
 // Supabase client
 export * from './supabase';
 

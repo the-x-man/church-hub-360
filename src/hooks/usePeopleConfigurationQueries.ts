@@ -170,26 +170,26 @@ export function useMembershipFormManagement(organizationId: string | undefined):
         setOptimisticMembershipFormSchema(newMembershipFormSchema);
       }
 
-      const { error } = await supabase
+      const { data: result, error } = await supabase
         .from('people_configurations')
-        .update({
-          membership_form_schema: newMembershipFormSchema,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('organization_id', organizationId)
+        .upsert(
+          {
+            organization_id: organizationId,
+            membership_form_schema: newMembershipFormSchema,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'organization_id' }
+        )
         .select()
         .single();
 
       if (error) throw error;
 
-      // Update the query cache
-      queryClient.setQueryData(['people-configuration', organizationId], (oldData: PeopleConfiguration | undefined) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          membership_form_schema: newMembershipFormSchema,
-        };
-      });
+      // Update the query cache with the latest configuration
+      queryClient.setQueryData(
+        peopleConfigurationKeys.organization(organizationId),
+        result as PeopleConfiguration
+      );
 
       setOptimisticMembershipFormSchema(null);
       setLocalError(null);

@@ -9,7 +9,6 @@ import {
   useUpdateUserRole,
   useUserOrganizations,
 } from '../hooks/useOrganizationQueries';
-import { seedOrganizationIfNeeded } from '../utils/seedingUtils';
 import type {
   CreateOrganizationData,
   Organization,
@@ -90,21 +89,6 @@ export function OrganizationProvider({ children }: OrganizationProviderProps) {
       data,
       userId: user.id,
     });
-
-    // Seed the new organization with default people configuration
-    try {
-      await seedOrganizationIfNeeded(newOrganization.id, {
-        useMinimalSchema: false, // Use full schema for new organizations
-        userId: user.id,
-      });
-    } catch (seedError) {
-      console.error(
-        'Failed to seed organization with default configuration:',
-        seedError
-      );
-      // Don't fail the organization creation if seeding fails
-      // The organization can still be used and seeded later
-    }
 
     // Create the organization with role for immediate selection
     const newOrganizationWithRole: OrganizationWithRole = {

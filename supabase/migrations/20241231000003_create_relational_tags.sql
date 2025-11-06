@@ -1,4 +1,3 @@
--- Create relational tags structure to replace JSON-based tags in people_configurations
 -- This migration creates the new relational tables for tags management
 
 -- Create tags table for tag categories (e.g., "Departments", "Ministries", etc.)
