@@ -215,10 +215,17 @@ export function useAttendanceReport(params: ReportQueryParams | null) {
       } else if (params.occasion_ids && params.occasion_ids.length > 0) {
         sessionQuery = sessionQuery.in('occasion_id', params.occasion_ids);
       }
-      // Only restrict sessions by date when specific sessions are explicitly selected.
-      // If only an occasion is selected (and sessions are "All"), we do NOT restrict by session dates;
-      // we will filter attendance records by their marked_at timestamps instead.
-      const restrictSessionsByDate = !!(params.session_ids && params.session_ids.length > 0);
+      // Restrict sessions by date when:
+      // - Specific sessions are selected, OR
+      // - A cohort filter is applied (members/tags/groups modes) where the date range should bound expectation
+      // In pure occasions_sessions mode with only occasion selected and sessions set to "All",
+      // we continue to rely on records date filtering to avoid hiding closed sessions outside the date window.
+      const hasCohortFilters = !!(
+        (params.member_ids && params.member_ids.length > 0) ||
+        (params.tag_item_ids && params.tag_item_ids.length > 0) ||
+        (params.group_ids && params.group_ids.length > 0)
+      );
+      const restrictSessionsByDate = !!(params.session_ids && params.session_ids.length > 0) || hasCohortFilters;
       if (restrictSessionsByDate) {
         if (params.date_from) {
           sessionQuery = sessionQuery.gte('start_time', params.date_from);
@@ -374,10 +381,15 @@ export function useAttendanceReport(params: ReportQueryParams | null) {
       const sessions_count = sessions.length;
       // Compute expected totals
       const isTagsGroupsMode = (params.group_ids && params.group_ids.length > 0) || (params.tag_item_ids && params.tag_item_ids.length > 0);
+      const isMembersMode = (params.member_ids && params.member_ids.length > 0);
       let expected_total_members = 0;
-      if (isTagsGroupsMode) {
+      if (isTagsGroupsMode || isMembersMode) {
         // Cohort-based expectation across all sessions
-        const cohortSet = new Set<string>([...cohortGroupMembers, ...cohortTagMembers]);
+        const cohortSet = new Set<string>([
+          ...cohortGroupMembers,
+          ...cohortTagMembers,
+          ...(isMembersMode ? (params.member_ids as string[]) : []),
+        ]);
         const perSessionCounts = await Promise.all(
           sessions.map((s) => getEligibleCohortCountForSession(s, orgId, cohortSet)),
         );
