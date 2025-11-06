@@ -1,30 +1,17 @@
-/**
- * Attendance Page
- * Main attendance tracking interface with modern layout and navigation
- */
-
+import { Calendar, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
+import { AttendanceSessions } from '../../components/attendance/AttendanceSessions';
+import { OccasionsServices } from '../../components/attendance/OccasionsServices';
+import { ReportsInsights } from '../../components/attendance/ReportsInsights';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '../../components/ui/tabs';
-import { AttendanceStats } from '../../components/attendance/AttendanceStats';
-import { OccasionsServices } from '../../components/attendance/OccasionsServices';
-import { AttendanceSessions } from '../../components/attendance/AttendanceSessions';
-import { ReportsInsights } from '../../components/attendance/ReportsInsights';
-import { AttendanceSettings } from '../../components/attendance/AttendanceSettings';
-import {
-  BarChart3,
-  Calendar,
-  Users,
-  TrendingUp,
-  Settings,
-} from 'lucide-react';
 
 export function Attendance() {
-  const [activeTab, setActiveTab] = useState('stats');
+  const [activeTab, setActiveTab] = useState('sessions');
 
   return (
     <div className="space-y-6">
@@ -42,36 +29,25 @@ export function Attendance() {
 
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-fit lg:grid-cols-5">
-          <TabsTrigger value="stats" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Stats</span>
-          </TabsTrigger>
-          <TabsTrigger value="occasions" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span className="hidden sm:inline">Occasions</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 lg:w-fit lg:grid-cols-3 border border-primary/20 h-12">
           <TabsTrigger value="sessions" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Sessions</span>
           </TabsTrigger>
-          
+
+          <TabsTrigger value="occasions" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            <span className="hidden sm:inline">Occasions</span>
+          </TabsTrigger>
+
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             <span className="hidden sm:inline">Reports</span>
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Settings</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Tab Content */}
         <div className="mt-6">
-          <TabsContent value="stats" className="space-y-6">
-            <AttendanceStats />
-          </TabsContent>
-
           <TabsContent value="occasions" className="space-y-6">
             <OccasionsServices />
           </TabsContent>
@@ -80,14 +56,8 @@ export function Attendance() {
             <AttendanceSessions />
           </TabsContent>
 
-          
-
           <TabsContent value="reports" className="space-y-6">
             <ReportsInsights />
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <AttendanceSettings />
           </TabsContent>
         </div>
       </Tabs>

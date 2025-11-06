@@ -1,21 +1,16 @@
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
+import { Pagination } from '@/components/shared/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   useAttendanceOccasions,
-  useAttendanceOccasionStats,
   useDeleteAttendanceOccasion,
   useToggleAttendanceOccasionStatus,
 } from '@/hooks/attendance';
+import { useDebounceValue } from '@/hooks/useDebounce';
+import { cn } from '@/lib/utils';
 import type {
   AttendanceOccasion,
   AttendanceOccasionFilters,
@@ -25,10 +20,6 @@ import {
   getRecurrenceBadgeText,
 } from '@/utils/recurrence-formatter';
 import {
-  Calendar,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Edit,
   MapPin,
@@ -38,13 +29,11 @@ import {
   ToggleRight,
   Trash2,
   Users,
-  X,
+  X
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
-import { useDebounceValue } from '@/hooks/useDebounce';
+import { useMemo, useState } from 'react';
 import { CreateOccasionForm } from './CreateOccasionForm';
 import { EditOccasionForm } from './EditOccasionForm';
-import { cn } from '@/lib/utils';
 
 export function OccasionsServices() {
   const [filters, setFilters] = useState<AttendanceOccasionFilters>({
@@ -72,7 +61,6 @@ export function OccasionsServices() {
     ...filters,
     search: debouncedSearchTerm || undefined,
   });
-  const { data: stats } = useAttendanceOccasionStats();
   const deleteOccasion = useDeleteAttendanceOccasion();
   const toggleStatus = useToggleAttendanceOccasionStatus();
 
@@ -84,8 +72,7 @@ export function OccasionsServices() {
   }, [occasions, currentPage, pageSize]);
 
   const totalPages = Math.ceil(occasions.length / pageSize);
-  const hasNextPage = currentPage < totalPages;
-  const hasPreviousPage = currentPage > 1;
+
 
   const getStatusColor = (isActive: boolean) => {
     return isActive
@@ -178,56 +165,6 @@ export function OccasionsServices() {
           <Plus className="w-4 h-4 mr-2" />
           New Occasion
         </Button>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <CalendarDays className="h-4 w-4 text-cyan-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.this_week_occasions || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Occasions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium">
-              Expected Attendance
-            </CardTitle>
-            <Users className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.total_expected_attendance || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total expected this week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium">
-              Recurring Services
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.recurring_occasions || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Regular weekly services
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search and Filters */}
@@ -400,91 +337,19 @@ export function OccasionsServices() {
 
           {/* Pagination Controls */}
           {occasions.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t mt-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>
-                  Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                  {Math.min(currentPage * pageSize, occasions.length)} of{' '}
-                  {occasions.length} occasions
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                {/* Page Size Selector */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Show:</span>
-                  <Select
-                    value={pageSize.toString()}
-                    onValueChange={(value) =>
-                      handlePageSizeChange(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5</SelectItem>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Pagination Buttons */}
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={!hasPreviousPage}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNumber;
-                      if (totalPages <= 5) {
-                        pageNumber = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNumber = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNumber = totalPages - 4 + i;
-                      } else {
-                        pageNumber = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <Button
-                          key={pageNumber}
-                          variant={
-                            currentPage === pageNumber ? 'default' : 'outline'
-                          }
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNumber)}
-                          className="w-8 h-8 p-0"
-                        >
-                          {pageNumber}
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                    }
-                    disabled={!hasNextPage}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+            <div className="px-4 py-3 border-t mt-2">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, totalPages)}
+                pageSize={pageSize}
+                totalItems={occasions.length}
+                onPageChange={(page) =>
+                  setCurrentPage(Math.min(Math.max(1, page), Math.max(1, totalPages)))
+                }
+                onPageSizeChange={(size) => handlePageSizeChange(size)}
+                itemName="occasions"
+                pageSizeOptions={[5, 10, 20, 50]}
+              />
             </div>
           )}
         </CardContent>

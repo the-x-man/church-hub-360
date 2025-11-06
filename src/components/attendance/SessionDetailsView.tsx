@@ -9,14 +9,11 @@ import { useMembersSummaryPaginated } from '@/hooks/useMemberQueries';
 import { useTagsQuery } from '@/hooks/useRelationalTags';
 import type { AttendanceSessionWithRelations } from '@/types/attendance';
 import type { MemberSummary } from '@/types/members';
-import { useMemo, useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { AlertCircle } from 'lucide-react';
 import {
-  validateSessionForMarking,
   buildAllowedMemberIdSet,
+  validateSessionForMarking,
 } from '@/utils/attendance/sessionValidation';
+import { useMemo, useState } from 'react';
 import {
   LinksQrCard,
   ManualMarkingCard,
@@ -54,7 +51,10 @@ export function SessionDetailsView({
     isLoading: loadingAllowed,
   } = useSessionAllowedMembers(session);
 
-  const allowedMemberIdSet = useMemo(() => buildAllowedMemberIdSet(allowedMembers), [allowedMembers]);
+  const allowedMemberIdSet = useMemo(
+    () => buildAllowedMemberIdSet(allowedMembers),
+    [allowedMembers]
+  );
 
   // Session-level validation to decide if manual marking UI should show
   const sessionValidation = useMemo(
@@ -65,17 +65,6 @@ export function SessionDetailsView({
       }),
     [session]
   );
-
-  const reasonLabels: Record<string, string> = {
-    session_closed: 'Session closed',
-    outside_time_window: 'Outside scheduled time window',
-    public_marking_disabled: 'Public marking disabled',
-    mode_disabled: 'Manual marking disabled',
-    member_not_allowed: 'Member not allowed for this session',
-    member_allowlist_unknown: 'Allowlist not loaded',
-    outside_allowed_radius: 'Outside allowed proximity radius',
-    missing_session: 'No session provided',
-  };
 
   // Fallback to all members when no allowed list
   const { data: paginated, isLoading: loadingAll } = useMembersSummaryPaginated(
@@ -184,50 +173,32 @@ export function SessionDetailsView({
             allowedTagLabels={allowedTagLabels}
           />
 
-          {/* Status alert when marking is not available */}
-          {!sessionValidation.ok && (
-            <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-900/10">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Attendance Marking Unavailable</AlertTitle>
-              <AlertDescription>
-                Attendance marking is currently disabled for this session.
-              </AlertDescription>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {sessionValidation.reasons.map((r) => (
-                  <Badge key={r} variant="secondary" className="text-xs">
-                    {reasonLabels[r] ?? r}
-                  </Badge>
-                ))}
-              </div>
-            </Alert>
-          )}
-
           {/* Manual marking table */}
-          {sessionValidation.ok && (
-            <ManualMarkingCard
-              session={session}
-              search={search}
-              setSearch={setSearch}
-              searchFields={searchFields}
-              setSearchFields={setSearchFields}
-              filteredMembers={filteredMembers}
-              presentMap={presentMap}
-              onPresent={handlePresent}
-              onAbsent={handleAbsent}
-              markPending={markAttendance.isPending}
-              unmarkPending={unmarkAttendance.isPending}
-              hasAllowedList={allowedMembers.length > 0}
-              loadingAllowed={loadingAllowed}
-              loadingAll={loadingAll}
-              page={page}
-              pageSize={pageSize}
-              paginatedTotal={(paginated?.total || 0) as number}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-              markingModes={session.marking_modes}
-              records={records}
-            />
-          )}
+
+          <ManualMarkingCard
+            session={session}
+            search={search}
+            setSearch={setSearch}
+            searchFields={searchFields}
+            setSearchFields={setSearchFields}
+            filteredMembers={filteredMembers}
+            presentMap={presentMap}
+            onPresent={handlePresent}
+            onAbsent={handleAbsent}
+            markPending={markAttendance.isPending}
+            unmarkPending={unmarkAttendance.isPending}
+            hasAllowedList={allowedMembers.length > 0}
+            loadingAllowed={loadingAllowed}
+            loadingAll={loadingAll}
+            page={page}
+            pageSize={pageSize}
+            paginatedTotal={(paginated?.total || 0) as number}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            markingModes={session.marking_modes}
+            records={records}
+            sessionValidationResult={sessionValidation}
+          />
         </div>
 
         {/* Right: Link/QR placeholders */}

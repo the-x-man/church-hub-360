@@ -121,18 +121,6 @@ export interface AttendanceOccasionListResponse {
 }
 
 /**
- * Attendance Occasion Statistics
- */
-export interface AttendanceOccasionStats {
-  total_occasions: number;
-  active_occasions: number;
-  recurring_occasions: number;
-  one_time_occasions: number;
-  this_week_occasions: number;
-  total_expected_attendance: number;
-}
-
-/**
  * Location data for proximity checking
  */
 export interface AttendanceLocation {

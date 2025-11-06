@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +38,7 @@ import { SessionForm } from './SessionForm';
 import { SessionDetailsView } from './SessionDetailsView';
 import { SessionCreationWizard } from './SessionCreationWizard';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
+import { Pagination } from '@/components/shared/Pagination';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import type { AttendanceSessionFormData } from '@/schemas/attendanceSessionSchema';
 import type {
@@ -53,16 +54,23 @@ export function AttendanceSessions() {
     AttendanceSessionStatus | 'all'
   >('all');
   const [isOpenFilter, setIsOpenFilter] = useState<boolean | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'editor' | 'details'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'editor' | 'details'>(
+    'list'
+  );
   const [editorSession, setEditorSession] = useState<AttendanceSession | null>(
     null
   );
-  const [detailsSession, setDetailsSession] = useState<AttendanceSessionWithRelations | null>(null);
+  const [
+    detailsSession,
+    setDetailsSession,
+  ] = useState<AttendanceSessionWithRelations | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     sessionId: string | null;
     sessionName: string | null;
   }>({ isOpen: false, sessionId: null, sessionName: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Build filters object
   const filters: AttendanceSessionFilters = {
@@ -74,6 +82,16 @@ export function AttendanceSessions() {
   const { data: sessions = [], isLoading, error } = useAttendanceSessions(
     filters
   );
+
+  const totalPages = Math.max(1, Math.ceil(sessions.length / pageSize));
+  const paginatedSessions = sessions.slice(
+    (currentPage - 1) * pageSize,
+    (currentPage - 1) * pageSize + pageSize
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, isOpenFilter]);
 
   const deleteSessionMutation = useDeleteAttendanceSession();
   const toggleStatusMutation = useToggleSessionStatus();
@@ -169,7 +187,14 @@ export function AttendanceSessions() {
         </Badge>
       );
     }
-    return <Badge variant="secondary">Past</Badge>;
+    return (
+      <Badge
+        variant="secondary"
+        className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      >
+        Ended
+      </Badge>
+    );
   };
 
   const formatDateTime = (dateTime: string) => {
@@ -211,8 +236,8 @@ export function AttendanceSessions() {
                 ? 'Edit Attendance Session'
                 : 'Create New Attendance Session'
               : viewMode === 'details'
-                ? 'Attendance Session Details'
-                : 'Attendance Sessions'}
+              ? 'Attendance Session Details'
+              : 'Attendance Sessions'}
           </h2>
         </div>
         {viewMode === 'editor' ? (
@@ -312,7 +337,7 @@ export function AttendanceSessions() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {sessions.map((session) => (
+                  {paginatedSessions.map((session) => (
                     <div
                       key={session.id}
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -386,7 +411,11 @@ export function AttendanceSessions() {
                             )}
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(session)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(session)}
+                        >
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -412,6 +441,26 @@ export function AttendanceSessions() {
                     </div>
                   ))}
                 </div>
+                {sessions.length > 0 && (
+                  <div className="px-4 py-3 border-t mt-2">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      pageSize={pageSize}
+                      totalItems={sessions.length}
+                      onPageChange={(page) =>
+                        setCurrentPage(
+                          Math.min(Math.max(1, page), Math.max(1, totalPages))
+                        )
+                      }
+                      onPageSizeChange={(size) => {
+                        setPageSize(size);
+                        setCurrentPage(1);
+                      }}
+                      itemName="sessions"
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -462,7 +511,10 @@ export function AttendanceSessions() {
       {viewMode === 'details' && detailsSession && (
         <Card>
           <CardContent className="pt-6">
-            <SessionDetailsView session={detailsSession} onBack={handleDetailsBack} />
+            <SessionDetailsView
+              session={detailsSession}
+              onBack={handleDetailsBack}
+            />
           </CardContent>
         </Card>
       )}

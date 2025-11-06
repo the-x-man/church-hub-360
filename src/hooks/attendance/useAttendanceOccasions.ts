@@ -10,7 +10,6 @@ import type {
   AttendanceOccasionWithRelations,
   AttendanceOccasionFilters,
   AttendanceOccasionSort,
-  AttendanceOccasionStats,
 } from "@/types/attendance";
 
 // Query keys
@@ -148,53 +147,6 @@ export function useAttendanceOccasion(id: string) {
       };
     },
     enabled: !!currentOrganization?.id && !!id,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-}
-
-/**
- * Hook to fetch attendance occasion statistics
- */
-export function useAttendanceOccasionStats() {
-  const { currentOrganization } = useOrganization();
-  
-  return useQuery({
-    queryKey: attendanceOccasionKeys.organizationStats(currentOrganization?.id || ''),
-    queryFn: async (): Promise<AttendanceOccasionStats> => {
-      if (!currentOrganization?.id) throw new Error('Organization ID is required');
-
-      const { data, error } = await supabase
-        .from('attendance_occasions')
-        .select('id, is_active, recurrence_rule, default_duration_minutes')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_deleted', false);
-
-      if (error) throw error;
-
-      const occasions = data || [];
-      const activeOccasions = occasions.filter(o => o.is_active);
-      const recurringOccasions = occasions.filter(o => o.recurrence_rule);
-      const oneTimeOccasions = occasions.filter(o => !o.recurrence_rule);
-
-      // Calculate this week's occasions (simplified - would need proper recurrence parsing)
-      const thisWeekOccasions = recurringOccasions.length; // Simplified calculation
-
-      // Calculate expected attendance (simplified)
-      const totalExpectedAttendance = occasions.reduce((sum, occasion) => {
-        return sum + (occasion.default_duration_minutes ? 100 : 50); // Mock calculation
-      }, 0);
-
-      return {
-        total_occasions: occasions.length,
-        active_occasions: activeOccasions.length,
-        recurring_occasions: recurringOccasions.length,
-        one_time_occasions: oneTimeOccasions.length,
-        this_week_occasions: thisWeekOccasions,
-        total_expected_attendance: totalExpectedAttendance,
-      };
-    },
-    enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

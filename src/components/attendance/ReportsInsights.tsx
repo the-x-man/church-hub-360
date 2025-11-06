@@ -1,16 +1,16 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Calendar, 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  BarChart3,
+  TrendingUp,
+  Calendar,
   Users,
   Download,
   Filter,
   Eye,
-  FileText
-} from "lucide-react";
+  FileText,
+} from 'lucide-react';
 
 export function ReportsInsights() {
   return (
@@ -18,7 +18,9 @@ export function ReportsInsights() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Reports & Insights</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Attendance Reports & Insights
+          </h2>
           <p className="text-muted-foreground">
             Analyze attendance patterns and generate reports
           </p>
@@ -39,14 +41,14 @@ export function ReportsInsights() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Attendance
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">--</div>
-            <p className="text-xs text-muted-foreground">
-              Last 30 days
-            </p>
+            <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
 
@@ -57,9 +59,7 @@ export function ReportsInsights() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">--%</div>
-            <p className="text-xs text-muted-foreground">
-              Month over month
-            </p>
+            <p className="text-xs text-muted-foreground">Month over month</p>
           </CardContent>
         </Card>
 
@@ -70,9 +70,7 @@ export function ReportsInsights() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">--</div>
-            <p className="text-xs text-muted-foreground">
-              Highest attendance
-            </p>
+            <p className="text-xs text-muted-foreground">Highest attendance</p>
           </CardContent>
         </Card>
 
@@ -83,9 +81,7 @@ export function ReportsInsights() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">--%</div>
-            <p className="text-xs text-muted-foreground">
-              Regular attendees
-            </p>
+            <p className="text-xs text-muted-foreground">Regular attendees</p>
           </CardContent>
         </Card>
       </div>
@@ -185,7 +181,9 @@ export function ReportsInsights() {
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <div className="font-medium">Report Name</div>
-                  <div className="text-sm text-muted-foreground">Generated on Date</div>
+                  <div className="text-sm text-muted-foreground">
+                    Generated on Date
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -202,7 +200,9 @@ export function ReportsInsights() {
                 <FileText className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <div className="font-medium">Another Report</div>
-                  <div className="text-sm text-muted-foreground">Generated on Date</div>
+                  <div className="text-sm text-muted-foreground">
+                    Generated on Date
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
