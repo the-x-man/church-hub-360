@@ -1,16 +1,28 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReportExportMenu } from '../ReportExportMenu';
+import { AttendanceWidgetExportButtons } from '@/components/attendance/AttendanceWidgetExportButtons';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAgeGroupManagement } from '@/hooks/usePeopleConfigurationQueries';
 import type { AttendanceReportData } from '@/hooks/attendance/useAttendanceReports';
 
 interface AgeGroupReportProps {
   report?: AttendanceReportData | null;
+  filtersSummary?: {
+    mode: 'occasions_sessions' | 'tags_groups' | 'members';
+    date_from?: string;
+    date_to?: string;
+    occasion_ids?: string[];
+    session_ids?: string[];
+    tag_item_ids?: string[];
+    group_ids?: string[];
+    member_ids?: string[];
+  };
 }
 
-export function AgeGroupReport({ report }: AgeGroupReportProps) {
-  const printableRef = useRef<HTMLDivElement>(null);
+export function AgeGroupReport({
+  report,
+  filtersSummary,
+}: AgeGroupReportProps) {
   const { currentOrganization } = useOrganization();
   const { ageGroups = [] } = useAgeGroupManagement(currentOrganization?.id);
 
@@ -41,31 +53,40 @@ export function AgeGroupReport({ report }: AgeGroupReportProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Age Group Breakdown</CardTitle>
-        <ReportExportMenu filenameBase="age-group-breakdown" getRows={() => rows} printRef={printableRef} disabled={!report || rows.length === 0} />
+        <AttendanceWidgetExportButtons
+          report={report}
+          filtersSummary={filtersSummary}
+          defaultSections={['age_groups']}
+          disabled={!report || rows.length === 0}
+        />
       </CardHeader>
       <CardContent>
-        <div ref={printableRef} className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th className="py-2 pr-4">Age Group</th>
-                <th className="py-2">Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={2} className="py-3 text-muted-foreground">No data</td>
+        <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="py-2 pr-4">Age Group</th>
+                  <th className="py-2">Count</th>
                 </tr>
-              )}
-              {rows.map((row, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="py-2 pr-4">{row.Group}</td>
-                  <td className="py-2">{row.Count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="py-3 text-muted-foreground">
+                      No data
+                    </td>
+                  </tr>
+                )}
+                {rows.map((row, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="py-2 pr-4">{row.Group}</td>
+                    <td className="py-2">{row.Count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </CardContent>
     </Card>

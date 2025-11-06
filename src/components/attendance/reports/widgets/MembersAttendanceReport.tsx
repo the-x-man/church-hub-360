@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReportExportMenu } from '../ReportExportMenu';
+import { AttendanceWidgetExportButtons } from '@/components/attendance/AttendanceWidgetExportButtons';
 import type { AttendanceReportData } from '@/hooks/attendance/useAttendanceReports';
 import type { MemberSummary } from '@/types/members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,16 @@ import { format } from 'date-fns';
 interface MembersAttendanceReportProps {
   report?: AttendanceReportData | null;
   memberIds: string[];
+  filtersSummary?: {
+    mode: 'occasions_sessions' | 'tags_groups' | 'members';
+    date_from?: string;
+    date_to?: string;
+    occasion_ids?: string[];
+    session_ids?: string[];
+    tag_item_ids?: string[];
+    group_ids?: string[];
+    member_ids?: string[];
+  };
 }
 
 type EligibilityMap = Record<string, Set<string>>; // session_id -> eligible member IDs (from selected cohort)
@@ -20,8 +30,8 @@ type EligibilityMap = Record<string, Set<string>>; // session_id -> eligible mem
 export function MembersAttendanceReport({
   report,
   memberIds,
+  filtersSummary,
 }: MembersAttendanceReportProps) {
-  const printableRef = useRef<HTMLDivElement>(null);
   const [eligibility, setEligibility] = useState<EligibilityMap>({});
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [selectedMembersById, setSelectedMembersById] = useState<
@@ -244,19 +254,50 @@ export function MembersAttendanceReport({
 
   const isEmpty = exportRows.length === 0;
 
+  const eligibleExpectedTotal = useMemo(() => {
+    return sessions.reduce((sum, s) => sum + (eligibility[s.id]?.size || 0), 0);
+  }, [sessions, eligibility]);
+
+  const summary = useMemo<Array<[string, unknown]>>(() => {
+    if (!report) return [];
+    const s = report.summary;
+    return [
+      ['Selected Members', memberIds.length],
+      ['Sessions', s.sessions_count],
+      ['Expected Eligible Across Sessions', eligibleExpectedTotal],
+      ['Total Attendance Records', s.total_attendance],
+      ['Unique Members Recorded', s.unique_members],
+      ['Occasions', s.occasions_count],
+      ['Days Span', s.days_span],
+      ['Average per Day', s.average_per_day],
+    ];
+  }, [report, memberIds.length, eligibleExpectedTotal]);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Members Attendance</CardTitle>
-        <ReportExportMenu
-          filenameBase="members-attendance"
-          getRows={() => exportRows}
-          printRef={printableRef}
+        <AttendanceWidgetExportButtons
+          report={report}
+          filtersSummary={filtersSummary}
+          defaultSections={['members']}
           disabled={!report || isEmpty || eligibilityLoading}
         />
       </CardHeader>
       <CardContent>
-        <div ref={printableRef} className="space-y-6">
+        <div className="space-y-6">
+          {summary.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border p-3 bg-neutral-50 dark:bg-neutral-900/40">
+              {summary.map(([label, value], idx) => (
+                <div key={idx} className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">
+                    {String(label)}:
+                  </span>
+                  <span className="font-medium truncate">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Attendance tables grouped by member with card on top */}
           <ScrollArea className={cn(exportRows.length > 12 ? 'h-[560px]' : '')}>
             {eligibilityLoading && (

@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReportExportMenu } from '../ReportExportMenu';
+import { AttendanceWidgetExportButtons } from '@/components/attendance/AttendanceWidgetExportButtons';
 import type { AttendanceReportData } from '@/hooks/attendance/useAttendanceReports';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useTagsQuery } from '@/hooks/useRelationalTags';
@@ -12,15 +12,31 @@ interface TagsGroupsReportProps {
   showGroups?: boolean;
   selectedTagItemIds?: string[];
   selectedGroupIds?: string[];
+  filtersSummary?: {
+    mode: 'occasions_sessions' | 'tags_groups' | 'members';
+    date_from?: string;
+    date_to?: string;
+    occasion_ids?: string[];
+    session_ids?: string[];
+    tag_item_ids?: string[];
+    group_ids?: string[];
+    member_ids?: string[];
+  };
 }
 
-export function TagsGroupsReport({ report, showTags = true, showGroups = true, selectedTagItemIds = [], selectedGroupIds = [] }: TagsGroupsReportProps) {
-  const printableRef = useRef<HTMLDivElement>(null);
+export function TagsGroupsReport({
+  report,
+  showTags = true,
+  showGroups = true,
+  selectedTagItemIds = [],
+  selectedGroupIds = [],
+  filtersSummary,
+}: TagsGroupsReportProps) {
   const { currentOrganization } = useOrganization();
   const { data: relationalTags = [] } = useTagsQuery(currentOrganization?.id);
   const { data: allGroups = [] } = useAllGroups();
 
-  const { tagCounts, groupCounts, exportRows } = useMemo(() => {
+  const { tagCounts, groupCounts } = useMemo(() => {
     const tagCounts: Record<string, number> = {};
     const groupCounts: Record<string, number> = {};
 
@@ -62,20 +78,50 @@ export function TagsGroupsReport({ report, showTags = true, showGroups = true, s
       }
     }
 
-    const exportRows: Array<{ Type: string; Label: string; Count: number }> = [];
-    if (showTags) {
-      for (const [label, count] of Object.entries(tagCounts)) {
-        exportRows.push({ Type: 'Tag', Label: label, Count: count });
-      }
-    }
-    if (showGroups) {
-      for (const [label, count] of Object.entries(groupCounts)) {
-        exportRows.push({ Type: 'Group', Label: label, Count: count });
-      }
-    }
-    return { tagCounts, groupCounts, exportRows };
+    return { tagCounts, groupCounts };
   }, [report, showTags, showGroups]);
   // Note: we intentionally do not include relationalTags/allGroups in deps to avoid flicker; selected IDs changes trigger re-render in parent
+
+  const selectedTagLabels = useMemo(() => {
+    const labels: string[] = [];
+    for (const t of relationalTags) {
+      for (const item of t.tag_items || []) {
+        if (selectedTagItemIds.includes(item.id))
+          labels.push(String(item.name));
+      }
+    }
+    return labels;
+  }, [relationalTags, selectedTagItemIds]);
+
+  const selectedGroupNamesList = useMemo(() => {
+    const names: string[] = [];
+    for (const g of allGroups) {
+      if (selectedGroupIds.includes(g.id)) names.push(String(g.name));
+    }
+    return names;
+  }, [allGroups, selectedGroupIds]);
+
+  const summary = useMemo<Array<[string, unknown]>>(() => {
+    if (!report) return [];
+    const s = report.summary;
+    const pairs: Array<[string, unknown]> = [
+      [
+        'Selected Tags',
+        selectedTagLabels.length > 0 ? selectedTagLabels.join(', ') : 'None',
+      ],
+      [
+        'Selected Groups',
+        selectedGroupNamesList.length > 0
+          ? selectedGroupNamesList.join(', ')
+          : 'None',
+      ],
+      ['Total Attendance', s.total_attendance],
+      ['Unique Members', s.unique_members],
+      ['Sessions', s.sessions_count],
+      ['Occasions', s.occasions_count],
+    ];
+    return pairs;
+  }, [report, selectedTagLabels, selectedGroupNamesList]);
 
   const sortedTagEntries = useMemo(() => {
     return Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
@@ -85,16 +131,35 @@ export function TagsGroupsReport({ report, showTags = true, showGroups = true, s
     return Object.entries(groupCounts).sort((a, b) => b[1] - a[1]);
   }, [groupCounts]);
 
-  const isEmpty = (!showTags || sortedTagEntries.length === 0) && (!showGroups || sortedGroupEntries.length === 0);
+  const isEmpty =
+    (!showTags || sortedTagEntries.length === 0) &&
+    (!showGroups || sortedGroupEntries.length === 0);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Tags & Groups Breakdown</CardTitle>
-        <ReportExportMenu filenameBase="tags-groups-breakdown" getRows={() => exportRows} printRef={printableRef} disabled={!report || isEmpty} />
+        <AttendanceWidgetExportButtons
+          report={report}
+          filtersSummary={filtersSummary}
+          defaultSections={['tags_groups']}
+          disabled={!report || isEmpty}
+        />
       </CardHeader>
       <CardContent>
-        <div ref={printableRef} className="space-y-6">
+        <div className="space-y-6">
+          {summary.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border p-3 bg-neutral-50 dark:bg-neutral-900/40">
+              {summary.map(([label, value], idx) => (
+                <div key={idx} className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">
+                    {String(label)}:
+                  </span>
+                  <span className="font-medium truncate">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {isEmpty && (
             <div className="text-muted-foreground text-sm">No data</div>
           )}
@@ -110,7 +175,9 @@ export function TagsGroupsReport({ report, showTags = true, showGroups = true, s
                 <tbody>
                   {sortedTagEntries.length === 0 && (
                     <tr>
-                      <td colSpan={2} className="py-3 text-muted-foreground">No tags</td>
+                      <td colSpan={2} className="py-3 text-muted-foreground">
+                        No tags
+                      </td>
                     </tr>
                   )}
                   {sortedTagEntries.map(([label, count]) => (
@@ -135,7 +202,9 @@ export function TagsGroupsReport({ report, showTags = true, showGroups = true, s
                 <tbody>
                   {sortedGroupEntries.length === 0 && (
                     <tr>
-                      <td colSpan={2} className="py-3 text-muted-foreground">No groups</td>
+                      <td colSpan={2} className="py-3 text-muted-foreground">
+                        No groups
+                      </td>
                     </tr>
                   )}
                   {sortedGroupEntries.map(([label, count]) => (

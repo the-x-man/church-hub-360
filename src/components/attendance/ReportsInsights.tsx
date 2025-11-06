@@ -15,6 +15,7 @@ import { useAttendanceReport } from '@/hooks/attendance/useAttendanceReports';
 import { buildReportQuery } from '@/hooks/reports/buildReportQuery';
 import { useReportFilters } from '@/hooks/reports/useReportFilters';
 import { useMemo } from 'react';
+import { AttendanceExportButtons } from '@/components/attendance/AttendanceExportButtons';
 
 export function ReportsInsights() {
   const {
@@ -39,6 +40,20 @@ export function ReportsInsights() {
     showReportWidgets ? (queryParams as any) : null
   );
 
+  const filtersSummary = useMemo(
+    () => ({
+      mode: filters.mode,
+      date_from: (queryParams as any)?.date_from,
+      date_to: (queryParams as any)?.date_to,
+      occasion_ids: (queryParams as any)?.occasion_ids,
+      session_ids: (queryParams as any)?.session_ids,
+      tag_item_ids: (queryParams as any)?.tag_item_ids,
+      group_ids: (queryParams as any)?.group_ids,
+      member_ids: (queryParams as any)?.member_ids,
+    }),
+    [filters.mode, queryParams]
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -51,7 +66,7 @@ export function ReportsInsights() {
             Analyze attendance patterns and generate reports
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <TopFiltersBar mode={filters.mode} onChange={setMode} />
         </div>
       </div>
@@ -165,13 +180,19 @@ export function ReportsInsights() {
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
         <Button
           onClick={markGenerated}
           disabled={!isGenerateEnabled || isLoading}
         >
           Generate Report
         </Button>
+
+        <AttendanceExportButtons
+          report={report}
+          filtersSummary={filtersSummary}
+          className="ml-auto"
+        />
       </div>
 
       {/* Error state */}
@@ -190,10 +211,12 @@ export function ReportsInsights() {
       {showReportWidgets && (
         <div className="space-y-6">
           <StatsReport report={report} />
+
           {filters.mode === 'members' ? (
             <MembersAttendanceReport
               report={report}
               memberIds={filters.members.memberIds}
+              filtersSummary={filtersSummary}
             />
           ) : (
             <TableReport
@@ -208,12 +231,17 @@ export function ReportsInsights() {
               }
               selectedTagItemIds={filters.tagsGroups.tagItemIds}
               selectedGroupIds={filters.tagsGroups.groupIds}
+              filtersSummary={filtersSummary}
             />
           )}
           {filters.mode !== 'members' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <AgeGroupReport report={report} />
-              <GenderReport report={report} disabled={!showGenderWidget} />
+              <AgeGroupReport report={report} filtersSummary={filtersSummary} />
+              <GenderReport
+                report={report}
+                disabled={!showGenderWidget}
+                filtersSummary={filtersSummary}
+              />
             </div>
           )}
           {filters.mode === 'tags_groups' && (
@@ -223,6 +251,7 @@ export function ReportsInsights() {
               showGroups={filters.tagsGroups.groupIds.length > 0}
               selectedTagItemIds={filters.tagsGroups.tagItemIds}
               selectedGroupIds={filters.tagsGroups.groupIds}
+              filtersSummary={filtersSummary}
             />
           )}
         </div>

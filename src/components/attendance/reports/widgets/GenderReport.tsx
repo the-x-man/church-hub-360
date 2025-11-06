@@ -1,15 +1,24 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReportExportMenu } from '../ReportExportMenu';
+import { AttendanceWidgetExportButtons } from '@/components/attendance/AttendanceWidgetExportButtons';
 import type { AttendanceReportData } from '@/hooks/attendance/useAttendanceReports';
 
 interface GenderReportProps {
   report?: AttendanceReportData | null;
   disabled?: boolean;
+  filtersSummary?: {
+    mode: 'occasions_sessions' | 'tags_groups' | 'members';
+    date_from?: string;
+    date_to?: string;
+    occasion_ids?: string[];
+    session_ids?: string[];
+    tag_item_ids?: string[];
+    group_ids?: string[];
+    member_ids?: string[];
+  };
 }
 
-export function GenderReport({ report, disabled }: GenderReportProps) {
-  const printableRef = useRef<HTMLDivElement>(null);
+export function GenderReport({ report, disabled, filtersSummary }: GenderReportProps) {
   const rows = useMemo(() => {
     if (!report) return [] as Array<{ Gender: string; Count: number }>;
     const entries = Object.entries(report.demographic.byGender);
@@ -20,10 +29,15 @@ export function GenderReport({ report, disabled }: GenderReportProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Gender Breakdown</CardTitle>
-        <ReportExportMenu filenameBase="gender-breakdown" getRows={() => rows} printRef={printableRef} disabled={disabled || !report || rows.length === 0} />
+        <AttendanceWidgetExportButtons
+          report={report}
+          filtersSummary={filtersSummary}
+          defaultSections={["gender"]}
+          disabled={disabled || !report || rows.length === 0}
+        />
       </CardHeader>
       <CardContent>
-        <div ref={printableRef}>
+        <div>
           {disabled ? (
             <div className="text-muted-foreground text-sm">Select 2 or more members to view gender distribution.</div>
           ) : (
