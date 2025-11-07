@@ -7,7 +7,7 @@ import type {
   BudgetPlan,
   BudgetLineItem,
   BudgetCategory,
-  IncomeOccasionType,
+  ExtendedIncomeType,
   ExpenseCategory,
   PaymentMethod,
 } from '@/types/finance';
@@ -19,7 +19,8 @@ export const mockIncomeRecords: IncomeRecord[] = [
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: 2500.00,
-    occasion_type: 'offering',
+    income_type: 'general_income',
+    extended_income_type: 'Offering',
     occasion_name: 'Sunday Morning Service',
     source: 'Congregation',
     payment_method: 'cash',
@@ -35,7 +36,8 @@ export const mockIncomeRecords: IncomeRecord[] = [
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: 5000.00,
-    occasion_type: 'tithe',
+    income_type: 'general_income',
+    extended_income_type: 'Tithe',
     source: 'Monthly Tithes',
     payment_method: 'bank_transfer',
     date: '2024-01-01',
@@ -50,7 +52,8 @@ export const mockIncomeRecords: IncomeRecord[] = [
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: 1200.00,
-    occasion_type: 'special_offering',
+    income_type: 'general_income',
+    extended_income_type: 'Special Offering',
     occasion_name: 'Building Fund Drive',
     source: 'Special Collection',
     payment_method: 'check',
@@ -66,7 +69,8 @@ export const mockIncomeRecords: IncomeRecord[] = [
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: 800.00,
-    occasion_type: 'thanksgiving',
+    income_type: 'general_income',
+    extended_income_type: 'Thanksgiving',
     occasion_name: 'Harvest Thanksgiving',
     source: 'Thanksgiving Service',
     payment_method: 'cash',
@@ -82,7 +86,8 @@ export const mockIncomeRecords: IncomeRecord[] = [
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: 3200.00,
-    occasion_type: 'missions',
+    income_type: 'general_income',
+    extended_income_type: 'Fundraising',
     occasion_name: 'Missions Sunday',
     source: 'Missions Department',
     payment_method: 'online',
@@ -502,7 +507,7 @@ export const mockFinanceMembers = [
 
 // Helper functions for generating additional mock data
 export const  generateMockIncomeRecord = (overrides: Partial<IncomeRecord> = {}): IncomeRecord => {
-  const occasions: IncomeOccasionType[] = ['offering', 'tithe', 'special_offering', 'thanksgiving', 'missions'];
+  const occasions: ExtendedIncomeType[] = ['Offering', 'Tithe', 'Special Offering', 'Thanksgiving', 'Fundraising'];
   const paymentMethods: PaymentMethod[] = ['cash', 'check', 'bank_transfer', 'online'];
   
   return {
@@ -510,7 +515,8 @@ export const  generateMockIncomeRecord = (overrides: Partial<IncomeRecord> = {})
     organization_id: 'org-1',
     branch_id: 'branch-1',
     amount: Math.floor(Math.random() * 5000) + 100,
-    occasion_type: occasions[Math.floor(Math.random() * occasions.length)],
+    income_type: 'general_income',
+    extended_income_type: occasions[Math.floor(Math.random() * occasions.length)],
     payment_method: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
     date: new Date().toISOString().split('T')[0],
     created_by: 'user-1',

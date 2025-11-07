@@ -11,6 +11,7 @@ import {
   PieChart,
   BarChart3,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface StatCard {
   id: string;
@@ -121,15 +122,18 @@ export const FinanceStatsCards: React.FC<FinanceStatsCardsProps> = ({
       className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}
     >
       {stats.map((stat) => (
-        <Card key={stat.id} className={getCardColorClasses(stat.color)}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card
+          key={stat.id}
+          className={cn('py-3', getCardColorClasses(stat.color))}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {stat.title}
             </CardTitle>
             {stat.icon || defaultIcons.amount}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold mb-1">
+            <div className="text-lg font-bold mb-1">
               {formatValue(stat.value)}
             </div>
 

@@ -1,7 +1,13 @@
-import React from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -9,23 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Badge } from '@/components/ui/badge';
-import { 
-  CalendarIcon, 
-  Filter, 
-  X, 
-  Search,
-  Download,
-  Plus
-} from 'lucide-react';
-import { format } from 'date-fns';
 import type { DateFilter, DatePreset, FinanceFilter } from '@/types/finance';
+import { format } from 'date-fns';
+import { CalendarIcon, Download, Filter, Plus, Search, X } from 'lucide-react';
+import React from 'react';
 
 interface FilterOption {
   value: string;
@@ -38,12 +31,15 @@ interface FinanceFilterBarProps {
   categoryOptions?: FilterOption[];
   memberOptions?: FilterOption[];
   paymentMethodOptions?: FilterOption[];
-  statusOptions?: FilterOption[];
   searchPlaceholder?: string;
   showAddButton?: boolean;
   onAddClick?: () => void;
   onExportClick?: () => void;
   addButtonLabel?: string;
+  recordTypeFilter?: 'all' | 'contribution' | 'donation';
+  onRecordTypeFilterChange?: (
+    recordTypeFilter: 'all' | 'contribution' | 'donation'
+  ) => void;
 }
 
 const datePresetOptions: { value: DatePreset; label: string }[] = [
@@ -65,12 +61,13 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
   categoryOptions = [],
   memberOptions = [],
   paymentMethodOptions = [],
-  statusOptions = [],
   searchPlaceholder = 'Search records...',
   showAddButton = true,
   onAddClick,
   onExportClick,
   addButtonLabel = 'Add Record',
+  recordTypeFilter = 'all',
+  onRecordTypeFilterChange,
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showFilters, setShowFilters] = React.useState(false);
@@ -81,15 +78,6 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
       date_filter: { ...filters.date_filter, ...dateFilter },
     });
   };
-
-  // Helper function to update array filters
-  // const updateArrayFilter = (key: keyof FinanceFilter, value: string, checked: boolean) => {
-  //   const currentValues = filters[key] as string[] || [];
-  //   const newValues = checked
-  //     ? [...currentValues, value]
-  //     : currentValues.filter(v => v !== value);
-  //   onFiltersChange({ ...filters, [key]: newValues.length > 0 ? newValues : undefined });
-  // };
 
   const clearAllFilters = () => {
     onFiltersChange({
@@ -110,21 +98,26 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
 
   const formatDateRange = () => {
     if (filters.date_filter.type === 'preset' && filters.date_filter.preset) {
-      const preset = datePresetOptions.find(p => p.value === filters.date_filter.preset);
+      const preset = datePresetOptions.find(
+        (p) => p.value === filters.date_filter.preset
+      );
       return preset?.label || 'Custom';
     }
-    
+
     if (filters.date_filter.start_date && filters.date_filter.end_date) {
-      return `${format(new Date(filters.date_filter.start_date), 'MMM dd')} - ${format(new Date(filters.date_filter.end_date), 'MMM dd')}`;
+      return `${format(
+        new Date(filters.date_filter.start_date),
+        'MMM dd'
+      )} - ${format(new Date(filters.date_filter.end_date), 'MMM dd')}`;
     }
-    
+
     return 'Select dates';
   };
 
   return (
     <div className="space-y-4">
       {/* Top row with search, date filter, and actions */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center justify-between">
         <div className="flex flex-1 gap-2 items-center">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -135,11 +128,31 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
               className="pl-9"
             />
           </div>
-          
+
+          {/* Record Type Filter */}
+          <div>
+            <Select
+              value={recordTypeFilter}
+              onValueChange={(v) => onRecordTypeFilterChange?.(v as any)}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="All records" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All records</SelectItem>
+                <SelectItem value="contribution">Contributions only</SelectItem>
+                <SelectItem value="donation">Donations only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Date Filter */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start text-left font-normal">
+              <Button
+                variant="outline"
+                className="justify-start text-left font-normal"
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {formatDateRange()}
               </Button>
@@ -150,7 +163,12 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                   <Label>Quick Select</Label>
                   <Select
                     value={filters.date_filter.preset || ''}
-                    onValueChange={(value) => updateDateFilter({ type: 'preset', preset: value as DatePreset })}
+                    onValueChange={(value) =>
+                      updateDateFilter({
+                        type: 'preset',
+                        preset: value as DatePreset,
+                      })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select preset" />
@@ -164,15 +182,19 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label>Custom Range</Label>
                   <div className="mt-1">
                     <Calendar
                       mode="range"
                       selected={{
-                        from: filters.date_filter.start_date ? new Date(filters.date_filter.start_date) : undefined,
-                        to: filters.date_filter.end_date ? new Date(filters.date_filter.end_date) : undefined,
+                        from: filters.date_filter.start_date
+                          ? new Date(filters.date_filter.start_date)
+                          : undefined,
+                        to: filters.date_filter.end_date
+                          ? new Date(filters.date_filter.end_date)
+                          : undefined,
                       }}
                       onSelect={(range) => {
                         updateDateFilter({
@@ -248,7 +270,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                     });
                   }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 w-full">
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -276,7 +298,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                     });
                   }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 w-full">
                     <SelectValue placeholder="All members" />
                   </SelectTrigger>
                   <SelectContent>
@@ -300,11 +322,12 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                   onValueChange={(value) => {
                     onFiltersChange({
                       ...filters,
-                      payment_method_filter: value === 'all' ? undefined : [value as any],
+                      payment_method_filter:
+                        value === 'all' ? undefined : [value as any],
                     });
                   }}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 w-full">
                     <SelectValue placeholder="All methods" />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,70 +342,61 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
               </div>
             )}
 
-            {/* Status Filter */}
-            {statusOptions.length > 0 && (
-              <div>
-                <Label>Status</Label>
-                <Select
-                  value={filters.status_filter?.[0] || 'all'}
-                  onValueChange={(value) => {
+            {/* Amount Range */}
+            <div>
+              <Label>Amount Range</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  type="number"
+                  placeholder="Min amount"
+                  value={filters.amount_range?.min || ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined;
                     onFiltersChange({
                       ...filters,
-                      status_filter: value === 'all' ? undefined : [value],
+                      amount_range: {
+                        ...filters.amount_range,
+                        min: value,
+                      },
                     });
                   }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
+                <Input
+                  type="number"
+                  placeholder="Max amount"
+                  value={filters.amount_range?.max || ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined;
+                    onFiltersChange({
+                      ...filters,
+                      amount_range: {
+                        ...filters.amount_range,
+                        max: value,
+                      },
+                    });
+                  }}
+                />
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Amount Range */}
-          <div>
-            <Label>Amount Range</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                type="number"
-                placeholder="Min amount"
-                value={filters.amount_range?.min || ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                  onFiltersChange({
-                    ...filters,
-                    amount_range: {
-                      ...filters.amount_range,
-                      min: value,
-                    },
-                  });
-                }}
-              />
-              <Input
-                type="number"
-                placeholder="Max amount"
-                value={filters.amount_range?.max || ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
-                  onFiltersChange({
-                    ...filters,
-                    amount_range: {
-                      ...filters.amount_range,
-                      max: value,
-                    },
-                  });
-                }}
-              />
-            </div>
+          {/* Apply button row */}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowFilters(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                onFiltersChange({ ...filters });
+                setShowFilters(false);
+              }}
+            >
+              Apply
+            </Button>
           </div>
         </div>
       )}

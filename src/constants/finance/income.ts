@@ -1,0 +1,15 @@
+export const extendedIncomeTypes = [
+  'Offering',
+  'Tithe',
+  'Contribution',
+  'Donation',
+  'Fundraising',
+  'Special Offering',
+  'Thanksgiving',
+  'Harvest',
+  'Special Thanksgiving',
+  'Fund',
+  'Grant',
+  'Special Grant',
+  'Other',
+] as const;

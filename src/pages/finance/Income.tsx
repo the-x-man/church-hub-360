@@ -42,7 +42,7 @@ import type { TableColumn, TableAction } from '@/components/finance';
 import type {
   IncomeRecord,
   IncomeFormData,
-  IncomeOccasionType,
+  ExtendedIncomeType,
   PaymentMethod,
   FinanceFilter,
   ReportConfig,
@@ -73,7 +73,7 @@ const Income: React.FC = () => {
   // Form state
   const [formData, setFormData] = useState<IncomeFormData>({
     amount: 0,
-    occasion_type: 'offering',
+    extended_income_type: 'Offering',
     payment_method: 'cash',
     date: new Date().toISOString().split('T')[0],
     description: '',
@@ -82,20 +82,19 @@ const Income: React.FC = () => {
 
   // Occasion type options
   const occasionTypeOptions = [
-    { value: 'offering', label: 'Regular Offering' },
-    { value: 'tithe', label: 'Tithe' },
-    { value: 'donation', label: 'Donation' },
-    { value: 'fundraising', label: 'Fundraising' },
-    { value: 'special_offering', label: 'Special Offering' },
-    { value: 'thanksgiving', label: 'Thanksgiving' },
-    { value: 'harvest', label: 'Harvest' },
-    { value: 'building_fund', label: 'Building Fund' },
-    { value: 'missions', label: 'Missions' },
-    { value: 'youth_ministry', label: 'Youth Ministry' },
-    { value: 'womens_ministry', label: "Women's Ministry" },
-    { value: 'mens_ministry', label: "Men's Ministry" },
-    { value: 'childrens_ministry', label: "Children's Ministry" },
-    { value: 'other', label: 'Other' },
+    { value: 'Offering', label: 'Offering' },
+    { value: 'Tithe', label: 'Tithe' },
+    { value: 'Contribution', label: 'Contribution' },
+    { value: 'Donation', label: 'Donation' },
+    { value: 'Fundraising', label: 'Fundraising' },
+    { value: 'Special Offering', label: 'Special Offering' },
+    { value: 'Thanksgiving', label: 'Thanksgiving' },
+    { value: 'Harvest', label: 'Harvest' },
+    { value: 'Special Thanksgiving', label: 'Special Thanksgiving' },
+    { value: 'Fund', label: 'Fund' },
+    { value: 'Grant', label: 'Grant' },
+    { value: 'Special Grant', label: 'Special Grant' },
+    { value: 'Other', label: 'Other' },
   ];
 
   // Payment method options
@@ -117,7 +116,7 @@ const Income: React.FC = () => {
     // Apply filters (simplified for demo)
     if (filters.category_filter?.length) {
       filtered = filtered.filter((record) =>
-        filters.category_filter!.includes(record.occasion_type)
+        filters.category_filter!.includes(record.extended_income_type)
       );
     }
 
@@ -170,8 +169,8 @@ const Income: React.FC = () => {
 
     // Find top occasion
     const occasionTotals = filteredAndSortedData.reduce((acc, record) => {
-      acc[record.occasion_type] =
-        (acc[record.occasion_type] || 0) + record.amount;
+      acc[record.extended_income_type] =
+        (acc[record.extended_income_type] || 0) + record.amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -200,7 +199,7 @@ const Income: React.FC = () => {
       sortable: true,
     },
     {
-      key: 'occasion_type',
+      key: 'extended_income_type',
       label: 'Occasion',
       render: (value) =>
         occasionTypeOptions.find((opt) => opt.value === value)?.label || value,
@@ -252,7 +251,7 @@ const Income: React.FC = () => {
         setSelectedRecord(record);
         setFormData({
           amount: record.amount,
-          occasion_type: record.occasion_type,
+          extended_income_type: record.extended_income_type,
           occasion_name: record.occasion_name || '',
           source: record.source || '',
           payment_method: record.payment_method,
@@ -292,7 +291,7 @@ const Income: React.FC = () => {
   const resetForm = () => {
     setFormData({
       amount: 0,
-      occasion_type: 'offering',
+      extended_income_type: 'Offering',
       payment_method: 'cash',
       date: new Date().toISOString().split('T')[0],
       description: '',
@@ -366,7 +365,7 @@ const Income: React.FC = () => {
             filters={filters}
             onGenerateReport={handleGenerateReport}
             availableGroupBy={[
-              { value: 'occasion_type', label: 'Occasion Type' },
+              { value: 'extended_income_type', label: 'Occasion Type' },
               { value: 'payment_method', label: 'Payment Method' },
               { value: 'source', label: 'Source' },
               { value: 'date', label: 'Date' },
@@ -431,13 +430,13 @@ const Income: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="occasion_type">Occasion Type *</Label>
+              <Label htmlFor="extended_income_type">Occasion Type *</Label>
               <Select
-                value={formData.occasion_type}
+                value={formData.extended_income_type}
                 onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    occasion_type: value as IncomeOccasionType,
+          extended_income_type: value as ExtendedIncomeType,
                   }))
                 }
               >
@@ -633,11 +632,11 @@ const Income: React.FC = () => {
             <div>
               <Label htmlFor="edit_occasion_type">Occasion Type *</Label>
               <Select
-                value={formData.occasion_type}
+                value={formData.extended_income_type}
                 onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    occasion_type: value as IncomeOccasionType,
+          extended_income_type: value as ExtendedIncomeType,
                   }))
                 }
               >
@@ -827,7 +826,7 @@ const Income: React.FC = () => {
                 <p>
                   {
                     occasionTypeOptions.find(
-                      (opt) => opt.value === selectedRecord.occasion_type
+                      (opt) => opt.value === selectedRecord.extended_income_type
                     )?.label
                   }
                 </p>
@@ -916,7 +915,7 @@ const Income: React.FC = () => {
                 onClick={() => {
                   setFormData({
                     amount: selectedRecord.amount,
-                    occasion_type: selectedRecord.occasion_type,
+                    extended_income_type: selectedRecord.extended_income_type,
                     occasion_name: selectedRecord.occasion_name || '',
                     source: selectedRecord.source || '',
                     payment_method: selectedRecord.payment_method,

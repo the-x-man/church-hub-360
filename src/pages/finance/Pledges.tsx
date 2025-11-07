@@ -469,7 +469,6 @@ export function Pledges() {
             onFiltersChange={setFilters}
             categoryOptions={filterOptions.pledgeTypes}
             memberOptions={filterOptions.members}
-            statusOptions={filterOptions.statuses}
             searchPlaceholder="Search pledges..."
             onAddClick={() => setShowAddDialog(true)}
             addButtonLabel="New Pledge"

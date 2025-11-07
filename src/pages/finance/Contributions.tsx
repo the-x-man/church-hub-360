@@ -1,88 +1,57 @@
-import type {
-  TableAction,
-  TableColumn,
-} from '@/components/finance/FinanceDataTable';
-import { FinanceDataTable } from '@/components/finance/FinanceDataTable';
+import {
+  contributionTypes,
+  paymentMethods,
+} from '@/components/finance/contributions/constants';
+import { contributionDonationStatsConfig } from '@/components/finance/contributions/ContributionDonationStatsConfig';
+import { ContributionFormDialog } from '@/components/finance/contributions/ContributionFormDialog';
+import { ContributionsTable } from '@/components/finance/contributions/ContributionsTable';
+import { ContributionViewDialog } from '@/components/finance/contributions/ContributionViewDialog';
 import { FinanceFilterBar } from '@/components/finance/FinanceFilterBar';
 import { FinanceReportGenerator } from '@/components/finance/FinanceReportGenerator';
 import { FinanceStatsCards } from '@/components/finance/FinanceStatsCards';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Checkbox } from '@/components/ui/checkbox';
+import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
+import { Pagination } from '@/components/shared/Pagination';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+  useCreateIncome,
+  useDeleteIncome,
+  useIncomes,
+  useUpdateIncome,
+} from '@/hooks/finance/income';
 import type {
-  ContributionFormData,
-  ContributionRecord,
-  ContributionType,
+  ContributionDonationFormData,
   FinanceFilter,
-  PaymentMethod,
+  ExtendedIncomeType,
+  IncomeResponseRow,
+  IncomeType,
 } from '@/types/finance';
-import { format } from 'date-fns';
-import { CalendarIcon, Edit, Eye, Heart, Trash2 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 const Contributions: React.FC = () => {
-  // Mock data for contributions
-  const [contributions, setContributions] = useState<ContributionRecord[]>([
-    {
-      id: 'cont-1',
-      organization_id: 'org-1',
-      branch_id: 'branch-1',
-      member_id: 'member-1',
-      member_name: 'John Smith',
-      amount: 500.0,
-      contribution_type: 'tithe',
-      payment_method: 'check',
-      date: '2024-01-15',
-      description: 'Monthly tithe',
-      envelope_number: '123',
-      tax_deductible: true,
-      receipt_issued: true,
-      receipt_number: 'REC-001',
-      created_by: 'admin',
-      created_at: '2024-01-15T10:00:00Z',
-      updated_at: '2024-01-15T10:00:00Z',
-    },
-    {
-      id: 'cont-2',
-      organization_id: 'org-1',
-      branch_id: 'branch-1',
-      member_id: 'member-2',
-      member_name: 'Mary Johnson',
-      amount: 250.0,
-      contribution_type: 'offering',
-      payment_method: 'cash',
-      date: '2024-01-14',
-      description: 'Sunday offering',
-      tax_deductible: true,
-      receipt_issued: false,
-      created_by: 'admin',
-      created_at: '2024-01-14T11:00:00Z',
-      updated_at: '2024-01-14T11:00:00Z',
-    },
-  ]);
+  // Data: use contributions from income table
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search] = useState<string | undefined>(undefined);
+  const [filters, setFilters] = useState<FinanceFilter>({
+    date_filter: { type: 'preset', preset: 'this_month' },
+  });
+  const [recordTypeFilter, setRecordTypeFilter] = useState<
+    'all' | 'contribution' | 'donation'
+  >('all');
+
+  const contributionsQuery = useIncomes({
+    page,
+    pageSize,
+    search,
+    filters,
+    income_types:
+      recordTypeFilter === 'all'
+        ? ['contribution', 'donation']
+        : [recordTypeFilter],
+  });
+  const contributions: IncomeResponseRow[] =
+    contributionsQuery.data?.data || [];
 
   // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -91,151 +60,155 @@ const Contributions: React.FC = () => {
   const [
     selectedContribution,
     setSelectedContribution,
-  ] = useState<ContributionRecord | null>(null);
+  ] = useState<IncomeResponseRow | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Filter state
-  const [filters, setFilters] = useState<FinanceFilter>({
-    date_filter: { type: 'custom', start_date: '', end_date: '' },
-    category_filter: [],
-    member_filter: [],
-    amount_range: { min: 0, max: 0 },
-    payment_method_filter: [],
-    status_filter: [],
-  });
+  // Mutations
+  const createIncome = useCreateIncome();
+  const updateIncome = useUpdateIncome();
+  const deleteIncome = useDeleteIncome();
 
-  // Form state
-  const [formData, setFormData] = useState<ContributionFormData>({
-    member_id: 'member-1',
+  const { currentOrganization } = useOrganization();
+
+  const [formData, setFormData] = useState<ContributionDonationFormData>({
+    source_type: 'member',
+    source: '',
+    member_id: undefined,
+    group_id: undefined,
+    tag_item_id: undefined,
     amount: 0,
-    contribution_type: 'tithe',
     payment_method: 'cash',
     date: new Date().toISOString().split('T')[0],
     description: '',
     notes: '',
     envelope_number: '',
-    tax_deductible: true,
+    income_type: 'contribution',
+    extended_income_type: 'Contribution',
+    attendance_occasion_id: undefined,
+    attendance_session_id: undefined,
   });
 
-  // Mock member options
-  const memberOptions = [
-    { value: 'member-1', label: 'John Smith' },
-    { value: 'member-2', label: 'Mary Johnson' },
-    { value: 'member-3', label: 'David Wilson' },
-    { value: 'member-4', label: 'Sarah Brown' },
-  ];
+  // Member typeahead UI state (single-select)
+  const [memberTypeaheadValue, setMemberTypeaheadValue] = useState<any[]>([]);
+  const [occasionTypeaheadValue, setOccasionTypeaheadValue] = useState<any[]>([]);
+  const [sessionTypeaheadValue, setSessionTypeaheadValue] = useState<any[]>([]);
 
-  // Filter options
-  const filterOptions = {
-    contributionTypes: [
-      { value: 'tithe', label: 'Tithe' },
-      { value: 'offering', label: 'Offering' },
-      { value: 'special_offering', label: 'Special Offering' },
-      { value: 'building_fund', label: 'Building Fund' },
-      { value: 'missions', label: 'Missions' },
-      { value: 'pledge_payment', label: 'Pledge Payment' },
-      { value: 'donation', label: 'Donation' },
-      { value: 'other', label: 'Other' },
-    ],
-    paymentMethods: [
-      { value: 'cash', label: 'Cash' },
-      { value: 'check', label: 'Check' },
-      { value: 'credit_card', label: 'Credit Card' },
-      { value: 'debit_card', label: 'Debit Card' },
-      { value: 'bank_transfer', label: 'Bank Transfer' },
-      { value: 'mobile_payment', label: 'Mobile Payment' },
-      { value: 'online', label: 'Online Payment' },
-    ],
-  };
+  // Filter options moved to shared constants
 
   // Reset form
   const resetForm = () => {
     setFormData({
-      member_id: 'member-1',
+      source_type: 'member',
+      source: '',
+      member_id: undefined,
+      group_id: undefined,
+      tag_item_id: undefined,
       amount: 0,
-      contribution_type: 'tithe',
       payment_method: 'cash',
       date: new Date().toISOString().split('T')[0],
       description: '',
       notes: '',
       envelope_number: '',
-      tax_deductible: true,
+      income_type: 'contribution',
+      extended_income_type: 'Contribution',
+      attendance_occasion_id: undefined,
+      attendance_session_id: undefined,
     });
+    setMemberTypeaheadValue([]);
+    setOccasionTypeaheadValue([]);
+    setSessionTypeaheadValue([]);
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const commonPayload = {
+        amount: formData.amount,
+        extended_income_type: formData.extended_income_type,
+        payment_method: formData.payment_method,
+        date: formData.date,
+        description: formData.description,
+        notes: formData.notes,
+        envelope_number: formData.envelope_number,
+        income_type: formData.income_type,
+        attendance_occasion_id: formData.attendance_occasion_id,
+        attendance_session_id: formData.attendance_session_id,
+        source_type: formData.source_type,
+        source:
+          formData.source_type === 'other'
+            ? formData.source || undefined
+            : undefined,
+        member_id:
+          formData.source_type === 'member'
+            ? formData.member_id || undefined
+            : undefined,
+        group_id:
+          formData.source_type === 'group'
+            ? formData.group_id || undefined
+            : undefined,
+        tag_item_id:
+          formData.source_type === 'tag_item'
+            ? formData.tag_item_id || undefined
+            : undefined,
+      } as any;
 
-    if (selectedContribution) {
-      // Edit existing contribution
-      const updatedContribution: ContributionRecord = {
-        ...selectedContribution,
-        ...formData,
-        member_name:
-          memberOptions.find((m) => m.value === formData.member_id)?.label ||
-          '',
-        updated_at: new Date().toISOString(),
-        receipt_issued: false, // Reset receipt status when editing
-      };
-
-      setContributions((prev) =>
-        prev.map((contribution) =>
-          contribution.id === selectedContribution.id
-            ? updatedContribution
-            : contribution
-        )
-      );
-      setIsEditDialogOpen(false);
-    } else {
-      // Add new contribution
-      const newContribution: ContributionRecord = {
-        id: Date.now().toString(),
-        organization_id: 'org-1', // TODO: Get from context
-        branch_id: 'branch-1', // TODO: Get from context
-        created_by: 'user-1', // TODO: Get from auth context
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        member_name:
-          memberOptions.find((m) => m.value === formData.member_id)?.label ||
-          '',
-        receipt_issued: false,
-        ...formData,
-      };
-
-      setContributions((prev) => [...prev, newContribution]);
-      setIsAddDialogOpen(false);
+      if (selectedContribution) {
+        await updateIncome.mutateAsync({
+          id: selectedContribution.id,
+          updates: commonPayload,
+        });
+        setIsEditDialogOpen(false);
+        resetForm();
+      } else {
+        await createIncome.mutateAsync(commonPayload);
+        setIsAddDialogOpen(false);
+        resetForm();
+      }
+    } finally {
+      setSelectedContribution(null);
     }
-
-    resetForm();
-    setSelectedContribution(null);
   };
 
   // Handle edit
-  const handleEdit = (contribution: ContributionRecord) => {
+  const handleEdit = (contribution: IncomeResponseRow) => {
     setSelectedContribution(contribution);
     setFormData({
-      member_id: contribution.member_id,
+      source_type: (contribution.source_type as any) || 'member',
+      source: contribution.source || '',
+      member_id: contribution.member_id || undefined,
+      group_id: contribution.group_id || undefined,
+      tag_item_id: contribution.tag_item_id || undefined,
       amount: contribution.amount,
-      contribution_type: contribution.contribution_type,
       payment_method: contribution.payment_method,
       date: contribution.date,
       description: contribution.description || '',
       notes: contribution.notes || '',
       envelope_number: contribution.envelope_number || '',
-      tax_deductible: contribution.tax_deductible,
+      income_type:
+        (contribution.income_type as Extract<
+          IncomeType,
+          'contribution' | 'donation'
+        >) || 'contribution',
+      extended_income_type:
+        (contribution.extended_income_type as ExtendedIncomeType) ||
+        'Contribution',
+      attendance_occasion_id: contribution.attendance_occasion_id || undefined,
+      attendance_session_id: contribution.attendance_session_id || undefined,
     });
     setIsEditDialogOpen(true);
   };
 
   // Handle view
-  const handleView = (contribution: ContributionRecord) => {
+  const handleView = (contribution: IncomeResponseRow) => {
     setSelectedContribution(contribution);
     setIsViewDialogOpen(true);
   };
 
   // Handle delete
-  const handleDelete = (contribution: ContributionRecord) => {
-    setContributions((prev) => prev.filter((c) => c.id !== contribution.id));
+  const handleDelete = (contribution: IncomeResponseRow) => {
+    setSelectedContribution(contribution);
+    setIsDeleteDialogOpen(true);
   };
 
   // Filtered contributions
@@ -245,7 +218,7 @@ const Contributions: React.FC = () => {
       if (
         filters.category_filter &&
         filters.category_filter.length > 0 &&
-        !filters.category_filter.includes(contribution.contribution_type)
+        !filters.category_filter.includes(contribution.extended_income_type)
       ) {
         return false;
       }
@@ -267,19 +240,24 @@ const Contributions: React.FC = () => {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalContributions = filteredContributions.reduce(
+    const totalAmount = filteredContributions.reduce(
       (sum, contribution) => sum + contribution.amount,
       0
     );
+    const totalContributionAmount = filteredContributions
+      .filter((c) => c.income_type === 'contribution')
+      .reduce((sum, c) => sum + c.amount, 0);
+    const totalDonationAmount = filteredContributions
+      .filter((c) => c.income_type === 'donation')
+      .reduce((sum, c) => sum + c.amount, 0);
     const recordCount = filteredContributions.length;
-    const averageContribution =
-      recordCount > 0 ? totalContributions / recordCount : 0;
+    const averageAmount = recordCount > 0 ? totalAmount / recordCount : 0;
 
     // Find top contributor
     const contributorTotals = filteredContributions.reduce(
       (acc, contribution) => {
-        acc[contribution.member_name] =
-          (acc[contribution.member_name] || 0) + contribution.amount;
+        const key = (contribution as any).contributor_name || 'Unknown';
+        acc[key] = (acc[key] || 0) + contribution.amount;
         return acc;
       },
       {} as Record<string, number>
@@ -291,93 +269,17 @@ const Contributions: React.FC = () => {
     );
 
     return {
-      totalContributions,
+      totalAmount,
+      totalContributionAmount,
+      totalDonationAmount,
       recordCount,
-      averageContribution,
+      averageAmount,
       topContributor: topContributor.name,
       topContributorAmount: topContributor.amount,
     };
   }, [filteredContributions]);
 
-  // Table columns
-  const columns: TableColumn[] = [
-    {
-      key: 'member_name',
-      label: 'Member',
-      sortable: true,
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
-      sortable: true,
-      render: (value) =>
-        `GHS${Number(value).toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-        })}`,
-    },
-    {
-      key: 'contribution_type',
-      label: 'Type',
-      sortable: true,
-      render: (value) =>
-        String(value)
-          .replace('_', ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-    },
-    {
-      key: 'payment_method',
-      label: 'Payment Method',
-      sortable: true,
-      render: (value) =>
-        String(value)
-          .replace('_', ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase()),
-    },
-    {
-      key: 'date',
-      label: 'Date',
-      sortable: true,
-      render: (value) => format(new Date(String(value)), 'MMM dd, yyyy'),
-    },
-    {
-      key: 'envelope_number',
-      label: 'Envelope #',
-      render: (value) => value || '-',
-    },
-    {
-      key: 'tax_deductible',
-      label: 'Tax Deductible',
-      render: (value) => (value ? 'Yes' : 'No'),
-    },
-    {
-      key: 'receipt_issued',
-      label: 'Receipt',
-      render: (value) => (value ? '✓' : '✗'),
-    },
-  ];
-
-  // Table actions
-  const actions: TableAction[] = [
-    {
-      key: 'view',
-      label: 'View',
-      icon: <Eye className="h-4 w-4" />,
-      onClick: handleView,
-    },
-    {
-      key: 'edit',
-      label: 'Edit',
-      icon: <Edit className="h-4 w-4" />,
-      onClick: handleEdit,
-    },
-    {
-      key: 'delete',
-      label: 'Delete',
-      icon: <Trash2 className="h-4 w-4" />,
-      onClick: handleDelete,
-      variant: 'destructive',
-    },
-  ];
+  // Table columns and actions moved to ContributionsTable component
 
   return (
     <div className="space-y-6">
@@ -385,7 +287,7 @@ const Contributions: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Heart className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Contributions</h1>
+          <h1 className="text-2xl font-bold">Contributions & Donations</h1>
         </div>
 
         {/* Report Generator */}
@@ -398,609 +300,117 @@ const Contributions: React.FC = () => {
             // TODO: Implement report generation
           }}
         />
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add New Contribution</DialogTitle>
-              <DialogDescription>
-                Record a new contribution or donation.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="member">Member *</Label>
-                  <Select
-                    value={formData.member_id}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, member_id: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {memberOptions.map((member) => (
-                        <SelectItem key={member.value} value={member.value}>
-                          {member.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        amount: parseFloat(e.target.value) || 0,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contributionType">Contribution Type *</Label>
-                  <Select
-                    value={formData.contribution_type}
-                    onValueChange={(value: ContributionType) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        contribution_type: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.contributionTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method *</Label>
-                  <Select
-                    value={formData.payment_method}
-                    onValueChange={(value: PaymentMethod) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        payment_method: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.paymentMethods.map((method) => (
-                        <SelectItem key={method.value} value={method.value}>
-                          {method.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.date
-                          ? format(new Date(formData.date), 'PPP')
-                          : 'Pick a date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          formData.date ? new Date(formData.date) : undefined
-                        }
-                        onSelect={(date) =>
-                          date &&
-                          setFormData((prev) => ({
-                            ...prev,
-                            date: date.toISOString().split('T')[0],
-                          }))
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="envelopeNumber">Envelope Number</Label>
-                  <Input
-                    id="envelopeNumber"
-                    value={formData.envelope_number}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        envelope_number: e.target.value,
-                      }))
-                    }
-                    placeholder="Envelope number"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="Brief description"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                  }
-                  placeholder="Additional notes"
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="taxDeductible"
-                  checked={formData.tax_deductible}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      tax_deductible: !!checked,
-                    }))
-                  }
-                />
-                <Label htmlFor="taxDeductible">Tax deductible</Label>
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Add Contribution</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <ContributionFormDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          mode="add"
+          formData={formData}
+          onFormDataChange={setFormData}
+          onSubmit={handleSubmit}
+          isSubmitting={createIncome.isPending}
+          currentOrganizationId={currentOrganization?.id || ''}
+          memberTypeaheadValue={memberTypeaheadValue}
+          onMemberTypeaheadChange={setMemberTypeaheadValue}
+          paymentMethodOptions={paymentMethods as any}
+          extendedIncomeTypeOptions={contributionTypes as any}
+          occasionTypeaheadValue={occasionTypeaheadValue}
+          onOccasionTypeaheadChange={setOccasionTypeaheadValue}
+          sessionTypeaheadValue={sessionTypeaheadValue}
+          onSessionTypeaheadChange={setSessionTypeaheadValue}
+        />
       </div>
 
       {/* Stats Cards */}
       <FinanceStatsCards
-        stats={[
-          {
-            id: 'total_contributions',
-            title: 'Total Contributions',
-            value: `GHS${stats.totalContributions.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}`,
-            icon: <span className="text-green-600">💰</span>,
-            color: 'default',
-          },
-          {
-            id: 'contribution_records',
-            title: 'Contribution Records',
-            value: stats.recordCount.toString(),
-            icon: <span>📊</span>,
-            subtitle: 'total entries',
-          },
-          {
-            id: 'avg_contribution',
-            title: 'Average Contribution',
-            value: `GHS${stats.averageContribution.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}`,
-            icon: <span>📈</span>,
-            subtitle: 'per record',
-          },
-          {
-            id: 'top_contributor',
-            title: 'Top Contributor',
-            value: stats.topContributor,
-            subtitle: `GHS${stats.topContributorAmount.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}`,
-            icon: <span>🏆</span>,
-          },
-        ]}
+        stats={contributionDonationStatsConfig({
+          totalContributionAmount: stats.totalContributionAmount,
+          totalDonationAmount: stats.totalDonationAmount,
+          recordCount: stats.recordCount,
+          averageAmount: stats.averageAmount,
+          topContributor: stats.topContributor,
+          topContributorAmount: stats.topContributorAmount,
+        })}
+        className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"
       />
-
       {/* Filter Bar */}
       <FinanceFilterBar
         filters={filters}
         onFiltersChange={setFilters}
-        categoryOptions={filterOptions.contributionTypes}
-        paymentMethodOptions={filterOptions.paymentMethods}
+        categoryOptions={contributionTypes}
+        paymentMethodOptions={paymentMethods}
         showAddButton={true}
         onAddClick={() => setIsAddDialogOpen(true)}
-        addButtonLabel="Add Contribution"
+        addButtonLabel="Add Record"
+        recordTypeFilter={recordTypeFilter}
+        onRecordTypeFilterChange={setRecordTypeFilter}
       />
 
       {/* Data Table */}
-      <FinanceDataTable
+      <ContributionsTable
         data={filteredContributions}
-        columns={columns}
-        actions={actions}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={page}
+        totalPages={contributionsQuery.data?.totalPages || 1}
+        pageSize={pageSize}
+        totalItems={contributionsQuery.data?.totalCount || 0}
+        onPageChange={(p) => setPage(p)}
+        onPageSizeChange={(ps) => {
+          setPageSize(ps);
+          setPage(1);
+        }}
+        itemName="records"
       />
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Contribution</DialogTitle>
-            <DialogDescription>
-              Update the contribution information.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-member">Member *</Label>
-                <Select
-                  value={formData.member_id}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, member_id: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {memberOptions.map((member) => (
-                      <SelectItem key={member.value} value={member.value}>
-                        {member.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-amount">Amount *</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      amount: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-contributionType">
-                  Contribution Type *
-                </Label>
-                <Select
-                  value={formData.contribution_type}
-                  onValueChange={(value: ContributionType) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      contribution_type: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filterOptions.contributionTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-paymentMethod">Payment Method *</Label>
-                <Select
-                  value={formData.payment_method}
-                  onValueChange={(value: PaymentMethod) =>
-                    setFormData((prev) => ({ ...prev, payment_method: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filterOptions.paymentMethods.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date
-                        ? format(new Date(formData.date), 'PPP')
-                        : 'Pick a date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.date ? new Date(formData.date) : undefined
-                      }
-                      onSelect={(date) =>
-                        date &&
-                        setFormData((prev) => ({
-                          ...prev,
-                          date: date.toISOString().split('T')[0],
-                        }))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-envelopeNumber">Envelope Number</Label>
-                <Input
-                  id="edit-envelopeNumber"
-                  value={formData.envelope_number}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      envelope_number: e.target.value,
-                    }))
-                  }
-                  placeholder="Envelope number"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Input
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Brief description"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                placeholder="Additional notes"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-taxDeductible"
-                checked={formData.tax_deductible}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    tax_deductible: !!checked,
-                  }))
-                }
-              />
-              <Label htmlFor="edit-taxDeductible">Tax deductible</Label>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Update Contribution</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ContributionFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        mode="edit"
+        formData={formData}
+        onFormDataChange={setFormData}
+        onSubmit={handleSubmit}
+        isSubmitting={updateIncome.isPending}
+        currentOrganizationId={currentOrganization?.id || ''}
+        memberTypeaheadValue={memberTypeaheadValue}
+        onMemberTypeaheadChange={setMemberTypeaheadValue}
+        paymentMethodOptions={paymentMethods as any}
+        extendedIncomeTypeOptions={contributionTypes as any}
+        occasionTypeaheadValue={occasionTypeaheadValue}
+        onOccasionTypeaheadChange={setOccasionTypeaheadValue}
+        sessionTypeaheadValue={sessionTypeaheadValue}
+        onSessionTypeaheadChange={setSessionTypeaheadValue}
+      />
 
       {/* View Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Contribution Details</DialogTitle>
-          </DialogHeader>
-          {selectedContribution && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Member
-                  </Label>
-                  <p className="font-semibold">
-                    {selectedContribution.member_name}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Amount
-                  </Label>
-                  <p className="text-lg font-semibold text-green-600">
-                    GHS
-                    {selectedContribution.amount.toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Type
-                  </Label>
-                  <p className="capitalize">
-                    {selectedContribution.contribution_type.replace('_', ' ')}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Payment Method
-                  </Label>
-                  <p className="capitalize">
-                    {selectedContribution.payment_method.replace('_', ' ')}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Date
-                  </Label>
-                  <p>{format(new Date(selectedContribution.date), 'PPP')}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Envelope #
-                  </Label>
-                  <p>{selectedContribution.envelope_number || 'N/A'}</p>
-                </div>
-              </div>
-
-              {selectedContribution.description && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Description
-                  </Label>
-                  <p>{selectedContribution.description}</p>
-                </div>
-              )}
-
-              {selectedContribution.notes && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Notes
-                  </Label>
-                  <p>{selectedContribution.notes}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Tax Deductible
-                  </Label>
-                  <p>{selectedContribution.tax_deductible ? 'Yes' : 'No'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Receipt Issued
-                  </Label>
-                  <p>{selectedContribution.receipt_issued ? 'Yes' : 'No'}</p>
-                </div>
-              </div>
-
-              {selectedContribution.receipt_number && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Receipt Number
-                  </Label>
-                  <p>{selectedContribution.receipt_number}</p>
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>
-                    Created:{' '}
-                    {format(new Date(selectedContribution.created_at), 'PPp')}
-                  </span>
-                  <span>
-                    Updated:{' '}
-                    {format(new Date(selectedContribution.updated_at), 'PPp')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsViewDialogOpen(false)}
-            >
-              Close
-            </Button>
-            <Button
-              onClick={() => {
-                setIsViewDialogOpen(false);
-                if (selectedContribution) handleEdit(selectedContribution);
-              }}
-            >
-              Edit Contribution
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ContributionViewDialog
+        open={isViewDialogOpen}
+        onOpenChange={setIsViewDialogOpen}
+        contribution={selectedContribution as any}
+        onEdit={handleEdit}
+      />
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={async () => {
+          if (selectedContribution) {
+            await deleteIncome.mutateAsync(selectedContribution.id);
+          }
+          setIsDeleteDialogOpen(false);
+          setSelectedContribution(null);
+        }}
+        title="Delete Record"
+        description="Are you sure you want to delete this record? This action cannot be undone."
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+        isLoading={deleteIncome.isPending}
+      />
     </div>
   );
 };

@@ -15,7 +15,6 @@ import {
   TrendingDown,
   Heart,
   Target,
-  Calculator,
   MessageSquare,
   CalendarDays,
   BarChart3,
@@ -100,17 +99,12 @@ const navItems: NavItem[] = [
       {
         to: '/finance/income',
         icon: TrendingUp,
-        label: 'Income',
-      },
-      {
-        to: '/finance/expenses',
-        icon: TrendingDown,
-        label: 'Expenses',
+        label: 'General Income',
       },
       {
         to: '/finance/contributions',
         icon: Heart,
-        label: 'Contributions',
+        label: 'Contributions & Donations',
       },
       {
         to: '/finance/pledges',
@@ -118,10 +112,15 @@ const navItems: NavItem[] = [
         label: 'Pledges',
       },
       {
-        to: '/finance/budget-planning',
-        icon: Calculator,
-        label: 'Budget Planning',
+        to: '/finance/expenses',
+        icon: TrendingDown,
+        label: 'Expenditure',
       },
+      // {
+      //   to: '/finance/budget-planning',
+      //   icon: Calculator,
+      //   label: 'Budget Planning',
+      // },
     ],
   },
   {

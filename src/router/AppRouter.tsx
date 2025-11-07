@@ -44,7 +44,6 @@ import { Income } from '../pages/finance/Income';
 import Expenses from '../pages/finance/Expenses';
 import Contributions from '../pages/finance/Contributions';
 import { Pledges } from '../pages/finance/Pledges';
-import BudgetPlanning from '../pages/finance/BudgetPlanning';
 import { MembershipFormBuilder } from '@/pages/people/MembershipFormBuilder';
 
 function AppRoutes() {
@@ -126,7 +125,7 @@ function AppRoutes() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="contributions" element={<Contributions />} />
           <Route path="pledges" element={<Pledges />} />
-          <Route path="budget-planning" element={<BudgetPlanning />} />
+          {/* <Route path="budget-planning" element={<BudgetPlanning />} /> */}
         </Route>
 
         {/* Other main pages */}

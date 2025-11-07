@@ -1,3 +1,5 @@
+import type { extendedIncomeTypes } from "@/constants/finance/income";
+
 // Base types for finance module
 export interface BaseFinanceRecord {
   id: string;
@@ -14,28 +16,62 @@ export interface BaseFinanceRecord {
 
 // Income types
 export interface IncomeRecord extends BaseFinanceRecord {
-  occasion_type: IncomeOccasionType;
+  // High-level income category flags
+  income_type: 'general_income' | 'contribution' | 'donation' | 'pledge_payment';
+  extended_income_type: ExtendedIncomeType;
   occasion_name?: string;
+  // Source of income and related relations
   source?: string;
+  source_type?: 'church' | 'member' | 'tag_item' | 'group' | 'other';
+  member_id?: string;
+  // Convenience denormalized display field when joined with members
+  member_name?: string;
+  // Unified display name for contributor/donator based on source_type
+  contributor_name?: string;
+  group_id?: string;
+  tag_item_id?: string;
+  attendance_occasion_id?: string;
+  attendance_session_id?: string;
   payment_method: PaymentMethod;
   receipt_number?: string;
+  // Contribution-specific fields (optional for general income)
+  envelope_number?: string;
+  tax_deductible?: boolean;
+  receipt_issued?: boolean;
 }
 
-export type IncomeOccasionType = 
-  | 'offering'
-  | 'tithe'
-  | 'donation'
-  | 'fundraising'
-  | 'special_offering'
-  | 'thanksgiving'
-  | 'harvest'
-  | 'building_fund'
-  | 'missions'
-  | 'youth_ministry'
-  | 'womens_ministry'
-  | 'mens_ministry'
-  | 'childrens_ministry'
-  | 'other';
+// Joined relation summaries for income responses
+export interface IncomeMemberRelation {
+  id: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  profile_image_url: string | null;
+}
+
+export interface IncomeGroupRelation {
+  id: string;
+  name: string;
+}
+
+export interface IncomeTagItemRelation {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+// Income response row including joined relations and derived contributor fields
+export interface IncomeResponseRow extends IncomeRecord {
+  member?: IncomeMemberRelation | null;
+  group?: IncomeGroupRelation | null;
+  tag_item?: IncomeTagItemRelation | null;
+  // Derived display fields computed in hooks
+  contributor_name?: string;
+  contributor_avatar_url?: string;
+  contributor_tag_color?: string;
+}
+
+export type IncomeType = 'general_income' | 'contribution' | 'donation' | 'pledge_payment';
 
 // Expense types
 export interface ExpenseRecord extends BaseFinanceRecord {
@@ -60,7 +96,6 @@ export type ExpenseCategory =
   | 'events'
   | 'transportation'
   | 'insurance'
-  | 'taxes'
   | 'professional_services'
   | 'other';
 
@@ -86,6 +121,25 @@ export type ContributionType =
   | 'donation'
   | 'other';
 
+  export interface ContributionDonationFormData {
+      // Source info
+      source_type: 'member' | 'group' | 'tag_item' | 'other';
+      source?: string; // when source_type === 'other'
+      member_id?: string;
+      group_id?: string;
+      tag_item_id?: string;
+      // Core fields
+      amount: number;
+      payment_method: PaymentMethod;
+      date: string; // YYYY-MM-DD
+      description?: string;
+      notes?: string;
+      envelope_number?: string;
+      income_type: Extract<IncomeType, 'contribution' | 'donation'>;
+      extended_income_type: ExtendedIncomeType;
+      attendance_occasion_id?: string;
+      attendance_session_id?: string;
+    }
 // Pledge types
 export interface PledgeRecord {
   id: string;
@@ -250,10 +304,12 @@ export interface ReportConfig {
   sort_order?: 'asc' | 'desc';
 }
 
+export type ExtendedIncomeType = typeof extendedIncomeTypes[number];
+
 // Form types
 export interface IncomeFormData {
   amount: number;
-  occasion_type: IncomeOccasionType;
+  extended_income_type: ExtendedIncomeType;
   occasion_name?: string;
   source?: string;
   payment_method: PaymentMethod;
