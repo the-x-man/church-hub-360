@@ -280,6 +280,12 @@ export interface FinanceFilter {
   };
   payment_method_filter?: PaymentMethod[];
   status_filter?: string[];
+  // Extended filters for richer finance queries
+  group_filter?: string[];
+  tag_item_filter?: string[];
+  attendance_occasion_filter?: string[];
+  attendance_session_filter?: string[];
+  income_type_filter?: IncomeType[];
 }
 
 export interface FinanceStats {

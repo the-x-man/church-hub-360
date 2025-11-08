@@ -10,7 +10,7 @@ import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmation
 import { Pagination } from '@/components/shared/Pagination';
 // import { useOrganization } from '@/contexts/OrganizationContext';
 import { useDeleteIncome, useIncomes } from '@/hooks/finance/income';
-import type { FinanceFilter, IncomeResponseRow } from '@/types/finance';
+import type { FinanceFilter, IncomeResponseRow, IncomeType } from '@/types/finance';
 import { Heart } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
@@ -22,9 +22,7 @@ const Contributions: React.FC = () => {
   const [filters, setFilters] = useState<FinanceFilter>({
     date_filter: { type: 'preset', preset: 'this_month' },
   });
-  const [recordTypeFilter, setRecordTypeFilter] = useState<
-    'all' | 'contribution' | 'donation'
-  >('all');
+  const [recordTypeFilter, setRecordTypeFilter] = useState<'all' | IncomeType>('all');
 
   const contributionsQuery = useIncomes({
     page,
@@ -199,6 +197,7 @@ const Contributions: React.FC = () => {
         addButtonLabel="Add Record"
         recordTypeFilter={recordTypeFilter}
         onRecordTypeFilterChange={setRecordTypeFilter}
+        incomeTypeFilterOptions={["contribution", "donation"]}
       />
 
       {/* Data Table */}

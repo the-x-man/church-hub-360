@@ -49,6 +49,11 @@ function applyFinanceFilters(
     query = query.in('extended_income_type', filters.category_filter as string[]);
   }
 
+  // Income type filter (advanced)
+  if (filters.income_type_filter && filters.income_type_filter.length) {
+    query = query.in('income_type', filters.income_type_filter as string[]);
+  }
+
   if (filters.payment_method_filter && filters.payment_method_filter.length) {
     query = query.in('payment_method', filters.payment_method_filter as string[]);
   }
@@ -62,35 +67,35 @@ function applyFinanceFilters(
     }
   }
 
-  // Date filter (preset handling for common cases; extend as needed)
+  // Relation filters: member, group, tag item, occasion, session
+  if (filters.member_filter && filters.member_filter.length) {
+    query = query.in('member_id', filters.member_filter as string[]);
+  }
+
+  if (filters.group_filter && filters.group_filter.length) {
+    query = query.in('group_id', filters.group_filter as string[]);
+  }
+
+  if (filters.tag_item_filter && filters.tag_item_filter.length) {
+    query = query.in('tag_item_id', filters.tag_item_filter as string[]);
+  }
+
+  if (filters.attendance_occasion_filter && filters.attendance_occasion_filter.length) {
+    query = query.in('attendance_occasion_id', filters.attendance_occasion_filter as string[]);
+  }
+
+  if (filters.attendance_session_filter && filters.attendance_session_filter.length) {
+    query = query.in('attendance_session_id', filters.attendance_session_filter as string[]);
+  }
+
+  // Date filter: always rely on provided start/end from UI mapping
   if (filters.date_filter) {
     const df = filters.date_filter;
-    const today = new Date();
-    if (df.type === 'preset') {
-      if (df.preset === 'this_month') {
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_month') {
-        const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const end = new Date(today.getFullYear(), today.getMonth(), 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'this_year') {
-        const start = new Date(today.getFullYear(), 0, 1);
-        const end = new Date(today.getFullYear(), 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_year') {
-        const start = new Date(today.getFullYear() - 1, 0, 1);
-        const end = new Date(today.getFullYear() - 1, 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      }
-    } else if (df.type === 'custom') {
-      if (df.start_date) query = query.gte('date', df.start_date);
-      if (df.end_date) query = query.lte('date', df.end_date);
+    if (df.start_date) {
+      query = query.gte('date', df.start_date);
+    }
+    if (df.end_date) {
+      query = query.lte('date', df.end_date);
     }
   }
 
