@@ -69,7 +69,7 @@ export const ContributionViewDialog: React.FC<ContributionViewDialogProps> = ({
 
             <div>
               <Label className="text-sm font-medium text-muted-foreground">
-                Record Type
+                Income Type
               </Label>
               <p className="capitalize">
                 {String(contribution.income_type).replace('_', ' ')}
@@ -79,7 +79,7 @@ export const ContributionViewDialog: React.FC<ContributionViewDialogProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">
-                  Income Type
+                  Category
                 </Label>
                 <p className="capitalize">
                   {String(contribution.extended_income_type).replace('_', ' ')}

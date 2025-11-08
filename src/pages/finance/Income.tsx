@@ -382,7 +382,6 @@ const Income: React.FC = () => {
         filters={filters}
         onFiltersChange={setFilters}
         categoryOptions={occasionTypeOptions}
-        paymentMethodOptions={paymentMethodOptions}
         searchPlaceholder="Search income records..."
         onAddClick={() => setShowAddDialog(true)}
         addButtonLabel="Add Income"
@@ -436,7 +435,7 @@ const Income: React.FC = () => {
                 onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-          extended_income_type: value as ExtendedIncomeType,
+                    extended_income_type: value as ExtendedIncomeType,
                   }))
                 }
               >
@@ -636,7 +635,7 @@ const Income: React.FC = () => {
                 onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-          extended_income_type: value as ExtendedIncomeType,
+                    extended_income_type: value as ExtendedIncomeType,
                   }))
                 }
               >

@@ -19,6 +19,7 @@ import type { DateFilter, DatePreset, FinanceFilter } from '@/types/finance';
 import { format } from 'date-fns';
 import { CalendarIcon, Download, Filter, Plus, Search, X } from 'lucide-react';
 import React from 'react';
+import { paymentMethodOptions as paymentMethodOptionsConst } from './constants';
 
 interface FilterOption {
   value: string;
@@ -314,7 +315,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
             )}
 
             {/* Payment Method Filter */}
-            {paymentMethodOptions.length > 0 && (
+            {(paymentMethodOptions.length > 0 || paymentMethodOptionsConst.length > 0) && (
               <div>
                 <Label>Payment Method</Label>
                 <Select
@@ -332,7 +333,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All methods</SelectItem>
-                    {paymentMethodOptions.map((option) => (
+                    {(paymentMethodOptions.length > 0 ? paymentMethodOptions : paymentMethodOptionsConst).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>

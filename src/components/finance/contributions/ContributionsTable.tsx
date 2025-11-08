@@ -85,7 +85,7 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
     },
     {
       key: 'income_type',
-      label: 'Record Type',
+      label: 'Income Type',
       sortable: true,
       render: (value) =>
         String(value)
@@ -94,7 +94,7 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
     },
     {
       key: 'extended_income_type',
-      label: 'Type',
+      label: 'Record Type',
       sortable: true,
       render: (value) =>
         String(value)
@@ -115,7 +115,7 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
       label: 'Date',
       sortable: true,
       render: (value) =>
-        format(new Date(String(value)), 'MMM dd, yyyy HH:mm:aa'),
+        format(new Date(String(value)), 'MMM dd, yyyy hh:mm:a'),
     },
     {
       key: 'receipt_issued',

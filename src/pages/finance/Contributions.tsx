@@ -1,30 +1,16 @@
-import {
-  contributionTypes,
-  paymentMethods,
-} from '@/components/finance/contributions/constants';
+import { contributionTypes } from '@/components/finance/constants';
 import { contributionDonationStatsConfig } from '@/components/finance/contributions/ContributionDonationStatsConfig';
-import { ContributionFormDialog } from '@/components/finance/contributions/ContributionFormDialog';
 import { ContributionsTable } from '@/components/finance/contributions/ContributionsTable';
 import { ContributionViewDialog } from '@/components/finance/contributions/ContributionViewDialog';
 import { FinanceFilterBar } from '@/components/finance/FinanceFilterBar';
 import { FinanceReportGenerator } from '@/components/finance/FinanceReportGenerator';
 import { FinanceStatsCards } from '@/components/finance/FinanceStatsCards';
+import { IncomeFormDialog } from '@/components/finance/IncomeFormDialog';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
 import { Pagination } from '@/components/shared/Pagination';
-import { useOrganization } from '@/contexts/OrganizationContext';
-import {
-  useCreateIncome,
-  useDeleteIncome,
-  useIncomes,
-  useUpdateIncome,
-} from '@/hooks/finance/income';
-import type {
-  ContributionDonationFormData,
-  FinanceFilter,
-  ExtendedIncomeType,
-  IncomeResponseRow,
-  IncomeType,
-} from '@/types/finance';
+// import { useOrganization } from '@/contexts/OrganizationContext';
+import { useDeleteIncome, useIncomes } from '@/hooks/finance/income';
+import type { FinanceFilter, IncomeResponseRow } from '@/types/finance';
 import { Heart } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
@@ -64,108 +50,11 @@ const Contributions: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Mutations
-  const createIncome = useCreateIncome();
-  const updateIncome = useUpdateIncome();
   const deleteIncome = useDeleteIncome();
 
-  const { currentOrganization } = useOrganization();
-
-  const [formData, setFormData] = useState<ContributionDonationFormData>({
-    source_type: 'member',
-    source: '',
-    member_id: undefined,
-    group_id: undefined,
-    tag_item_id: undefined,
-    amount: 0,
-    payment_method: 'cash',
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    notes: '',
-    envelope_number: '',
-    income_type: 'contribution',
-    extended_income_type: 'Contribution',
-    attendance_occasion_id: undefined,
-    attendance_session_id: undefined,
-  });
-
-  // Member typeahead UI state (single-select)
-  const [memberTypeaheadValue, setMemberTypeaheadValue] = useState<any[]>([]);
-  const [occasionTypeaheadValue, setOccasionTypeaheadValue] = useState<any[]>([]);
-  const [sessionTypeaheadValue, setSessionTypeaheadValue] = useState<any[]>([]);
-
-  // Filter options moved to shared constants
-
-  // Reset form
-  const resetForm = () => {
-    setFormData({
-      source_type: 'member',
-      source: '',
-      member_id: undefined,
-      group_id: undefined,
-      tag_item_id: undefined,
-      amount: 0,
-      payment_method: 'cash',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      notes: '',
-      envelope_number: '',
-      income_type: 'contribution',
-      extended_income_type: 'Contribution',
-      attendance_occasion_id: undefined,
-      attendance_session_id: undefined,
-    });
-    setMemberTypeaheadValue([]);
-    setOccasionTypeaheadValue([]);
-    setSessionTypeaheadValue([]);
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const commonPayload = {
-        amount: formData.amount,
-        extended_income_type: formData.extended_income_type,
-        payment_method: formData.payment_method,
-        date: formData.date,
-        description: formData.description,
-        notes: formData.notes,
-        envelope_number: formData.envelope_number,
-        income_type: formData.income_type,
-        attendance_occasion_id: formData.attendance_occasion_id,
-        attendance_session_id: formData.attendance_session_id,
-        source_type: formData.source_type,
-        source:
-          formData.source_type === 'other'
-            ? formData.source || undefined
-            : undefined,
-        member_id:
-          formData.source_type === 'member'
-            ? formData.member_id || undefined
-            : undefined,
-        group_id:
-          formData.source_type === 'group'
-            ? formData.group_id || undefined
-            : undefined,
-        tag_item_id:
-          formData.source_type === 'tag_item'
-            ? formData.tag_item_id || undefined
-            : undefined,
-      } as any;
-
-      if (selectedContribution) {
-        await updateIncome.mutateAsync({
-          id: selectedContribution.id,
-          updates: commonPayload,
-        });
-        setIsEditDialogOpen(false);
-        resetForm();
-      } else {
-        await createIncome.mutateAsync(commonPayload);
-        setIsAddDialogOpen(false);
-        resetForm();
-      }
-    } finally {
+  const handleEditOpenChange = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
       setSelectedContribution(null);
     }
   };
@@ -173,29 +62,6 @@ const Contributions: React.FC = () => {
   // Handle edit
   const handleEdit = (contribution: IncomeResponseRow) => {
     setSelectedContribution(contribution);
-    setFormData({
-      source_type: (contribution.source_type as any) || 'member',
-      source: contribution.source || '',
-      member_id: contribution.member_id || undefined,
-      group_id: contribution.group_id || undefined,
-      tag_item_id: contribution.tag_item_id || undefined,
-      amount: contribution.amount,
-      payment_method: contribution.payment_method,
-      date: contribution.date,
-      description: contribution.description || '',
-      notes: contribution.notes || '',
-      envelope_number: contribution.envelope_number || '',
-      income_type:
-        (contribution.income_type as Extract<
-          IncomeType,
-          'contribution' | 'donation'
-        >) || 'contribution',
-      extended_income_type:
-        (contribution.extended_income_type as ExtendedIncomeType) ||
-        'Contribution',
-      attendance_occasion_id: contribution.attendance_occasion_id || undefined,
-      attendance_session_id: contribution.attendance_session_id || undefined,
-    });
     setIsEditDialogOpen(true);
   };
 
@@ -279,8 +145,6 @@ const Contributions: React.FC = () => {
     };
   }, [filteredContributions]);
 
-  // Table columns and actions moved to ContributionsTable component
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -300,23 +164,16 @@ const Contributions: React.FC = () => {
             // TODO: Implement report generation
           }}
         />
-        <ContributionFormDialog
+        <IncomeFormDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
           mode="add"
-          formData={formData}
-          onFormDataChange={setFormData}
-          onSubmit={handleSubmit}
-          isSubmitting={createIncome.isPending}
-          currentOrganizationId={currentOrganization?.id || ''}
-          memberTypeaheadValue={memberTypeaheadValue}
-          onMemberTypeaheadChange={setMemberTypeaheadValue}
-          paymentMethodOptions={paymentMethods as any}
-          extendedIncomeTypeOptions={contributionTypes as any}
-          occasionTypeaheadValue={occasionTypeaheadValue}
-          onOccasionTypeaheadChange={setOccasionTypeaheadValue}
-          sessionTypeaheadValue={sessionTypeaheadValue}
-          onSessionTypeaheadChange={setSessionTypeaheadValue}
+          title="Add Record"
+          initialData={{
+            income_type: 'contribution',
+            extended_income_type: 'Contribution',
+          }}
+          allowedIncomeTypes={['contribution', 'donation']}
         />
       </div>
 
@@ -337,7 +194,6 @@ const Contributions: React.FC = () => {
         filters={filters}
         onFiltersChange={setFilters}
         categoryOptions={contributionTypes}
-        paymentMethodOptions={paymentMethods}
         showAddButton={true}
         onAddClick={() => setIsAddDialogOpen(true)}
         addButtonLabel="Add Record"
@@ -368,24 +224,17 @@ const Contributions: React.FC = () => {
       />
 
       {/* Edit Dialog */}
-      <ContributionFormDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        mode="edit"
-        formData={formData}
-        onFormDataChange={setFormData}
-        onSubmit={handleSubmit}
-        isSubmitting={updateIncome.isPending}
-        currentOrganizationId={currentOrganization?.id || ''}
-        memberTypeaheadValue={memberTypeaheadValue}
-        onMemberTypeaheadChange={setMemberTypeaheadValue}
-        paymentMethodOptions={paymentMethods as any}
-        extendedIncomeTypeOptions={contributionTypes as any}
-        occasionTypeaheadValue={occasionTypeaheadValue}
-        onOccasionTypeaheadChange={setOccasionTypeaheadValue}
-        sessionTypeaheadValue={sessionTypeaheadValue}
-        onSessionTypeaheadChange={setSessionTypeaheadValue}
-      />
+      {isEditDialogOpen && (
+        <IncomeFormDialog
+          key={selectedContribution?.id || 'edit'}
+          open={isEditDialogOpen}
+          onOpenChange={handleEditOpenChange}
+          mode="edit"
+          title="Edit Record"
+          initialData={selectedContribution || undefined}
+          allowedIncomeTypes={['contribution', 'donation']}
+        />
+      )}
 
       {/* View Dialog */}
       <ContributionViewDialog
