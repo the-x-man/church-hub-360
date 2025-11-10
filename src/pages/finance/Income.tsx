@@ -47,7 +47,9 @@ const Income: React.FC = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-  const [receiptRecord, setReceiptRecord] = useState<IncomeResponseRow | null>(null);
+  const [receiptRecord, setReceiptRecord] = useState<IncomeResponseRow | null>(
+    null
+  );
   const [
     selectedRecord,
     setSelectedRecord,
@@ -70,7 +72,7 @@ const Income: React.FC = () => {
 
     if (filters.category_filter?.length) {
       filtered = filtered.filter((record) =>
-        (filters.category_filter || []).includes(record.extended_income_type)
+        (filters.category_filter || []).includes(record.category)
       );
     }
 
@@ -109,8 +111,7 @@ const Income: React.FC = () => {
     const averageIncome = recordCount > 0 ? totalIncome / recordCount : 0;
 
     const occasionTotals = filteredAndSortedData.reduce((acc, r) => {
-      acc[r.extended_income_type] =
-        (acc[r.extended_income_type] || 0) + (r.amount || 0);
+      acc[r.category] = (acc[r.category] || 0) + (r.amount || 0);
       return acc;
     }, {} as Record<string, number>);
     const topOccasionEntry = Object.entries(occasionTotals).sort(
@@ -187,7 +188,7 @@ const Income: React.FC = () => {
       sortable: true,
     },
     {
-      key: 'extended_income_type',
+      key: 'category',
       label: 'Category',
       render: (value) => value || '-',
     },
@@ -281,7 +282,7 @@ const Income: React.FC = () => {
             filters={filters}
             onGenerateReport={handleGenerateReport}
             availableGroupBy={[
-              { value: 'extended_income_type', label: 'Occasion Type' },
+              { value: 'category', label: 'Occasion Type' },
               { value: 'payment_method', label: 'Payment Method' },
               { value: 'source', label: 'Source' },
               { value: 'date', label: 'Date' },
@@ -354,7 +355,7 @@ const Income: React.FC = () => {
         onSuccess={() => setIsAddDialogOpen(false)}
         initialData={{
           income_type: 'general_income',
-          extended_income_type: 'Offering',
+          category: 'Offering',
           source_type: 'church',
         }}
         allowedIncomeTypes={['general_income']}

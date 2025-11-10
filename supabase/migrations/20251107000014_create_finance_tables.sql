@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.income (
   )) NOT NULL DEFAULT 'general_income',
 
   -- Occasion details (optional)
-  extended_income_type TEXT,
+  category TEXT,
   occasion_name TEXT,
   attendance_occasion_id UUID REFERENCES public.attendance_occasions(id) ON DELETE SET NULL,
   attendance_session_id UUID REFERENCES public.attendance_sessions(id) ON DELETE SET NULL,

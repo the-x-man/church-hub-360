@@ -146,7 +146,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
 
   const [form, setForm] = useState<CreateIncomeInput>(() => ({
     amount: (initialData as any)?.amount ?? 0,
-    extended_income_type: (initialData as any)?.extended_income_type ?? extendedIncomeTypes[0],
+    category: (initialData as any)?.category ?? extendedIncomeTypes[0],
     payment_method: (initialData as any)?.payment_method ?? 'cash',
     date: (initialData as any)?.date ?? new Date().toISOString(),
     description: (initialData as any)?.description ?? '',
@@ -200,7 +200,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
       setForm((prev) => ({
         ...prev,
         amount: data?.amount ?? 0,
-        extended_income_type: data?.extended_income_type ?? extendedIncomeTypes[0],
+        category: data?.category ?? extendedIncomeTypes[0],
         payment_method: data?.payment_method ?? 'cash',
         date: data?.date ?? new Date().toISOString(),
         description: data?.description ?? '',
@@ -274,7 +274,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
     setForm((prev) => ({
       ...prev,
       amount: 0,
-      extended_income_type: extendedIncomeTypes[0],
+      category: extendedIncomeTypes[0],
       payment_method: 'cash',
       date: new Date().toISOString(),
       description: '',
@@ -310,8 +310,8 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
     if (!form.income_type) {
       nextErrors.income_type = 'Please select an income type.';
     }
-    if (!form.extended_income_type) {
-      nextErrors.extended_income_type = 'Please select a category.';
+    if (!form.category) {
+      nextErrors.category = 'Please select a category.';
     }
 
     // Source Type and related selection
@@ -459,15 +459,15 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
             <div className="space-y-2 md:col-span-1">
               <Label>Category *</Label>
               <Select
-                value={form.extended_income_type}
+                value={form.category}
                 onValueChange={(value) =>
                   setForm((prev) => ({
                     ...prev,
-                    extended_income_type: value as any,
+                    category: value as any,
                   }))
                 }
               >
-                <SelectTrigger className="w-full" aria-invalid={!!errors.extended_income_type}>
+                <SelectTrigger className="w-full" aria-invalid={!!errors.category}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -478,8 +478,8 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.extended_income_type && (
-                <p className="text-destructive text-sm mt-1" aria-live="polite">{errors.extended_income_type}</p>
+              {errors.category && (
+                <p className="text-destructive text-sm mt-1" aria-live="polite">{errors.category}</p>
               )}
             </div>
           </div>

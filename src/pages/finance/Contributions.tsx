@@ -59,7 +59,9 @@ const Contributions: React.FC = () => {
   ] = useState<IncomeResponseRow | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-  const [receiptRecord, setReceiptRecord] = useState<IncomeResponseRow | null>(null);
+  const [receiptRecord, setReceiptRecord] = useState<IncomeResponseRow | null>(
+    null
+  );
 
   // Mutations
   const deleteIncome = useDeleteIncome();
@@ -96,7 +98,7 @@ const Contributions: React.FC = () => {
       if (
         filters.category_filter &&
         filters.category_filter.length > 0 &&
-        !filters.category_filter.includes(contribution.extended_income_type)
+        !filters.category_filter.includes(contribution.category)
       ) {
         return false;
       }
@@ -183,7 +185,7 @@ const Contributions: React.FC = () => {
           title="Add Record"
           initialData={{
             income_type: 'contribution',
-            extended_income_type: 'Contribution',
+            category: 'Contribution',
           }}
           allowedIncomeTypes={['contribution', 'donation']}
         />

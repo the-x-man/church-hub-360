@@ -84,7 +84,7 @@ export const IncomeViewDialog: React.FC<IncomeViewDialogProps> = ({
                   Category
                 </Label>
                 <p className="capitalize">
-                  {String(contribution.extended_income_type).replace('_', ' ')}
+                  {String(contribution.category).replace('_', ' ')}
                 </p>
               </div>
               <div>

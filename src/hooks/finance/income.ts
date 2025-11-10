@@ -46,9 +46,9 @@ function applyFinanceFilters(
 ) {
   if (!filters) return query;
 
-  // Category filter maps to extended_income_type for Income page
+  // Category filter maps to category for Income page
   if (filters.category_filter && filters.category_filter.length) {
-    query = query.in('extended_income_type', filters.category_filter as string[]);
+    query = query.in('category', filters.category_filter as string[]);
   }
 
   // Income type filter (advanced)
@@ -174,7 +174,7 @@ export function useIncomes(params?: IncomeQueryParams) {
           `receipt_number.ilike.%${q}%`,
           `payment_method.ilike.%${q}%`,
           `income_type.ilike.%${q}%`,
-          `extended_income_type.ilike.%${q}%`,
+          `category.ilike.%${q}%`,
         ];
         query = query.or(orClauses.join(','));
       }
@@ -273,7 +273,7 @@ export function useIncome(id: string | null) {
 
 export interface CreateIncomeInput {
   amount: number;
-  extended_income_type: ExtendedIncomeType;
+  category: ExtendedIncomeType;
   payment_method: PaymentMethod;
   date: string; // YYYY-MM-DD
   description?: string;
@@ -309,7 +309,7 @@ export function useCreateIncome() {
         organization_id: currentOrganization.id,
         branch_id: input.branch_id || null,
         amount: input.amount,
-        extended_income_type: input.extended_income_type,
+        category: input.category,
         payment_method: input.payment_method,
         date: input.date,
         description: input.description || null,

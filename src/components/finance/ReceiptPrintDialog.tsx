@@ -16,6 +16,9 @@ import { format } from 'date-fns';
 import { useUpdateIncome } from '@/hooks/finance/income';
 import { supabase } from '@/utils/supabase';
 import { useReactToPrint } from 'react-to-print';
+import { useReceiptPreferences } from '@/hooks/finance/useReceiptPreferences';
+import { generateReceiptNumberByPattern } from '@/utils/finance/receiptNumber';
+import ReceiptPreferencesDialog from '@/components/finance/ReceiptPreferencesDialog';
 
 interface ReceiptPrintDialogProps {
   open: boolean;
@@ -31,6 +34,8 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
   const { currentOrganization } = useOrganization();
   const updateIncome = useUpdateIncome();
   const orgName = currentOrganization?.name || 'Organization';
+  const orgId = currentOrganization?.id;
+  const { prefs, bumpSeq, DEFAULT_FIELD_PREFS } = useReceiptPreferences(orgId);
 
   const pmLabel = useMemo(() => {
     const v = record?.payment_method;
@@ -51,32 +56,38 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
     setFinalReceiptNumber(record?.receipt_number ?? null);
   }, [record?.id, record?.receipt_number]);
 
-  // Generate and show a unique receipt number when dialog opens (if missing)
+  // Generate and show a unique receipt number when dialog opens (if missing), using preferences pattern
   useEffect(() => {
     const doGenerate = async () => {
       if (!open || !record || record.receipt_number) return;
       setIsGeneratingNumber(true);
       try {
-        const candidate = generateReceiptNumber();
-        const unique = await ensureUniqueReceiptNumber(candidate);
+        const pattern =
+          prefs?.number?.pattern ?? 'RCPT-{ORG4}-{YYMMDD}-{RAND3}';
+        const seqPreview = (prefs?.number?.seq ?? 0) + 1;
+        const unique = await generateReceiptNumberByPattern({
+          orgId,
+          orgName,
+          pattern,
+          seq: seqPreview,
+        });
         setFinalReceiptNumber(unique);
       } finally {
         setIsGeneratingNumber(false);
       }
     };
     doGenerate();
-  }, [open, record]);
+  }, [open, record, prefs?.number?.pattern, prefs?.number?.seq, orgId]);
 
-  const generateReceiptNumber = (): string => {
-    const orgCode = (currentOrganization?.name || 'ORG')
-      .replace(/[^A-Za-z0-9]/g, '')
-      .slice(0, 4)
-      .toUpperCase();
-    const datePart = format(new Date(), 'yyMMdd-HHmm');
-    const rand = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, '0');
-    return `RCPT-${orgCode}-${datePart}-${rand}`;
+  const generateReceiptNumber = async (): Promise<string> => {
+    const pattern = prefs?.number?.pattern ?? 'RCPT-{ORG4}-{YYMMDD}-{RAND3}';
+    const seqPreview = (prefs?.number?.seq ?? 0) + 1;
+    return generateReceiptNumberByPattern({
+      orgId,
+      orgName,
+      pattern,
+      seq: seqPreview,
+    });
   };
 
   const ensureUniqueReceiptNumber = async (
@@ -100,6 +111,7 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   const PRINT_PAGE_STYLE = `
     @page { margin: 18mm; }
@@ -126,7 +138,9 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
       // Ensure receipt number exists and persist before printing
       let receiptNum = finalReceiptNumber;
       if (!receiptNum) {
-        receiptNum = await ensureUniqueReceiptNumber(generateReceiptNumber());
+        receiptNum = await ensureUniqueReceiptNumber(
+          await generateReceiptNumber()
+        );
         setFinalReceiptNumber(receiptNum);
       }
       if (record?.id && receiptNum) {
@@ -135,6 +149,8 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
             id: record.id,
             updates: { receipt_number: receiptNum, receipt_issued: true },
           });
+          // bump local sequence only after successful persist
+          await bumpSeq();
         } catch (err) {
           console.error('Persist failed before print:', err);
         }
@@ -193,111 +209,121 @@ export const ReceiptPrintDialog: React.FC<ReceiptPrintDialogProps> = ({
           <div className="title-block text-right mt-4">
             <div className="title text-xl font-extrabold">Official Receipt</div>
             <div className="rec-num text-xs text-muted-foreground">
-              # {finalReceiptNumber || (isGeneratingNumber ? 'Generating…' : 'Pending')}
+              #{' '}
+              {finalReceiptNumber ||
+                (isGeneratingNumber ? 'Generating…' : 'Pending')}
             </div>
           </div>
 
           <Separator className="my-4" />
 
-          {/* Details Grid */}
+          {/* Details Grid (preferences-driven) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="row flex gap-4 items-center">
-              <span className="label text-sm text-muted-foreground">
-                Income Type
-              </span>
-              <span className="value font-medium">
-                {String(record?.income_type || 'income')
-                  .replace('_', ' ')
-                  .replace(/\b\w/g, (l) => l.toUpperCase())}
-              </span>
-            </div>
-            <div className="row flex gap-4 items-center">
-              <span className="label text-sm text-muted-foreground">
-                Category
-              </span>
-              <span className="value font-medium">
-                {record?.extended_income_type || '-'}
-              </span>
-            </div>
-            <div className="row flex gap-4 items-center">
-              <span className="label text-sm text-muted-foreground">
-                Source
-              </span>
-              <span className="value font-medium">
-                {record?.contributor_name || record?.source || '-'}
-              </span>
-            </div>
-            {record?.occasion_name && (
-              <div className="row flex gap-4 items-center">
-                <span className="label text-sm text-muted-foreground">
-                  Occasion
-                </span>
-                <span className="value font-medium">
-                  {record.occasion_name}
-                </span>
-              </div>
-            )}
-            <div className="row flex gap-4 items-center">
-              <span className="label text-sm text-muted-foreground">Date</span>
-              <span className="value font-medium">
-                {record?.date
-                  ? format(new Date(record.date), 'MMM dd, yyyy HH:mm')
-                  : '-'}
-              </span>
-            </div>
-            <div className="row flex gap-4 items-center">
-              <span className="label text-sm text-muted-foreground">
-                Payment Method
-              </span>
-              <span className="value font-medium">{pmLabel}</span>
-            </div>
-            {record?.envelope_number && (
-              <div className="row flex gap-4 items-center">
-                <span className="label text-sm text-muted-foreground">
-                  Envelope #
-                </span>
-                <span className="value font-medium">
-                  {record.envelope_number}
-                </span>
-              </div>
-            )}
-            {typeof record?.tax_deductible === 'boolean' && (
-              <div className="row flex gap-4 items-center">
-                <span className="label text-sm text-muted-foreground">
-                  Tax Deductible
-                </span>
-                <span className="value font-medium">
-                  {record.tax_deductible ? 'Yes' : 'No'}
-                </span>
-              </div>
-            )}
+            {(prefs?.fields ?? DEFAULT_FIELD_PREFS)
+              .filter((f) => f.enabled)
+              .filter((f) => f.key !== 'amount' && f.key !== 'receipt_number')
+              .map((f) => {
+                const label = f.label;
+                let value: string = '-';
+                switch (f.key) {
+                  case 'income_type':
+                    value = String(record?.income_type || 'income')
+                      .replace('_', ' ')
+                      .replace(/\b\w/g, (l) => l.toUpperCase());
+                    break;
+                  case 'category':
+                    value = record?.category || '-';
+                    break;
+                  case 'source':
+                    value = record?.contributor_name || record?.source || '-';
+                    break;
+                  case 'occasion_name':
+                    value = record?.occasion_name || '-';
+                    break;
+                  case 'date':
+                    value = record?.date
+                      ? format(new Date(record.date), 'MMM dd, yyyy HH:mm')
+                      : '-';
+                    break;
+                  case 'payment_method':
+                    value = pmLabel;
+                    break;
+                  case 'envelope_number':
+                    value = record?.envelope_number ?? '-';
+                    break;
+                  case 'tax_deductible':
+                    value =
+                      typeof record?.tax_deductible === 'boolean'
+                        ? record!.tax_deductible
+                          ? 'Yes'
+                          : 'No'
+                        : '-';
+                    break;
+                  default:
+                    break;
+                }
+                return (
+                  <div key={f.key} className="row flex gap-4 items-center">
+                    <span className="label text-sm text-muted-foreground">
+                      {label}
+                    </span>
+                    <span className="value font-medium">{value}</span>
+                  </div>
+                );
+              })}
           </div>
 
           <Separator className="my-4" />
 
-          {/* Amount and Receipt Number */}
+          {/* Amount and Receipt Number (preferences-driven) */}
           <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Receipt #: {finalReceiptNumber || 'N/A'}
-            </div>
-            <div className="amount text-2xl font-bold">
-              {formatCurrency(record?.amount)}
-            </div>
+            {(prefs?.fields ?? DEFAULT_FIELD_PREFS).find(
+              (f) => f.key === 'receipt_number' && f.enabled
+            ) ? (
+              <div className="text-sm text-muted-foreground">
+                {(prefs?.fields ?? DEFAULT_FIELD_PREFS).find(
+                  (f) => f.key === 'receipt_number'
+                )?.label || 'Receipt #'}
+                : {finalReceiptNumber || 'N/A'}
+              </div>
+            ) : (
+              <span />
+            )}
+            {(prefs?.fields ?? DEFAULT_FIELD_PREFS).find(
+              (f) => f.key === 'amount' && f.enabled
+            ) ? (
+              <div className="amount text-2xl font-bold">
+                {formatCurrency(record?.amount)}
+              </div>
+            ) : null}
           </div>
 
-          <div className="footer mt-6 text-center text-sm text-muted-foreground">
-            Thank you for your support.
-          </div>
+          {(prefs?.footer?.enabled ?? true) && (
+            <div className="footer mt-6 text-center text-sm text-muted-foreground">
+              {prefs?.footer?.message ?? 'Thank you for your support.'}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
             Close
           </Button>
+          <Button variant="outline" onClick={() => setPrefsOpen(true)}>
+            Customize
+          </Button>
           <Button onClick={handlePrint} disabled={isPrinting}>
             {isPrinting ? 'Printing…' : 'Print'}
           </Button>
+          {/* Optionally expose preferences via a quick button (does not open dev server) */}
+          {/* This can be wired from parent page. */}
         </DialogFooter>
+
+        {/* Preferences Dialog */}
+        <ReceiptPreferencesDialog
+          open={prefsOpen}
+          onOpenChange={setPrefsOpen}
+        />
       </DialogContent>
     </Dialog>
   );
