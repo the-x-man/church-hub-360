@@ -10,11 +10,11 @@ export const contributionTypes = extendedIncomeTypes.map((t) => ({
  // Payment method options
 export const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
     { value: 'cash', label: 'Cash' },
+    { value: 'mobile_payment', label: 'Mobile Money' },
+    { value: 'bank_transfer', label: 'Bank Transfer' },
     { value: 'check', label: 'Check' },
     { value: 'credit_card', label: 'Credit Card' },
     { value: 'debit_card', label: 'Debit Card' },
-    { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'mobile_payment', label: 'Mobile Payment' },
     { value: 'online', label: 'Online' },
     { value: 'other', label: 'Other' },
   ];

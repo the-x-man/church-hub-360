@@ -145,16 +145,26 @@ export interface PledgeRecord {
   id: string;
   organization_id: string;
   branch_id: string;
-  member_id: string;
-  member_name: string;
+  // Source fields
+  source_type?: 'church' | 'member' | 'tag_item' | 'group' | 'other';
+  source?: string; // when source_type === 'other'
+  member_id?: string;
+  member_name?: string; // convenience display
+  group_id?: string;
+  group_name?: string; // convenience display
+  tag_item_id?: string;
+  tag_item_name?: string; // convenience display
+  // Unified display name for pledge source
+  contributor_name?: string;
+  // Core fields
   pledge_amount: number;
   amount_paid: number;
   amount_remaining: number;
-  pledge_type: PledgeType;
+  pledge_type: string;
   campaign_name?: string;
   start_date: string;
   end_date: string;
-  payment_frequency: PaymentFrequency;
+  payment_frequency: string;
   status: PledgeStatus;
   description?: string;
   created_by: string;
@@ -173,27 +183,13 @@ export interface PledgePayment {
   created_at: string;
 }
 
-export type PledgeType = 
-  | 'building_fund'
-  | 'missions'
-  | 'special_project'
-  | 'annual_pledge'
-  | 'capital_campaign'
-  | 'other';
+
 
 export type PledgeStatus = 
   | 'active'
   | 'fulfilled'
   | 'cancelled'
   | 'overdue';
-
-export type PaymentFrequency = 
-  | 'weekly'
-  | 'bi_weekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'annually'
-  | 'one_time';
 
 // Budget Planning types
 export interface BudgetCategory {
@@ -349,13 +345,19 @@ export interface ContributionFormData {
 }
 
 export interface PledgeFormData {
-  member_id: string;
+  // Source info
+  source_type: 'member' | 'group' | 'tag_item' | 'other' | 'church';
+  source?: string; // when source_type === 'other'
+  member_id?: string;
+  group_id?: string;
+  tag_item_id?: string;
+  // Core fields
   pledge_amount: number;
-  pledge_type: PledgeType;
+  pledge_type: string;
   campaign_name?: string;
   start_date: string;
   end_date: string;
-  payment_frequency: PaymentFrequency;
+  payment_frequency: string;
   description?: string;
 }
 

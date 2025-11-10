@@ -3,7 +3,13 @@ import { supabase } from '@/utils/supabase';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { FinanceFilter, PledgeRecord, PledgePayment, PledgeType, PaymentMethod } from '@/types/finance';
+import type {
+  FinanceFilter,
+  PledgeRecord,
+  PledgePayment,
+  PaymentMethod,
+  PledgeStatus,
+} from '@/types/finance';
 
 export interface PledgesQueryParams {
   page?: number;
@@ -51,49 +57,30 @@ function applyFinanceFilters(
 ) {
   if (!filters) return query;
 
-  // Status filter can be mapped to pledge status or custom logic
+  // Direct status mapping for pledge records
   if (filters.status_filter && filters.status_filter.length) {
-    // For now, treat 'completed' as pledged_amount <= amount_paid, 'active' otherwise
-    // This demo implementation relies on a view; skip direct mapping here.
+    query = query.in('status', filters.status_filter as string[]);
   }
 
   if (filters.amount_range) {
     if (filters.amount_range.min !== undefined) {
-      query = query.gte('pledged_amount', filters.amount_range.min as number);
+      query = query.gte('pledge_amount', filters.amount_range.min as number);
     }
     if (filters.amount_range.max !== undefined) {
-      query = query.lte('pledged_amount', filters.amount_range.max as number);
+      query = query.lte('pledge_amount', filters.amount_range.max as number);
     }
   }
 
   if (filters.date_filter) {
     const df = filters.date_filter;
-    const today = new Date();
-    if (df.type === 'preset') {
-      if (df.preset === 'this_month') {
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_month') {
-        const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const end = new Date(today.getFullYear(), today.getMonth(), 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'this_year') {
-        const start = new Date(today.getFullYear(), 0, 1);
-        const end = new Date(today.getFullYear(), 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_year') {
-        const start = new Date(today.getFullYear() - 1, 0, 1);
-        const end = new Date(today.getFullYear() - 1, 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      }
-    } else if (df.type === 'custom') {
-      if (df.start_date) query = query.gte('date', df.start_date);
-      if (df.end_date) query = query.lte('date', df.end_date);
+    // Use explicit start/end when given; map to pledge start_date/end_date
+    if (df.start_date) {
+      const start = df.start_date.length >= 10 ? df.start_date.slice(0, 10) : df.start_date;
+      query = query.gte('start_date', start);
+    }
+    if (df.end_date) {
+      const end = df.end_date.length >= 10 ? df.end_date.slice(0, 10) : df.end_date;
+      query = query.lte('end_date', end);
     }
   }
 
@@ -116,17 +103,26 @@ export function usePledges(params?: PledgesQueryParams) {
 
       let query = supabase
         .from('pledge_records')
-        .select('*', { count: 'exact' })
+        .select(
+          `*,
+           member:members(id, first_name, middle_name, last_name),
+           group:groups(id, name),
+           tag_item:tag_items(id, name)`,
+          { count: 'exact' }
+        )
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
-        .order('date', { ascending: false })
+        .order('start_date', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (queryParams.search && queryParams.search.trim()) {
         const q = queryParams.search.trim();
-        query = query.or(
-          `description.ilike.%${q}%,pledger_name.ilike.%${q}%,target_ministry.ilike.%${q}%`
-        );
+        const orClauses: string[] = [
+          `description.ilike.%${q}%`,
+          `campaign_name.ilike.%${q}%`,
+          `pledge_type.ilike.%${q}%`,
+        ];
+        query = query.or(orClauses.join(','));
       }
 
       query = applyFinanceFilters(query, queryParams.filters);
@@ -141,8 +137,39 @@ export function usePledges(params?: PledgesQueryParams) {
       const totalCount = count || 0;
       const totalPages = Math.ceil(totalCount / queryParams.pageSize!);
 
+      // Map source display names for UI convenience
+      const mapped = (data || []).map((r: any) => {
+        const first = r.member?.first_name || '';
+        const middle = r.member?.middle_name ? ` ${r.member.middle_name}` : '';
+        const last = r.member?.last_name ? ` ${r.member.last_name}` : '';
+        const member_name = `${first}${middle}${last}`.trim();
+        const group_name = r.group?.name || '';
+        const tag_item_name = r.tag_item?.name || '';
+        let contributor_name = '';
+        switch (r.source_type) {
+          case 'member':
+            contributor_name = member_name || 'Member';
+            break;
+          case 'group':
+            contributor_name = group_name || 'Group';
+            break;
+          case 'tag_item':
+            contributor_name = tag_item_name || 'Tag Item';
+            break;
+          case 'other':
+            contributor_name = r.source || 'Other';
+            break;
+          case 'church':
+            contributor_name = 'Church';
+            break;
+          default:
+            contributor_name = member_name || r.source || group_name || tag_item_name || '';
+        }
+        return { ...r, member_name, group_name, tag_item_name, contributor_name } as PledgeRecord;
+      });
+
       return {
-        data: data || [],
+        data: mapped,
         totalCount,
         totalPages,
         currentPage: queryParams.page!,
@@ -165,14 +192,41 @@ export function usePledge(id: string | null) {
 
       const { data, error } = await supabase
         .from('pledge_records')
-        .select('*')
+        .select(`*, member:members(id, first_name, middle_name, last_name), group:groups(id, name), tag_item:tag_items(id, name)`) 
         .eq('id', id)
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
         .single();
 
       if (error) throw error;
-      return data as PledgeRecord;
+      const r: any = data;
+      const first = r.member?.first_name || '';
+      const middle = r.member?.middle_name ? ` ${r.member.middle_name}` : '';
+      const last = r.member?.last_name ? ` ${r.member.last_name}` : '';
+      const member_name = `${first}${middle}${last}`.trim();
+      const group_name = r.group?.name || '';
+      const tag_item_name = r.tag_item?.name || '';
+      let contributor_name = '';
+      switch (r.source_type) {
+        case 'member':
+          contributor_name = member_name || 'Member';
+          break;
+        case 'group':
+          contributor_name = group_name || 'Group';
+          break;
+        case 'tag_item':
+          contributor_name = tag_item_name || 'Tag Item';
+          break;
+        case 'other':
+          contributor_name = r.source || 'Other';
+          break;
+        case 'church':
+          contributor_name = 'Church';
+          break;
+        default:
+          contributor_name = member_name || r.source || group_name || tag_item_name || '';
+      }
+      return { ...r, member_name, group_name, tag_item_name, contributor_name } as PledgeRecord;
     },
     enabled: !!currentOrganization?.id && !!id,
     staleTime: 5 * 60 * 1000,
@@ -181,13 +235,20 @@ export function usePledge(id: string | null) {
 }
 
 export interface CreatePledgeInput {
-  pledge_type: PledgeType;
-  pledged_amount: number;
-  date: string; // YYYY-MM-DD
+  // Source fields
+  source_type: 'member' | 'group' | 'tag_item' | 'other' | 'church';
+  source?: string; // when source_type === 'other'
+  member_id?: string;
+  group_id?: string;
+  tag_item_id?: string;
+  // Core fields
+  pledge_amount: number;
+  pledge_type: string;
+  campaign_name?: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  payment_frequency: string;
   description?: string;
-  target_ministry?: string;
-  pledger_name?: string;
-  member_id?: string | null;
   branch_id?: string | null;
 }
 
@@ -204,13 +265,23 @@ export function useCreatePledge() {
       const payload = {
         organization_id: currentOrganization.id,
         branch_id: input.branch_id || null,
-        pledge_type: input.pledge_type,
-        pledged_amount: input.pledged_amount,
-        date: input.date,
-        description: input.description || null,
-        target_ministry: input.target_ministry || null,
-        pledger_name: input.pledger_name || null,
+        // Source mapping
+        source_type: input.source_type,
+        source: input.source || null,
         member_id: input.member_id || null,
+        group_id: input.group_id || null,
+        tag_item_id: input.tag_item_id || null,
+        // Core pledge values
+        pledge_amount: input.pledge_amount,
+        amount_paid: 0,
+        amount_remaining: input.pledge_amount,
+        pledge_type: input.pledge_type,
+        campaign_name: input.campaign_name || null,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        payment_frequency: input.payment_frequency,
+        description: input.description || null,
+        status: 'active' as PledgeStatus,
         created_by: user.id,
       };
 
@@ -236,7 +307,12 @@ export function useCreatePledge() {
 
 export interface UpdatePledgeInput {
   id: string;
-  updates: Partial<CreatePledgeInput> & { pledged_amount?: number; date?: string };
+  updates: Partial<CreatePledgeInput> & {
+    pledge_amount?: number;
+    start_date?: string;
+    end_date?: string;
+    status?: PledgeStatus;
+  };
 }
 
 export function useUpdatePledge() {
@@ -358,7 +434,6 @@ export interface CreatePledgePaymentInput {
   amount: number;
   payment_date: string; // YYYY-MM-DD
   payment_method: PaymentMethod;
-  reference?: string;
   notes?: string;
 }
 
@@ -373,11 +448,11 @@ export function useCreatePledgePayment() {
       if (!user?.id) throw new Error('User not authenticated');
 
       const payload = {
+        organization_id: currentOrganization.id,
         pledge_id: input.pledge_id,
         amount: input.amount,
         payment_date: input.payment_date,
         payment_method: input.payment_method,
-        reference: input.reference || null,
         notes: input.notes || null,
         created_by: user.id,
       };
@@ -392,7 +467,11 @@ export function useCreatePledgePayment() {
       return data as PledgePayment;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: pledgeKeys.pledgePayments(data.pledge_id) });
+      // Refresh payments queries (prefix match to cover all params)
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.payments() });
+      // Refresh the pledge detail and overall pledges list to reflect updated totals
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.detail(data.pledge_id) });
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.lists() });
       toast.success('Pledge payment recorded');
     },
     onError: (error) => {
@@ -423,6 +502,7 @@ export function useUpdatePledgePayment() {
           ...updates,
         })
         .eq('id', id)
+        .eq('organization_id', currentOrganization.id)
         .eq('created_by', user.id)
         .select()
         .single();
@@ -431,7 +511,11 @@ export function useUpdatePledgePayment() {
       return data as PledgePayment;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: pledgeKeys.pledgePayments(data.pledge_id) });
+      // Refresh payments queries (prefix match to cover all params)
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.payments() });
+      // Refresh the pledge detail and overall pledges list to reflect updated totals
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.detail(data.pledge_id) });
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.lists() });
       toast.success('Pledge payment updated');
     },
     onError: (error) => {
@@ -443,6 +527,7 @@ export function useUpdatePledgePayment() {
 
 export function useDeletePledgePayment() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useOrganization();
   const { user } = useAuth();
 
   return useMutation({
@@ -454,13 +539,18 @@ export function useDeletePledgePayment() {
         .from('pledge_payments')
         .update({ is_deleted: true })
         .eq('id', id)
+        .eq('organization_id', currentOrganization!.id)
         .eq('created_by', user.id);
 
       if (error) throw error;
       return { success: true };
     },
     onSuccess: (_, { pledge_id }) => {
-      queryClient.invalidateQueries({ queryKey: pledgeKeys.pledgePayments(pledge_id) });
+      // Refresh payments queries (prefix match to cover all params)
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.payments() });
+      // Refresh the pledge detail and overall pledges list to reflect updated totals
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.detail(pledge_id) });
+      queryClient.invalidateQueries({ queryKey: pledgeKeys.lists() });
       toast.success('Pledge payment deleted');
     },
     onError: (error) => {

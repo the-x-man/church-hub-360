@@ -1,14 +1,10 @@
-import * as React from "react";
-import { ChevronDownIcon } from "lucide-react";
+import * as React from 'react';
+import { ChevronDownIcon } from 'lucide-react';
 
-import { Button } from "../ui/button";
-import { Calendar } from "../ui/calendar";
-import { Label } from "../ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Button } from '../ui/button';
+import { Calendar } from '../ui/calendar';
+import { Label } from '../ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 interface DatePickerProps {
   value?: string;
@@ -19,33 +15,35 @@ interface DatePickerProps {
   disabled?: boolean;
   formatDateLabel?: (date: Date) => string;
   id?: string;
-  captionLayout?: "dropdown" | "dropdown-years" | "dropdown-months" | "label";
+  captionLayout?: 'dropdown' | 'dropdown-years' | 'dropdown-months' | 'label';
   fromYear?: number;
   toYear?: number;
   disableFuture?: boolean;
   disablePast?: boolean;
   minDate?: string;
   maxDate?: string;
-  align?: "start" | "center" | "end";
+  align?: 'start' | 'center' | 'end';
+  buttonId?: string;
 }
 
 export function DatePicker({
   value,
   onChange,
   label,
-  placeholder = "Select date",
-  className = "w-full",
+  placeholder = 'Select date',
+  className = 'w-full',
   disabled = false,
   formatDateLabel,
   id,
-  captionLayout = "dropdown",
+  captionLayout = 'dropdown',
   fromYear = 1900,
   toYear = new Date().getFullYear(),
   disableFuture = false,
   disablePast = false,
   minDate,
   maxDate,
-  align = "start"
+  align = 'start',
+  buttonId = id || 'date-picker',
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selectedDate = value ? new Date(value) : undefined;
@@ -87,8 +85,6 @@ export function DatePicker({
     return false;
   };
 
-  const buttonId = id || "date-picker";
-
   return (
     <div className="flex flex-col gap-3">
       {label && (
@@ -105,7 +101,9 @@ export function DatePicker({
             disabled={disabled}
           >
             {selectedDate
-              ? (formatDateLabel ? formatDateLabel(selectedDate) : selectedDate.toLocaleDateString())
+              ? formatDateLabel
+                ? formatDateLabel(selectedDate)
+                : selectedDate.toLocaleDateString()
               : placeholder}
             <ChevronDownIcon className="h-4 w-4" />
           </Button>
