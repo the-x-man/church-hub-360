@@ -1,6 +1,6 @@
 import React from 'react';
 import { FinanceDataTable, type TableColumn, type TableAction } from '@/components/finance';
-import type { PledgePayment } from '@/types/finance';
+import type { PledgePayment, DateFilter } from '@/types/finance';
 import { Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { paymentMethodOptions } from '../constants';
@@ -10,9 +10,14 @@ interface PaymentsTableProps {
   onEdit: (record: PledgePayment) => void;
   onDelete: (record: PledgePayment) => void;
   loading?: boolean;
+  // Print metadata
+  printTitle?: string;
+  printDateFilter?: DateFilter;
+  printDateRangeLabel?: string;
+  printOrganizationName?: string;
 }
 
-export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDelete, loading }) => {
+export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDelete, loading, printTitle, printDateFilter, printDateRangeLabel, printOrganizationName }) => {
   const columns: TableColumn[] = [
     {
       key: 'payment_date',
@@ -86,5 +91,16 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDe
     },
   ];
 
-  return <FinanceDataTable data={data} columns={columns} actions={actions} loading={loading} />;
+  return (
+    <FinanceDataTable
+      data={data}
+      columns={columns}
+      actions={actions}
+      loading={loading}
+      printTitle={printTitle}
+      printDateFilter={printDateFilter}
+      printDateRangeLabel={printDateRangeLabel}
+      printOrganizationName={printOrganizationName}
+    />
+  );
 };

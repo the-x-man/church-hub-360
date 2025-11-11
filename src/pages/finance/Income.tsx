@@ -1,29 +1,23 @@
-import React, { useMemo, useState } from 'react';
-import { Edit, Eye, Receipt, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import type { TableAction, TableColumn } from '@/components/finance';
 import {
   FinanceDataTable,
   FinanceFilterBar,
-  FinanceReportGenerator,
   FinanceStatsCards,
   incomeStatsConfig,
 } from '@/components/finance';
-import type { TableAction, TableColumn } from '@/components/finance';
+import { paymentMethodOptions } from '@/components/finance/constants';
 import { IncomeFormDialog } from '@/components/finance/IncomeFormDialog';
-import { ReceiptPrintDialog } from '@/components/finance/ReceiptPrintDialog';
 import { IncomeViewDialog } from '@/components/finance/IncomeViewDialog';
+import { ReceiptPrintDialog } from '@/components/finance/ReceiptPrintDialog';
 import { DeleteConfirmationDialog } from '@/components/shared/DeleteConfirmationDialog';
 import { Pagination } from '@/components/shared/Pagination';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { extendedIncomeTypes } from '@/constants/finance/income';
-import { paymentMethodOptions } from '@/components/finance/constants';
 import { useDeleteIncome, useIncomes } from '@/hooks/finance/income';
-import type {
-  FinanceFilter,
-  IncomeResponseRow,
-  ReportConfig,
-} from '@/types/finance';
+import type { FinanceFilter, IncomeResponseRow } from '@/types/finance';
 import type { AmountComparison } from '@/utils/finance/search';
+import { Edit, Eye, Receipt, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 
 const Income: React.FC = () => {
   // Filters, search, sorting
@@ -263,31 +257,12 @@ const Income: React.FC = () => {
     setSortDirection(direction);
   };
 
-  const handleGenerateReport = (config: ReportConfig) => {
-    toast.success(`Generating ${config.title} report...`);
-    // In a real app, this would trigger report generation
-  };
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Income Management</h1>
-        </div>
-        <div className="flex gap-2">
-          <FinanceReportGenerator
-            title="Income"
-            data={filteredAndSortedData}
-            filters={filters}
-            onGenerateReport={handleGenerateReport}
-            availableGroupBy={[
-              { value: 'category', label: 'Occasion Type' },
-              { value: 'payment_method', label: 'Payment Method' },
-              { value: 'source', label: 'Source' },
-              { value: 'date', label: 'Date' },
-            ]}
-          />
         </div>
       </div>
 
@@ -333,6 +308,8 @@ const Income: React.FC = () => {
         sortKey={sortKey}
         sortDirection={sortDirection}
         emptyMessage="No income records found"
+        printTitle="Income"
+        printDateFilter={filters.date_filter}
       />
 
       {/* Pagination */}

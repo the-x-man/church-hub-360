@@ -599,6 +599,8 @@ const Expenses: React.FC = () => {
         columns={columns}
         actions={actions}
         loading={isLoading}
+        printTitle="Expenses"
+        printDateFilter={filters.date_filter}
       />
 
       <div className="mt-4">

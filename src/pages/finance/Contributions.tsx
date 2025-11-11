@@ -3,7 +3,6 @@ import { contributionDonationStatsConfig } from '@/components/finance/contributi
 import { ContributionsTable } from '@/components/finance/contributions/ContributionsTable';
 import { IncomeViewDialog } from '@/components/finance/IncomeViewDialog';
 import { FinanceFilterBar } from '@/components/finance/FinanceFilterBar';
-import { FinanceReportGenerator } from '@/components/finance/FinanceReportGenerator';
 import { FinanceStatsCards } from '@/components/finance/FinanceStatsCards';
 import { IncomeFormDialog } from '@/components/finance/IncomeFormDialog';
 import { ReceiptPrintDialog } from '@/components/finance/ReceiptPrintDialog';
@@ -112,8 +111,6 @@ const Contributions: React.FC = () => {
         return false;
       }
 
-      // TODO: Implement date filtering
-
       return true;
     });
   }, [contributions, filters]);
@@ -168,16 +165,6 @@ const Contributions: React.FC = () => {
           <h1 className="text-2xl font-bold">Contributions & Donations</h1>
         </div>
 
-        {/* Report Generator */}
-        <FinanceReportGenerator
-          data={filteredContributions}
-          title="Contribution Report"
-          filters={filters}
-          onGenerateReport={(config) => {
-            console.log('Generating report with config:', config);
-            // TODO: Implement report generation
-          }}
-        />
         <IncomeFormDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
@@ -229,6 +216,14 @@ const Contributions: React.FC = () => {
           setReceiptRecord(record);
           setIsReceiptDialogOpen(true);
         }}
+        printTitle={
+          recordTypeFilter === 'all'
+            ? 'Contributions & Donations'
+            : recordTypeFilter === 'contribution'
+            ? 'Contributions'
+            : 'Donations'
+        }
+        printDateFilter={filters.date_filter}
       />
 
       {/* Pagination */}

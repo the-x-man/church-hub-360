@@ -201,7 +201,13 @@ export function Pledges() {
           />
 
           {/* Data Table */}
-          <PledgesTable data={filteredPledges} actions={pledgeActions} loading={loading} />
+          <PledgesTable
+            data={filteredPledges}
+            actions={pledgeActions}
+            loading={loading}
+            printTitle="Pledges"
+            printDateFilter={filters.date_filter}
+          />
 
           {/* Pagination */}
           <Pagination
@@ -243,6 +249,8 @@ export function Pledges() {
               setShowDeletePaymentDialog(true);
             }}
             loading={paymentsLoading}
+            printTitle="Pledge Payments"
+            printDateFilter={paymentFilters.date_filter}
           />
 
           {/* Pagination */}

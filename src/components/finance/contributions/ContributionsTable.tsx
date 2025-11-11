@@ -4,7 +4,7 @@ import type {
   TableColumn,
 } from '@/components/finance/FinanceDataTable';
 import { FinanceDataTable } from '@/components/finance/FinanceDataTable';
-import type { IncomeResponseRow } from '@/types/finance';
+import type { IncomeResponseRow, DateFilter } from '@/types/finance';
 import { Edit, Eye, Trash2, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,11 @@ interface ContributionsTableProps {
   onEdit: (record: IncomeResponseRow) => void;
   onDelete: (record: IncomeResponseRow) => void;
   onReceipt?: (record: IncomeResponseRow) => void;
+  // Print metadata
+  printTitle?: string;
+  printDateFilter?: DateFilter;
+  printDateRangeLabel?: string;
+  printOrganizationName?: string;
 }
 
 export const ContributionsTable: React.FC<ContributionsTableProps> = ({
@@ -23,6 +28,10 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
   onEdit,
   onDelete,
   onReceipt,
+  printTitle,
+  printDateFilter,
+  printDateRangeLabel,
+  printOrganizationName,
 }) => {
   const columns: TableColumn[] = [
     {
@@ -154,5 +163,15 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
     },
   ];
 
-  return <FinanceDataTable data={data} columns={columns} actions={actions} />;
+  return (
+    <FinanceDataTable
+      data={data}
+      columns={columns}
+      actions={actions}
+      printTitle={printTitle}
+      printDateFilter={printDateFilter}
+      printDateRangeLabel={printDateRangeLabel}
+      printOrganizationName={printOrganizationName}
+    />
+  );
 };

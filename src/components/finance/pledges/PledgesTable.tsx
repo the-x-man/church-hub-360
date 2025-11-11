@@ -1,16 +1,21 @@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { FinanceDataTable, type TableColumn, type TableAction } from '@/components/finance';
-import type { PledgeRecord } from '@/types/finance';
+import type { PledgeRecord, DateFilter } from '@/types/finance';
 import { format } from 'date-fns';
 
 interface PledgesTableProps {
   data: PledgeRecord[];
   actions?: TableAction[];
   loading?: boolean;
+  // Print metadata
+  printTitle?: string;
+  printDateFilter?: DateFilter;
+  printDateRangeLabel?: string;
+  printOrganizationName?: string;
 }
 
-export function PledgesTable({ data, actions = [], loading }: PledgesTableProps) {
+export function PledgesTable({ data, actions = [], loading, printTitle, printDateFilter, printDateRangeLabel, printOrganizationName }: PledgesTableProps) {
   const pledgeColumns: TableColumn[] = [
     {
       key: 'created_at',
@@ -77,6 +82,15 @@ export function PledgesTable({ data, actions = [], loading }: PledgesTableProps)
   ];
 
   return (
-    <FinanceDataTable data={data} columns={pledgeColumns} actions={actions} loading={loading} />
+    <FinanceDataTable
+      data={data}
+      columns={pledgeColumns}
+      actions={actions}
+      loading={loading}
+      printTitle={printTitle}
+      printDateFilter={printDateFilter}
+      printDateRangeLabel={printDateRangeLabel}
+      printOrganizationName={printOrganizationName}
+    />
   );
 }
