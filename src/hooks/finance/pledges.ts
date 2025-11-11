@@ -4,18 +4,19 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type {
-  FinanceFilter,
   PledgeRecord,
   PledgePayment,
   PaymentMethod,
   PledgeStatus,
+  PledgeFilter,
 } from '@/types/finance';
 
 export interface PledgesQueryParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  filters?: FinanceFilter;
+  filters?: PledgeFilter;
+  amountSearch?: { operator: '>' | '>=' | '=' | '<' | '<=' | '!='; value: number } | null;
 }
 
 export interface PaginatedPledgesResponse {
@@ -51,9 +52,9 @@ export const pledgeKeys = {
     [...pledgeKeys.payments(), pledgeId, params] as const,
 };
 
-function applyFinanceFilters(
+function applyPledgeFilters(
   query: any,
-  filters?: FinanceFilter
+  filters?: PledgeFilter
 ) {
   if (!filters) return query;
 
@@ -62,12 +63,33 @@ function applyFinanceFilters(
     query = query.in('status', filters.status_filter as string[]);
   }
 
+  // Pledge amount range
   if (filters.amount_range) {
     if (filters.amount_range.min !== undefined) {
       query = query.gte('pledge_amount', filters.amount_range.min as number);
     }
     if (filters.amount_range.max !== undefined) {
       query = query.lte('pledge_amount', filters.amount_range.max as number);
+    }
+  }
+
+  // Amount paid range
+  if (filters.amount_paid_range) {
+    if (filters.amount_paid_range.min !== undefined) {
+      query = query.gte('amount_paid', filters.amount_paid_range.min as number);
+    }
+    if (filters.amount_paid_range.max !== undefined) {
+      query = query.lte('amount_paid', filters.amount_paid_range.max as number);
+    }
+  }
+
+  // Amount remaining range
+  if (filters.amount_remaining_range) {
+    if (filters.amount_remaining_range.min !== undefined) {
+      query = query.gte('amount_remaining', filters.amount_remaining_range.min as number);
+    }
+    if (filters.amount_remaining_range.max !== undefined) {
+      query = query.lte('amount_remaining', filters.amount_remaining_range.max as number);
     }
   }
 
@@ -125,7 +147,32 @@ export function usePledges(params?: PledgesQueryParams) {
         query = query.or(orClauses.join(','));
       }
 
-      query = applyFinanceFilters(query, queryParams.filters);
+      // Amount search on pledge_amount using operator if provided
+      if (queryParams.amountSearch) {
+        const { operator, value } = queryParams.amountSearch;
+        switch (operator) {
+          case '>':
+            query = query.gt('pledge_amount', value);
+            break;
+          case '>=':
+            query = query.gte('pledge_amount', value);
+            break;
+          case '=':
+            query = query.eq('pledge_amount', value);
+            break;
+          case '<':
+            query = query.lt('pledge_amount', value);
+            break;
+          case '<=':
+            query = query.lte('pledge_amount', value);
+            break;
+          case '!=':
+            query = query.neq('pledge_amount', value);
+            break;
+        }
+      }
+
+      query = applyPledgeFilters(query, queryParams.filters);
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;
@@ -145,6 +192,7 @@ export function usePledges(params?: PledgesQueryParams) {
         const member_name = `${first}${middle}${last}`.trim();
         const group_name = r.group?.name || '';
         const tag_item_name = r.tag_item?.name || '';
+        const progress = r.pledge_amount > 0 ? (r.amount_paid / r.pledge_amount) * 100 : 0;
         let contributor_name = '';
         switch (r.source_type) {
           case 'member':
@@ -165,7 +213,7 @@ export function usePledges(params?: PledgesQueryParams) {
           default:
             contributor_name = member_name || r.source || group_name || tag_item_name || '';
         }
-        return { ...r, member_name, group_name, tag_item_name, contributor_name } as PledgeRecord;
+        return { ...r, member_name, group_name, tag_item_name, contributor_name, progress } as PledgeRecord as any;
       });
 
       return {

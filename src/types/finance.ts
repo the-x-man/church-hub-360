@@ -284,6 +284,23 @@ export interface FinanceFilter {
   income_type_filter?: IncomeType[];
 }
 
+// Pledge-specific filters used by pledge listing and stats
+export interface PledgeFilter {
+  date_filter: DateFilter;
+  // Pledge status selection
+  status_filter?: PledgeStatus[];
+  // Ranges for amounts
+  amount_range?: { min?: number; max?: number }; // pledge_amount
+  amount_paid_range?: { min?: number; max?: number };
+  amount_remaining_range?: { min?: number; max?: number };
+  // Client-side progress percentage range (0-100)
+  progress_range?: { min?: number; max?: number };
+  // Optional source relations
+  member_filter?: string[];
+  group_filter?: string[];
+  tag_item_filter?: string[];
+}
+
 export interface FinanceStats {
   total_amount: number;
   record_count: number;
@@ -367,6 +384,13 @@ export interface PledgePaymentFormData {
   payment_date: string;
   payment_method: PaymentMethod;
   notes?: string;
+}
+
+// Payments listing filters
+export interface PaymentFilter {
+  date_filter: DateFilter;
+  payment_method_filter?: PaymentMethod[];
+  amount_range?: { min?: number; max?: number };
 }
 
 // Extended Budget Planning Types

@@ -15,23 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { DateFilter, FinanceFilter, IncomeType } from '@/types/finance';
-import {
-  format,
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  subMonths,
-  startOfYear,
-  endOfYear,
-  addDays,
-} from 'date-fns';
+import { format } from 'date-fns';
 import { CalendarIcon, Download, Filter, Plus, Search, X } from 'lucide-react';
 import React from 'react';
 import { paymentMethodOptions as paymentMethodOptionsConst } from './constants';
 import { DatePresetPicker, type DatePresetValue } from '@/components/attendance/reports/DatePresetPicker';
+import { mapPickerToDateFilter, mapDateFilterToPicker } from '@/utils/finance/dateFilter';
 import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
 import { GroupSelect } from '@/components/finance/GroupSelect';
 import { TagItemSelect } from '@/components/finance/TagItemSelect';
@@ -80,128 +69,6 @@ interface FinanceFilterBarProps {
   incomeTypeFilterOptions?: IncomeType[];
 }
 
-// Map between attendance DatePresetPicker value and Finance DateFilter
-function mapPickerToDateFilter(v: DatePresetValue): DateFilter {
-  const { preset, range } = v;
-  // Use full ISO timestamps to avoid excluding records on the end day
-  const start = range.from.toISOString();
-  const end = range.to.toISOString();
-  // Preserve preset for UX labeling but always carry start/end for the query layer
-  if (preset !== 'custom') {
-    return { type: 'preset', preset, start_date: start, end_date: end } as DateFilter;
-  }
-  return { type: 'custom', start_date: start, end_date: end };
-}
-
-function mapDateFilterToPicker(df: DateFilter): DatePresetValue {
-  if (df.type === 'custom' && df.start_date && df.end_date) {
-    return {
-      preset: 'custom',
-      range: { from: new Date(df.start_date), to: new Date(df.end_date) },
-    };
-  }
-  if (df.type === 'preset' && df.preset) {
-    const supported: DatePresetValue['preset'][] = [
-      'yesterday',
-      'last_3_days',
-      'last_7_days',
-      'last_15_days',
-      'last_30_days',
-      'last_60_days',
-      'last_90_days',
-      'this_week',
-      'this_month',
-      'last_month',
-      'last_2_months',
-      'last_3_months',
-      'this_year',
-    ];
-    if (supported.includes(df.preset as any)) {
-      // Compute actual range for supported presets so the trigger reflects real dates
-      const now = new Date();
-      let from: Date = now;
-      let to: Date = now;
-      const presetKey = df.preset as unknown as DatePresetValue['preset'];
-      switch (presetKey) {
-        case 'yesterday': {
-          const y = addDays(now, -1);
-          from = startOfDay(y);
-          to = endOfDay(y);
-          break;
-        }
-        case 'last_3_days':
-          from = startOfDay(addDays(now, -2));
-          to = endOfDay(now);
-          break;
-        case 'last_7_days':
-          from = startOfDay(addDays(now, -6));
-          to = endOfDay(now);
-          break;
-        case 'last_15_days':
-          from = startOfDay(addDays(now, -14));
-          to = endOfDay(now);
-          break;
-        case 'last_30_days':
-          from = startOfDay(addDays(now, -29));
-          to = endOfDay(now);
-          break;
-        case 'last_60_days':
-          from = startOfDay(addDays(now, -59));
-          to = endOfDay(now);
-          break;
-        case 'last_90_days':
-          from = startOfDay(addDays(now, -89));
-          to = endOfDay(now);
-          break;
-        case 'this_week': {
-          from = startOfDay(startOfWeek(now));
-          to = endOfDay(endOfWeek(now));
-          break;
-        }
-        case 'this_month': {
-          from = startOfMonth(now);
-          to = endOfMonth(now);
-          break;
-        }
-        case 'last_month': {
-          const last = subMonths(now, 1);
-          from = startOfMonth(last);
-          to = endOfMonth(last);
-          break;
-        }
-        case 'last_2_months': {
-          const twoAgo = subMonths(now, 2);
-          const oneAgo = subMonths(now, 1);
-          from = startOfMonth(twoAgo);
-          to = endOfMonth(oneAgo);
-          break;
-        }
-        case 'last_3_months': {
-          const threeAgo = subMonths(now, 3);
-          const oneAgo = subMonths(now, 1);
-          from = startOfMonth(threeAgo);
-          to = endOfMonth(oneAgo);
-          break;
-        }
-        case 'this_year': {
-          from = startOfYear(now);
-          to = endOfYear(now);
-          break;
-        }
-        default: {
-          from = startOfDay(now);
-          to = endOfDay(now);
-        }
-      }
-      return {
-        preset: presetKey,
-        range: { from, to },
-      };
-    }
-  }
-  const now = new Date();
-  return { preset: 'custom', range: { from: now, to: now } };
-}
 
 export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
   filters,

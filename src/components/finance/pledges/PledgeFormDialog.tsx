@@ -17,6 +17,7 @@ import { PledgeOptionsSelect } from '@/components/finance/pledges/PledgeOptionsS
 import { useMember } from '@/hooks/useMemberQueries';
 import { useGroup } from '@/hooks/useGroups';
 import { useTagsQuery } from '@/hooks/useRelationalTags';
+import { format } from 'date-fns';
 
 interface PledgeFormDialogProps {
   open: boolean;
@@ -81,14 +82,14 @@ export function PledgeFormDialog({ open, onOpenChange, mode, title, initialData,
       setSourceName('');
       setSourceType('member');
       setPledgeAmount(0);
-      setPledgeTypeLabel('annual_pledge');
+      setPledgeTypeLabel('Annual Pledge');
       setCampaignName('');
       const today = new Date();
-      const start = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const end = `${today.getFullYear()}-12-31`;
+      const start = format(new Date(), 'yyyy-MM-dd');
+      const end = format(new Date(today.getFullYear(), 11, 31), 'yyyy-MM-dd');
       setStartDate(start);
       setEndDate(end);
-      setPaymentFrequencyLabel('monthly');
+      setPaymentFrequencyLabel('Monthly');
       setDescription('');
     }
   }, [open, initialData]);
@@ -312,11 +313,23 @@ export function PledgeFormDialog({ open, onOpenChange, mode, title, initialData,
           </div>
 
           <div className="space-y-2">
-            <DatePicker label="Start Date" value={startDate} onChange={setStartDate} buttonId="start-date" />
+            <DatePicker
+              label="Start Date"
+              value={startDate}
+              onChange={setStartDate}
+              buttonId="start-date"
+              formatDateLabel={(d) => format(d, 'MMM dd, yyyy')}
+            />
           </div>
 
           <div className="space-y-2">
-            <DatePicker label="End Date" value={endDate} onChange={setEndDate} buttonId="end-date" />
+            <DatePicker
+              label="End Date"
+              value={endDate}
+              onChange={setEndDate}
+              buttonId="end-date"
+              formatDateLabel={(d) => format(d, 'MMM dd, yyyy')}
+            />
           </div>
 
           <div className="space-y-2 md:col-span-2">
