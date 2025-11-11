@@ -42,6 +42,16 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDe
       },
     },
     {
+      key: 'created_by_user',
+      label: 'Recorded By',
+      render: (_: unknown, record: any) => {
+        const first = record?.created_by_user?.first_name;
+        const last = record?.created_by_user?.last_name;
+        const name = `${first || ''} ${last || ''}`.trim();
+        return name.length ? name : '-';
+      },
+    },
+    {
       key: 'notes',
       label: 'Notes',
       render: (value: string | undefined) => value || '-',

@@ -70,12 +70,6 @@ export function PledgeViewDialog({
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">
-                    Source Type
-                  </Label>
-                  <p className="capitalize">{pledge.source_type || 'member'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
                     Source
                   </Label>
                   <p className="text-lg font-medium">
@@ -145,6 +139,15 @@ export function PledgeViewDialog({
                 </div>
               </div>
             </div>
+
+            {pledge.created_by_user && (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Record Created By
+                </Label>
+                <p>{`${pledge.created_by_user.first_name} ${pledge.created_by_user.last_name}`}</p>
+              </div>
+            )}
 
             <ScrollArea className="h-[calc(95vh-550px)] p-4  border-b">
               <div className="space-y-2 overflow-auto">

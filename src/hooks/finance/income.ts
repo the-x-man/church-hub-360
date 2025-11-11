@@ -127,6 +127,7 @@ export function useIncomes(params?: IncomeQueryParams) {
            member:members(id, first_name, middle_name, last_name, profile_image_url),
            group:groups(id, name),
            tag_item:tag_items(id, name, color),
+           created_by_user:profiles(first_name, last_name),
            attendance_occasions(name),
            attendance_sessions(name, attendance_occasions(name))`,
           { count: 'exact' }

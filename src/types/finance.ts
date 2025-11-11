@@ -69,6 +69,11 @@ export interface IncomeResponseRow extends IncomeRecord {
   contributor_name?: string;
   contributor_avatar_url?: string;
   contributor_tag_color?: string;
+  // Joined creator profile for display in details modal
+  created_by_user?: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
 export type IncomeType = 'general_income' | 'contribution' | 'donation' | 'pledge_payment';
@@ -158,6 +163,11 @@ export interface PledgeRecord {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Joined creator profile for display in details modal
+  created_by_user?: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
 export interface PledgePayment {
@@ -169,6 +179,10 @@ export interface PledgePayment {
   notes?: string;
   created_by: string;
   created_at: string;
+  created_by_user?: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
 

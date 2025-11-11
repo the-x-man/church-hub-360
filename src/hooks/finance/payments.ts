@@ -88,6 +88,7 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
         .from('pledge_payments')
         .select(
           `*,
+           created_by_user:profiles(first_name, last_name),
            pledge:pledge_records(
              id,
              pledge_type,

@@ -129,7 +129,8 @@ export function usePledges(params?: PledgesQueryParams) {
           `*,
            member:members(id, first_name, middle_name, last_name),
            group:groups(id, name),
-           tag_item:tag_items(id, name)`,
+           tag_item:tag_items(id, name),
+           created_by_user:profiles(first_name, last_name)`,
           { count: 'exact' }
         )
         .eq('organization_id', currentOrganization.id)
@@ -240,7 +241,7 @@ export function usePledge(id: string | null) {
 
       const { data, error } = await supabase
         .from('pledge_records')
-        .select(`*, member:members(id, first_name, middle_name, last_name), group:groups(id, name), tag_item:tag_items(id, name)`) 
+        .select(`*, member:members(id, first_name, middle_name, last_name), group:groups(id, name), tag_item:tag_items(id, name), created_by_user:profiles(first_name, last_name)`)
         .eq('id', id)
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)

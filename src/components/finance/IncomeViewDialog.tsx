@@ -135,6 +135,17 @@ export const IncomeViewDialog: React.FC<IncomeViewDialogProps> = ({
               </div>
             </div>
 
+            {contribution.created_by_user && (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Record Created By
+                </Label>
+                <p>
+                  {`${contribution.created_by_user.first_name} ${contribution.created_by_user.last_name}`}
+                </p>
+              </div>
+            )}
+
             {contribution.description && (
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">
