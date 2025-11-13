@@ -69,6 +69,7 @@
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
     "dotenv": "^17.2.2",
+    "fabric": "^6.9.0",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",

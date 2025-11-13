@@ -6,11 +6,8 @@ import { toast } from 'sonner';
 import type {
   Announcement,
   AnnouncementWithMeta,
-  AnnouncementSlide,
   CreateAnnouncementInput,
   UpdateAnnouncementInput,
-  CreateSlideInput,
-  UpdateSlideInput,
 } from '@/types/announcements';
 
 export const announcementKeys = {
@@ -19,7 +16,6 @@ export const announcementKeys = {
   list: (organizationId: string) => [...announcementKeys.lists(), organizationId] as const,
   details: () => [...announcementKeys.all, 'detail'] as const,
   detail: (id: string) => [...announcementKeys.details(), id] as const,
-  slides: (id: string) => [...announcementKeys.detail(id), 'slides'] as const,
 };
 
 export function useAnnouncements() {
@@ -30,19 +26,26 @@ export function useAnnouncements() {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
       const { data, error } = await supabase
         .from('announcements')
-        .select(`*, profiles!announcements_created_by_fkey2(first_name,last_name), announcement_slides(count)`) // count via implicit relationship
+        .select(`*, profiles!announcements_created_by_fkey2(first_name,last_name)`) 
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((a: any) => ({
-        ...a,
-        slides_count: Array.isArray(a.announcement_slides) ? a.announcement_slides.length : undefined,
-        created_by_name:
-          a.profiles?.first_name && a.profiles?.last_name
-            ? `${a.profiles.first_name} ${a.profiles.last_name}`
-            : null,
-      }));
+      return (data || []).map((a: any) => {
+        let slides_count: number | undefined = undefined;
+        try {
+          const arr = JSON.parse(a.slides || '[]');
+          if (Array.isArray(arr)) slides_count = arr.length;
+        } catch {}
+        return {
+          ...a,
+          slides_count,
+          created_by_name:
+            a.profiles?.first_name && a.profiles?.last_name
+              ? `${a.profiles.first_name} ${a.profiles.last_name}`
+              : null,
+        };
+      });
     },
     enabled: !!currentOrganization?.id,
     staleTime: 2 * 60 * 1000,
@@ -79,25 +82,27 @@ export function useAnnouncement(id: string) {
   });
 }
 
-export function useAnnouncementSlides(announcementId: string) {
-  const { currentOrganization } = useOrganization();
+export function useAnnouncementPublic(id: string) {
   return useQuery({
-    queryKey: announcementKeys.slides(announcementId),
-    queryFn: async (): Promise<AnnouncementSlide[]> => {
-      if (!currentOrganization?.id) throw new Error('Organization ID is required');
+    queryKey: announcementKeys.detail(`public-${id}`),
+    queryFn: async (): Promise<AnnouncementWithMeta> => {
       const { data, error } = await supabase
-        .from('announcement_slides')
-        .select('*')
-        .eq('announcement_id', announcementId)
-        .order('position', { ascending: true });
+        .from('announcements')
+        .select(`*`) 
+        .eq('id', id)
+        .eq('is_deleted', false)
+        .maybeSingle();
       if (error) throw error;
-      return data || [];
+      if (!data) throw new Error('Announcement not found');
+      return data as AnnouncementWithMeta;
     },
-    enabled: !!currentOrganization?.id && !!announcementId,
-    staleTime: 1 * 60 * 1000,
+    enabled: !!id,
+    staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
 }
+
+// Legacy slide hooks removed in favor of JSON-based storage on announcements.slides
 
 export function useCreateAnnouncement() {
   const queryClient = useQueryClient();
@@ -173,83 +178,4 @@ export function useDeleteAnnouncement() {
   });
 }
 
-export function useCreateSlide() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  return useMutation({
-    mutationFn: async (input: CreateSlideInput): Promise<AnnouncementSlide> => {
-      if (input.font_size != null && input.font_size < 24) throw new Error('Font size must be >= 24');
-      if (!input.position || input.position < 1) throw new Error('Position must be >= 1');
-      const payload = { ...input, created_by: user?.id || null };
-      const { data, error } = await supabase.from('announcement_slides').insert(payload).select().single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: announcementKeys.slides(data.announcement_id) });
-      toast.success('Slide added');
-    },
-    onError: () => toast.error('Failed to add slide'),
-  });
-}
-
-export function useUpdateSlide() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: UpdateSlideInput }): Promise<AnnouncementSlide> => {
-      if (updates.font_size != null && updates.font_size < 24) throw new Error('Font size must be >= 24');
-      const { data, error } = await supabase
-        .from('announcement_slides')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: announcementKeys.slides(data.announcement_id) });
-    },
-    onError: () => toast.error('Failed to update slide'),
-  });
-}
-
-export function useDeleteSlide() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id }: { id: string }): Promise<void> => {
-      const { error } = await supabase.from('announcement_slides').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      // Invalidate all slides queries; or use context to pass announcement_id if available
-      queryClient.invalidateQueries({ queryKey: announcementKeys.all });
-      toast.success('Slide deleted');
-    },
-    onError: () => toast.error('Failed to delete slide'),
-  });
-}
-
-export function useReorderSlides() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ announcement_id, orderedIds }: { announcement_id: string; orderedIds: string[] }): Promise<void> => {
-      // Batch update positions; Supabase doesn't support transactional batch here, but we proceed sequentially
-      for (let i = 0; i < orderedIds.length; i++) {
-        const id = orderedIds[i];
-        const position = i + 1;
-        const { error } = await supabase
-          .from('announcement_slides')
-          .update({ position })
-          .eq('id', id)
-          .eq('announcement_id', announcement_id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: announcementKeys.slides(variables.announcement_id) });
-      toast.success('Slides reordered');
-    },
-    onError: () => toast.error('Failed to reorder slides'),
-  });
-}
+// Per-slide create/update/delete/reorder removed

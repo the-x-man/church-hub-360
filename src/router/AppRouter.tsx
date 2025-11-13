@@ -29,6 +29,8 @@ import { Reports } from '../pages/Reports';
 import { ActivityLogs } from '../pages/ActivityLogs';
 import Announcements from '../pages/Announcements';
 import AnnouncementDetails from '../pages/announcements/AnnouncementDetails';
+import AnnouncementPresent from '../pages/announcements/AnnouncementPresent';
+import SlideDesignerDev from '../pages/dev/SlideDesignerDev';
 
 // People section pages
 import { People } from '../pages/people';
@@ -140,6 +142,13 @@ function AppRoutes() {
         <Route path="reports" element={<Reports />} />
         <Route path="activity-logs" element={<ActivityLogs />} />
       </Route>
+
+      
+      {/* Public presentation route */}
+      <Route path="/present/announcements/:announcementId" element={<AnnouncementPresent />} />
+
+      {/* Dev route for slide designer testing */}
+      <Route path="/dev/slide-designer" element={<SlideDesignerDev />} />
 
       {/* Catch-all route - redirect to dashboard if authenticated, login if not */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

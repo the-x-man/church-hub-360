@@ -15,7 +15,7 @@ import {
   useDeleteAnnouncement,
 } from '@/hooks/announcements/useAnnouncements';
 import type { AnnouncementWithMeta } from '@/types/announcements';
-import { Edit, Megaphone, Plus, Trash2 } from 'lucide-react';
+import { Edit, Megaphone, Plus, Trash2, Share2, Link as LinkIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // removed SlideManager from creation flow; slides are edited in details page
@@ -30,6 +30,7 @@ export default function Announcements() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<AnnouncementWithMeta | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   // preview removed
@@ -84,7 +85,7 @@ export default function Announcements() {
       <div className="space-y-4">
         {data.map((a) => (
           <Card key={a.id} className="w-full">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between py-0">
               <CardTitle className="truncate">{a.title}</CardTitle>
               <div className="flex gap-2">
                 <Button
@@ -93,6 +94,16 @@ export default function Announcements() {
                   onClick={() => navigate(`/announcements/${a.id}`)}
                 >
                   <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelected(a);
+                    setShareOpen(true);
+                  }}
+                >
+                  <Share2 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -108,10 +119,10 @@ export default function Announcements() {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="text-sm line-clamp-4">{a.description}</div>
               <div className="text-sm text-muted-foreground">
                 Slides: {a.slides_count ?? '-'}
               </div>
-              <div className="text-sm mt-2 line-clamp-4">{a.description}</div>
             </CardContent>
           </Card>
         ))}
@@ -139,6 +150,62 @@ export default function Announcements() {
         cancelButtonText="Cancel"
         isLoading={deleteAnnouncement.isPending}
       />
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Share Announcement</DialogTitle>
+          </DialogHeader>
+          {selected ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Shareable Link</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}${window.location.pathname}#/present/announcements/${selected.id}`}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/present/announcements/${selected.id}`;
+                      navigator.clipboard?.writeText(url).catch(() => {});
+                    }}
+                  >
+                    <LinkIcon className="h-4 w-4 mr-2" /> Copy
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Share via WhatsApp</Label>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/present/announcements/${selected.id}`;
+                      const wa = `https://wa.me/?text=${encodeURIComponent(url)}`;
+                      window.open(wa, '_blank');
+                    }}
+                  >
+                    Open WhatsApp
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/present/announcements/${selected.id}`;
+                      const waWeb = `https://web.whatsapp.com/send?text=${encodeURIComponent(url)}`;
+                      window.open(waWeb, '_blank');
+                    }}
+                  >
+                    WhatsApp Web
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-muted-foreground">No announcement selected</div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-3xl h-[600px] overflow-auto">

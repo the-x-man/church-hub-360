@@ -8,6 +8,7 @@ export interface Announcement {
   last_updated_by?: string | null;
   created_at: string;
   updated_at: string;
+  slides?: string | null;
 }
 
 export interface AnnouncementWithMeta extends Announcement {
@@ -15,34 +16,9 @@ export interface AnnouncementWithMeta extends Announcement {
   created_by_name?: string | null;
 }
 
-export interface AnnouncementSlide {
+// JSON-stored slide shape used within announcements.slides (stringified)
+export interface SlideDraft {
   id: string;
-  announcement_id: string;
-  position: number;
-  title?: string | null;
-  content_html?: string | null;
-  layout?: string | null;
-  template_variant?: string | null;
-  bg_color?: string | null;
-  fg_color?: string | null;
-  font_size?: number | null;
-  created_by?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateAnnouncementInput {
-  title: string;
-  description: string;
-}
-
-export interface UpdateAnnouncementInput {
-  title?: string;
-  description?: string;
-}
-
-export interface CreateSlideInput {
-  announcement_id: string;
   position: number;
   title?: string;
   content_html?: string;
@@ -53,5 +29,19 @@ export interface CreateSlideInput {
   font_size?: number;
 }
 
-export interface UpdateSlideInput extends Partial<CreateSlideInput> {}
+export interface CreateAnnouncementInput {
+  title: string;
+  description: string;
+  slides?: string; // stringified JSON array of SlideDraft
+}
+
+export interface UpdateAnnouncementInput {
+  title?: string;
+  description?: string;
+  slides?: string; // stringified JSON array of SlideDraft
+}
+
+// Deprecated: legacy per-row slide types were replaced by announcements.slides JSON
+export type CreateSlideInput = never;
+export type UpdateSlideInput = never;
 
