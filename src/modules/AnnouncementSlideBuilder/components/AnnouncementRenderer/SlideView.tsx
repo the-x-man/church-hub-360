@@ -14,7 +14,7 @@ interface SlideViewProps {
 export const SlideView: React.FC<SlideViewProps> = ({ slide }) => {
   return (
     <div className="w-full h-full bg-white flex items-center justify-center p-12">
-      <div className="w-full max-w-6xl h-full flex flex-col gap-8">
+      <div className="w-full h-full flex flex-col gap-8">
         {slide.rows.map((row, rIdx) => (
           <div key={rIdx} className={`grid gap-8 ${row.layout === 'one-column' ? 'grid-cols-1' : row.layout === 'two-columns' ? 'grid-cols-2' : 'grid-cols-3'}`}>
             {row.columns.map((column, cIdx) => (

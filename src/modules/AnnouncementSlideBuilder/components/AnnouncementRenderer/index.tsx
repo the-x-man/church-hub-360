@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
 import { SlideView } from './SlideView';
 import type { Slide } from '../../utils/schema';
@@ -14,6 +14,11 @@ export const AnnouncementRenderer: React.FC<AnnouncementRendererProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  const BASE_WIDTH = 1600;
+  const BASE_HEIGHT = 900;
 
   const handleNext = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % slides.length);
@@ -58,6 +63,36 @@ export const AnnouncementRenderer: React.FC<AnnouncementRendererProps> = ({
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateScale = (w: number, h: number) => {
+      const s = Math.min(w / BASE_WIDTH, h / BASE_HEIGHT);
+      setScale(s > 0 ? s : 1);
+    };
+
+    const initialW = el.clientWidth;
+    const initialH = el.clientHeight;
+    updateScale(initialW, initialH);
+
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      const w = rect?.width ?? el.clientWidth;
+      const h = rect?.height ?? el.clientHeight;
+      updateScale(w, h);
+    });
+    ro.observe(el);
+
+    const onWindowResize = () => updateScale(el.clientWidth, el.clientHeight);
+    window.addEventListener('resize', onWindowResize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', onWindowResize);
+    };
+  }, []);
+
   if (!slides || slides.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -87,9 +122,23 @@ export const AnnouncementRenderer: React.FC<AnnouncementRendererProps> = ({
         )}
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-full h-full max-w-7xl mx-auto">
-          <SlideView slide={slides[currentIndex]} />
+      <div ref={containerRef} className="flex-1 flex items-center justify-center overflow-hidden">
+        <div
+          style={{
+            width: BASE_WIDTH * scale,
+            height: BASE_HEIGHT * scale,
+          }}
+        >
+          <div
+            style={{
+              width: BASE_WIDTH,
+              height: BASE_HEIGHT,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+            }}
+          >
+            <SlideView slide={slides[currentIndex]} />
+          </div>
         </div>
       </div>
 
