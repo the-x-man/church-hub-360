@@ -24,6 +24,7 @@ import {
   Menu,
   FormInput,
   Megaphone,
+  Package,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -144,6 +145,12 @@ const navItems: NavItem[] = [
     icon: Megaphone,
     label: 'Announcements',
   },
+  {
+    to: '/assets',
+    icon: Package,
+    label: 'Assets',
+  },
+
   // {
   //   to: '/reports',
   //   icon: BarChart3,

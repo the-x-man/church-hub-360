@@ -31,6 +31,10 @@ import Announcements from '../pages/Announcements';
 import AnnouncementDetails from '../pages/announcements/AnnouncementDetails';
 import AnnouncementPresent from '../pages/announcements/AnnouncementPresent';
 import SlideDesignerDev from '../pages/dev/SlideDesignerDev';
+import Assets from '../pages/Assets';
+import AddAsset from '../pages/assets/AddAsset';
+import EditAsset from '../pages/assets/EditAsset';
+import AssetDetail from '../pages/assets/AssetDetail';
 
 // People section pages
 import { People } from '../pages/people';
@@ -145,6 +149,10 @@ function AppRoutes() {
         />
         <Route path="reports" element={<Reports />} />
         <Route path="activity-logs" element={<ActivityLogs />} />
+        <Route path="assets" element={<Assets />} />
+        <Route path="assets/add" element={<AddAsset />} />
+        <Route path="assets/:assetId" element={<AssetDetail />} />
+        <Route path="assets/:assetId/edit" element={<EditAsset />} />
       </Route>
 
       {/* Public presentation route */}
