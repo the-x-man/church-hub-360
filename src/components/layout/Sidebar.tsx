@@ -25,6 +25,7 @@ import {
   FormInput,
   Megaphone,
   Package,
+  Gift,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -81,6 +82,11 @@ const navItems: NavItem[] = [
         to: '/people/membership',
         icon: UserCheck,
         label: 'Membership',
+      },
+      {
+        to: '/people/birthdays',
+        icon: Gift,
+        label: 'Birthdays',
       },
       {
         to: '/people/attendance',

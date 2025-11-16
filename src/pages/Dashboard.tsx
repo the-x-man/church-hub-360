@@ -1,5 +1,11 @@
 import { useAuth } from '../contexts/AuthContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { CheckCircle, Tags, Users, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -88,15 +94,15 @@ export function Dashboard() {
         <DashboardVisibilityDialog />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px,1fr] gap-6">
+      <div className="space-y-4">
         {prefs?.componentsVisibility?.quick_actions === false ? null : (
-          <Card>
+          <Card className="hidden md:block">
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common church management tasks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 ">
                 {quickActions.map((action) => {
                   const ActionIcon = action.icon;
                   return (
@@ -126,7 +132,7 @@ export function Dashboard() {
             </CardContent>
           </Card>
         )}
-        <div className="space-y-6">
+        <div className="space-y-6 col-span-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {show('birthdays') && <UpcomingBirthdaysCard />}
             {show('events') && <UpcomingEventsCard />}
@@ -138,11 +144,17 @@ export function Dashboard() {
             {show('branches') && <BranchesCard />}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {show('attendance') && show('attendance_trend_chart') && <AttendanceTrendChart />}
-            {show('membership') && show('members_gender_chart') && <MembersGenderChart />}
-            {show('finances') && show('finance_breakdown_chart') && <FinanceBreakdownChart />}
+            {show('attendance') && show('attendance_trend_chart') && (
+              <AttendanceTrendChart />
+            )}
+            {show('membership') && show('members_gender_chart') && (
+              <MembersGenderChart />
+            )}
+            {show('finances') && show('finance_breakdown_chart') && (
+              <FinanceBreakdownChart />
+            )}
+            {show('recent_groups') && <RecentGroupsTable />}
           </div>
-          {show('recent_groups') && <RecentGroupsTable />}
           {show('announcements') && <AnnouncementsCard />}
         </div>
       </div>

@@ -30,6 +30,7 @@ import { ActivityLogs } from '../pages/ActivityLogs';
 import Announcements from '../pages/Announcements';
 import AnnouncementDetails from '../pages/announcements/AnnouncementDetails';
 import AnnouncementPresent from '../pages/announcements/AnnouncementPresent';
+import BirthdayWish from '@/pages/present/BirthdayWish';
 import SlideDesignerDev from '../pages/dev/SlideDesignerDev';
 import Assets from '../pages/Assets';
 import AddAsset from '../pages/assets/AddAsset';
@@ -45,6 +46,7 @@ import { MemberDetail } from '../pages/people/MemberDetail';
 import Membership from '../pages/people/Membership';
 import MembershipList from '../pages/people/MembershipList';
 import { Attendance } from '../pages/people/Attendance';
+import Birthdays from '../pages/people/Birthdays';
 
 // Finance section pages
 import { Finance } from '../pages/finance';
@@ -127,6 +129,7 @@ function AppRoutes() {
             <Route path=":memberId" element={<MemberDetail />} />
           </Route>
           <Route path="attendance" element={<Attendance />} />
+          <Route path="birthdays" element={<Birthdays />} />
         </Route>
 
         {/* Finance section with nested routes */}
@@ -160,6 +163,7 @@ function AppRoutes() {
         path="/present/announcements/:announcementId"
         element={<AnnouncementPresent />}
       />
+      <Route path="/present/birthday/:memberId" element={<BirthdayWish />} />
 
       {/* Dev route for slide designer testing */}
       <Route path="/dev/slide-designer" element={<SlideDesignerDev />} />

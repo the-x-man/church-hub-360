@@ -97,7 +97,8 @@
     "xlsx": "^0.18.5",
     "zod": "^4.1.8",
     "zustand": "^5.0.8",
-    "recharts": "^3.4.1"
+    "recharts": "^3.4.1",
+    "canvas-confetti": "^1.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
