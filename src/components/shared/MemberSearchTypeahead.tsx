@@ -26,6 +26,7 @@ export interface MemberSearchTypeaheadProps {
   loadingMessage?: string;
   branchId?: string; // Optional branch filtering - disabled by default for backward compatibility
   excludeMembers?: string[]; // Array of member IDs to exclude from search results
+  allowedMemberIds?: string[]; // When provided, restrict results to only these member IDs
 }
 
 // Individual member item component
@@ -145,7 +146,8 @@ export function MemberSearchTypeahead({
   emptyMessage = "No members found",
   loadingMessage = "Searching members...",
   branchId, // Optional branch filtering
-  excludeMembers = [] // Array of member IDs to exclude from search results
+  excludeMembers = [], // Array of member IDs to exclude from search results
+  allowedMemberIds = []
 }: MemberSearchTypeaheadProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,13 +207,19 @@ export function MemberSearchTypeahead({
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+
+    // In single-select mode, if a member is selected, clear selection when user edits
+    if (!multiSelect && value.length > 0) {
+      onChange?.([]);
+    }
+
     setInputValue(newValue);
     setSearchTerm(newValue);
-    
-    // Open dropdown only when user starts typing
-    if (newValue.trim() && !isOpen) {
+
+    // Open dropdown when user types; close when input is cleared
+    if (newValue.trim()) {
       setIsOpen(true);
-    } else if (!newValue.trim() && isOpen) {
+    } else {
       setIsOpen(false);
     }
   };
@@ -235,10 +243,10 @@ export function MemberSearchTypeahead({
     inputRef.current?.focus();
   };
 
-  // Filter out only excluded members from search results, but keep selected members visible
-  const filteredResults = searchResults.filter(
-    member => !excludeMembers.includes(member.id)
-  );
+  // Filter search results: first exclude listed members, then restrict to allowed set if provided
+  const filteredResults = searchResults
+    .filter(member => !excludeMembers.includes(member.id))
+    .filter(member => (allowedMemberIds.length > 0 ? allowedMemberIds.includes(member.id) : true));
 
   // Check if member is selected
   const isSelected = (member: MemberSearchResult) => {
@@ -270,8 +278,10 @@ export function MemberSearchTypeahead({
 
   // Get display value for single select mode
   const getDisplayValue = () => {
-    if (!multiSelect && value.length > 0) {
-      return value[0].display_name;
+    if (!multiSelect) {
+      // Prefer current typed text when present, otherwise show selected member name
+      if (inputValue.trim()) return inputValue;
+      if (value.length > 0) return value[0].display_name;
     }
     return inputValue;
   };

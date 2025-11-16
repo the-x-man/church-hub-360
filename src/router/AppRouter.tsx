@@ -46,6 +46,7 @@ import { MemberDetail } from '../pages/people/MemberDetail';
 import Membership from '../pages/people/Membership';
 import MembershipList from '../pages/people/MembershipList';
 import { Attendance } from '../pages/people/Attendance';
+import AttendanceMarking from '../pages/people/AttendanceMarking';
 import Birthdays from '../pages/people/Birthdays';
 
 // Finance section pages
@@ -129,6 +130,7 @@ function AppRoutes() {
             <Route path=":memberId" element={<MemberDetail />} />
           </Route>
           <Route path="attendance" element={<Attendance />} />
+          <Route path="attendance/marking" element={<AttendanceMarking />} />
           <Route path="birthdays" element={<Birthdays />} />
         </Route>
 
