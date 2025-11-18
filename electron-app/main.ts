@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron';
 import fs from 'fs';
 import https from 'https';
 import os from 'os';
@@ -536,6 +536,22 @@ function createWindow() {
   // Hide menu bar and disable context menu for main window
   win.setMenuBarVisibility(false)
   win.setMenu(null)
+
+  win.webContents.on('context-menu', (_event: Electron.Event, params: Electron.ContextMenuParams) => {
+    _event.preventDefault()
+    const isEmptyArea = !params.linkURL && !params.selectionText && params.mediaType === 'none'
+    if (!isEmptyArea) return
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Refresh',
+        accelerator: 'F5',
+        click: () => {
+          win?.webContents.reloadIgnoringCache()
+        }
+      }
+    ])
+    menu.popup({ window: win })
+  })
 
   // Handle new window creation (for print windows, etc.)
   win.webContents.setWindowOpenHandler(() => {
