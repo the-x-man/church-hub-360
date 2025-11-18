@@ -87,7 +87,7 @@ module.exports = {
     createCommit: true,
     createTag: true,
     pushChanges: true, // Set to true to automatically push
-    commitMessage: "Release v1.1.1"
+    commitMessage: "Release v1.0.0"
   },
 
   // Validation rules
