@@ -12,7 +12,7 @@ module.exports = {
   
   // Release notes in markdown format
   releaseNotes: `### Added
-- Background update downloads
+- Initial MVP release 
 
 ### Improved / Changed
 
@@ -68,7 +68,7 @@ module.exports = {
   supabase: {
     enabled: true,
     publish: true,
-    edgeFunction: 'publish-release',
+    edgeFunction: 'publish-releases',
     url: process.env.VITE_SUPABASE_URL,
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
   },

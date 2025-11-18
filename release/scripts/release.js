@@ -529,7 +529,7 @@ async function main() {
     log.info('- npm run publish:supabase (if Supabase publishing failed)');
     
   } catch (error) {
-    log.error('Release failed:', error.message);
+    log.error(`Release failed: ${error.message}`);
     process.exit(1);
   }
 }

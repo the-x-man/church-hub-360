@@ -127,11 +127,11 @@ async function publishToSupabase(version, releaseNotes) {
       platforms.push({
         platform: platformName,
         architecture: platformConfig.architecture,
-        downloadUrl: platformConfig.downloadUrlTemplate.replaceAll('{version}', targetVersion),
-        fileSize: platformConfig.fileSize || 0,
+        download_url: platformConfig.downloadUrlTemplate.replaceAll('{version}', targetVersion),
+        file_size: platformConfig.fileSize || 0,
         status: platformConfig.status || 'published',
-        isCritical: platformConfig.isCritical || false,
-        minimumVersion: platformConfig.minimumVersion || null
+        is_critical: platformConfig.isCritical || false,
+        minimum_version: platformConfig.minimumVersion || null
       });
       log.info(`  - ${platformName} (${platformConfig.architecture}) [${platformConfig.status || 'published'}]`);
     });

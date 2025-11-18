@@ -94,7 +94,7 @@ async function createGitHubRelease(config, installerFiles) {
 
   log.step('Creating GitHub release...');
   
-  const token = process.env.GH_TOKEN;
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   if (!token) {
     throw new Error('GH_TOKEN environment variable is required for GitHub releases');
   }
@@ -176,8 +176,8 @@ async function main() {
     }
     
     // Validate required environment variables
-    if (!process.env.GH_TOKEN) {
-      throw new Error('GH_TOKEN environment variable is required');
+    if (!(process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+      throw new Error('GH_TOKEN or GITHUB_TOKEN environment variable is required');
     }
     
     // Find installer files
@@ -202,7 +202,7 @@ async function main() {
     }
     
   } catch (error) {
-    log.error('GitHub publishing failed:', error.message);
+    log.error(`GitHub publishing failed: ${error.message}`);
     process.exit(1);
   }
 }
