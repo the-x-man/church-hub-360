@@ -12,11 +12,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Lock } from 'lucide-react';
 import { UserActionsDropdown } from './UserActionsDropdown';
 import { format } from 'date-fns';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 import { ROLE_DISPLAY_NAMES } from '@/types/organizations';
 import type { UserWithRelations, UserAction } from '@/types/user-management';
 import { getFullName } from '@/types/user-management';
 import { processAvatarUrl } from '@/utils/asset-path';
+import { useAccess } from '@/registry/access/engine';
 
 interface UserTableProps {
   users: UserWithRelations[];
@@ -34,6 +35,7 @@ export function UserTable({
   branches = [],
 }: UserTableProps) {
   const { canManageUserData, canManageAllData } = useRoleCheck();
+  const { canCreateUsers } = useAccess();
   const isAdmin = canManageUserData();
 
   const handleAction = (action: UserAction, user: UserWithRelations) => {
@@ -161,7 +163,9 @@ export function UserTable({
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={processAvatarUrl(user.profile.avatar)} />
+                        <AvatarImage
+                          src={processAvatarUrl(user.profile.avatar)}
+                        />
                         <AvatarFallback className="text-xs">
                           {getUserInitials(user)}
                         </AvatarFallback>
@@ -238,6 +242,7 @@ export function UserTable({
                         isAdmin={isAdmin}
                         onAction={handleAction}
                         canDelete={canManageAllData()}
+                        canCreateUsers={canCreateUsers()}
                       />
                     )}
                   </TableCell>

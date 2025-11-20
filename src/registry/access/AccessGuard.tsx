@@ -4,23 +4,17 @@ import { useAccess } from '@/registry/access/engine';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 
-interface PeopleAccessGuardProps {
+interface AccessGuardProps {
   children: ReactNode;
   fallback?: ReactNode;
 }
 
-// Path guard resolves access via registry; no segment mapping needed
-
-export function PeopleAccessGuard({
-  children,
-  fallback = null,
-}: PeopleAccessGuardProps) {
-  const { canAccessPath } = useAccess();
-  const location = useLocation();
+export function AccessGuard({ children, fallback = null }: AccessGuardProps) {
+  const { canAccessPath, role } = useAccess();
   const { currentOrganization, isLoading } = useOrganization();
-  if (isLoading || !currentOrganization) return <LoadingSpinner />;
-  const path = location.pathname;
-  const allow = canAccessPath(path);
+  const location = useLocation();
+  if (isLoading || !currentOrganization || !role) return <LoadingSpinner />;
+  const allow = canAccessPath(location.pathname);
   if (!allow) return <>{fallback}</>;
   return <>{children}</>;
 }

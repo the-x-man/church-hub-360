@@ -1,7 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthRoute } from '../components/auth/AuthRoute';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
- 
+
 import { RoleAwareLayout } from '@/components/layout/RoleAwareLayout';
 import { AuthProvider } from '../contexts/AuthContext';
 import { OrganizationProvider } from '../contexts/OrganizationContext';
@@ -60,7 +60,7 @@ import { Pledges } from '../pages/finance/Pledges';
 import { InsightsReports } from '../pages/finance/InsightsReports';
 import { MembershipFormBuilder } from '@/pages/people/MembershipFormBuilder';
 import { TestAnnouncementEditorLayout } from '@/modules/AnnouncementSlideBuilder/TestEditorLayout';
-import { AccessGuard } from '@/components/auth/AccessGuard';
+import { AccessGuard } from '@/registry/access/AccessGuard';
 import { PeopleAccessGuard } from '@/components/auth/PeopleAccessGuard';
 
 function AppRoutes() {
@@ -131,10 +131,7 @@ function AppRoutes() {
         <Route
           path="branches"
           element={
-            <AccessGuard
-              section="branches"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Branches />
             </AccessGuard>
           }
@@ -143,10 +140,7 @@ function AppRoutes() {
         <Route
           path="user-management"
           element={
-            <AccessGuard
-              section="user_management"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <UserManagement />
             </AccessGuard>
           }
@@ -154,10 +148,7 @@ function AppRoutes() {
         <Route
           path="settings"
           element={
-            <AccessGuard
-              section="settings"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Settings />
             </AccessGuard>
           }
@@ -167,7 +158,7 @@ function AppRoutes() {
         <Route
           path="people"
           element={
-            <PeopleAccessGuard fallback={<Navigate to="/dashboard" replace />}> 
+            <PeopleAccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <People />
             </PeopleAccessGuard>
           }
@@ -189,10 +180,7 @@ function AppRoutes() {
         <Route
           path="finance"
           element={
-            <AccessGuard
-              section="finance"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Finance />
             </AccessGuard>
           }
@@ -210,10 +198,7 @@ function AppRoutes() {
         <Route
           path="events"
           element={
-            <AccessGuard
-              section="events"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Events />
             </AccessGuard>
           }
@@ -221,10 +206,7 @@ function AppRoutes() {
         <Route
           path="announcements"
           element={
-            <AccessGuard
-              section="announcements"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Announcements />
             </AccessGuard>
           }
@@ -238,10 +220,7 @@ function AppRoutes() {
         <Route
           path="assets"
           element={
-            <AccessGuard
-              section="assets"
-              fallback={<Navigate to="/dashboard" replace />}
-            >
+            <AccessGuard fallback={<Navigate to="/dashboard" replace />}>
               <Assets />
             </AccessGuard>
           }

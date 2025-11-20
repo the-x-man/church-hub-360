@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Settings2 } from 'lucide-react';
 import { useDashboardPreferences } from '@/hooks/dashboard/useDashboardPreferences';
 import { DEFAULT_SECTIONS } from '@/db/dashboardPrefsDb';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 
 const SECTION_LABELS: Record<string, string> = {
   birthdays: 'Upcoming Birthdays',

@@ -14,34 +14,23 @@ export function RoleGuard({
   fallback = null,
 }: RoleGuardProps) {
   const { currentOrganization } = useOrganization();
-
-  if (!currentOrganization) {
-    return <>{fallback}</>;
-  }
-
+  if (!currentOrganization) return <>{fallback}</>;
   const hasPermission = allowedRoles.includes(currentOrganization.user_role);
-
-  if (!hasPermission) {
-    return <>{fallback}</>;
-  }
-
+  if (!hasPermission) return <>{fallback}</>;
   return <>{children}</>;
 }
 
-// Hook for checking roles in components
 export function useRoleCheck() {
   const { currentOrganization } = useOrganization();
-
   const hasRole = (roles: OrganizationRole[]) => {
     if (!currentOrganization) return false;
     return roles.includes(currentOrganization.user_role);
   };
-
   const canManageAllData = () => hasRole(['owner', 'admin']);
   const canViewAllData = () =>
-    hasRole(['owner', 'admin', 'branch_admin', 'write']);
+    hasRole(['owner', 'admin', 'branch_admin', 'finance_admin', 'write']);
   const canManageBranchData = () =>
-    hasRole(['owner', 'admin', 'branch_admin', 'write']);
+    hasRole(['owner', 'admin', 'branch_admin', 'finance_admin', 'write']);
   const canManageUserData = () => hasRole(['owner', 'admin', 'branch_admin']);
   const canWrite = () => hasRole(['owner', 'admin', 'branch_admin', 'write']);
   const canRead = () =>
@@ -52,7 +41,6 @@ export function useRoleCheck() {
   const isFinanceAdmin = () => hasRole(['finance_admin']);
   const isAttendanceManager = () => hasRole(['attendance_manager']);
   const isAttendanceRep = () => hasRole(['attendance_rep']);
-
   return {
     hasRole,
     canManageAllData,
@@ -68,20 +56,5 @@ export function useRoleCheck() {
     isAttendanceManager,
     isAttendanceRep,
     currentRole: currentOrganization?.user_role,
-  };
-}
-
-// Higher-order component for role-based access
-export function withRoleGuard<P extends object>(
-  Component: React.ComponentType<P>,
-  allowedRoles: OrganizationRole[],
-  fallback?: ReactNode
-) {
-  return function GuardedComponent(props: P) {
-    return (
-      <RoleGuard allowedRoles={allowedRoles} fallback={fallback}>
-        <Component {...props} />
-      </RoleGuard>
-    );
   };
 }

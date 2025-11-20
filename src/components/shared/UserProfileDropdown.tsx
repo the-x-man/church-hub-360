@@ -32,7 +32,7 @@ import { UpdateDrawer } from '../../modules/auto-update/UpdateDrawer';
 import { openExternalUrl } from '../../utils/external-url';
 import { useUpdateStore } from '../../modules/auto-update/stores/updateStore';
 import { processAvatarUrl } from '../../utils/asset-path';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 
 export function UserProfileDropdown() {
   const { user, signOut } = useAuth();
@@ -94,7 +94,10 @@ export function UserProfileDropdown() {
             className="relative h-10 w-10 rounded-full p-0 hover:bg-accent"
           >
             <Avatar className="h-10 w-10">
-              <AvatarImage src={processAvatarUrl(profile.avatar)} alt={displayName} />
+              <AvatarImage
+                src={processAvatarUrl(profile.avatar)}
+                alt={displayName}
+              />
               <AvatarFallback className="bg-primary/10 text-primary font-medium">
                 {fallbackText}
               </AvatarFallback>
@@ -106,7 +109,10 @@ export function UserProfileDropdown() {
           <div className="p-4 bg-muted/30">
             <div className="flex items-center space-x-3">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={processAvatarUrl(profile.avatar)} alt={displayName} />
+                <AvatarImage
+                  src={processAvatarUrl(profile.avatar)}
+                  alt={displayName}
+                />
                 <AvatarFallback className="bg-primary/10 text-primary font-medium text-lg">
                   {fallbackText}
                 </AvatarFallback>

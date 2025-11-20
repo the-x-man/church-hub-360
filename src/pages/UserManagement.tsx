@@ -1,4 +1,5 @@
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
+import { useAccess } from '@/registry/access/engine';
 import { Input } from '@/components/ui/input';
 import { useUserFiltering } from '@/components/user-management/hooks/useUserFiltering';
 import InactiveUsersSection from '@/components/user-management/InactiveUsersSection';
@@ -28,6 +29,7 @@ import { useDebounceValue } from '@/hooks/useDebounce';
 
 export default function UserManagement() {
   const { canManageUserData, isBranchAdmin, canManageAllData } = useRoleCheck();
+  const { canCreateUsers } = useAccess();
   const { currentOrganization } = useOrganization();
   const { user } = useAuth();
 
@@ -279,13 +281,15 @@ export default function UserManagement() {
             Manage users and their permissions
           </p>
         </div>
-        <UserAddDialog
-          isOpen={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-          onSubmit={handleCreateUser}
-          branches={availableBranches || []}
-          isLoading={createUser.isPending}
-        />
+        {canCreateUsers() && (
+          <UserAddDialog
+            isOpen={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onSubmit={handleCreateUser}
+            branches={availableBranches || []}
+            isLoading={createUser.isPending}
+          />
+        )}
       </div>
 
       {/* Search and Display Controls */}

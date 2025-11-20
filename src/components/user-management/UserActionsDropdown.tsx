@@ -18,6 +18,7 @@ interface UserActionsDropdownProps {
   user: UserWithRelations;
   isAdmin: boolean;
   canDelete: boolean;
+  canCreateUsers: boolean;
   onAction: (action: UserAction, user: UserWithRelations) => void;
 }
 
@@ -25,6 +26,7 @@ export function UserActionsDropdown({
   user,
   isAdmin,
   canDelete,
+  canCreateUsers,
   onAction,
 }: UserActionsDropdownProps) {
   if (!isAdmin) {
@@ -55,10 +57,12 @@ export function UserActionsDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onAction('edit', user)}>
-          <Edit className="mr-2 h-4 w-4" />
-          Edit User
-        </DropdownMenuItem>
+        {canCreateUsers && (
+          <DropdownMenuItem onClick={() => onAction('edit', user)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit User
+          </DropdownMenuItem>
+        )}
         {/* <DropdownMenuItem onClick={() => onAction('regenerate-password', user)}>
           <Key className="mr-2 h-4 w-4" />
           Regenerate Password

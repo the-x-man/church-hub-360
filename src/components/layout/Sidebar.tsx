@@ -8,7 +8,7 @@ import {
   MapPin,
   ChevronDown,
   ChevronRight,
-  UserCheck,
+  CheckCircle,
   Calendar,
   DollarSign,
   TrendingUp,
@@ -26,6 +26,8 @@ import {
   Megaphone,
   Package,
   Gift,
+  Tag,
+  IdCard,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -44,8 +46,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
-// import { useRoleCheck } from '@/components/auth/RoleGuard';
-import { useAccess } from '@/lib/access-control';
+// import { useRoleCheck } from '@/registry/access/RoleGuard';
+import { useAccess } from '@/registry/access/engine';
+import { NAV_ITEMS } from '@/registry/pages';
+import type {
+  NavItem as RegistryNavItem,
+  NavLinkItem,
+  NavGroupItem,
+} from '@/registry/pages';
 
 interface NavItem {
   to?: string;
@@ -55,131 +63,52 @@ interface NavItem {
   children?: NavItem[];
 }
 
-const navItems: NavItem[] = [
-  {
-    to: '/dashboard',
-    icon: Home,
-    label: 'Dashboard',
-  },
-  {
-    to: '/branches',
-    icon: MapPin,
-    label: 'Branches',
-  },
-  {
-    icon: Users,
-    label: 'People',
-    children: [
-      {
-        to: '/people/tags',
-        icon: Settings,
-        label: 'Tags',
-      },
-      {
-        to: '/people/groups',
-        icon: Settings,
-        label: 'Groups',
-      },
-      {
-        to: '/people/membership',
-        icon: UserCheck,
-        label: 'Membership',
-      },
-      {
-        to: '/people/birthdays',
-        icon: Gift,
-        label: 'Birthdays',
-      },
-      {
-        to: '/people/attendance',
-        icon: Calendar,
-        label: 'Attendance',
-      },
-      {
-        to: '/people/form-builder',
-        icon: FormInput,
-        label: 'Form Builder',
-      },
-    ],
-  },
-  {
-    icon: DollarSign,
-    label: 'Finance',
-    children: [
-      {
-        to: '/finance/insights',
-        icon: BarChart3,
-        label: 'Insights & Reports',
-      },
-      {
-        to: '/finance/income',
-        icon: TrendingUp,
-        label: 'General Income',
-      },
-      {
-        to: '/finance/contributions',
-        icon: Heart,
-        label: 'Contributions & Donations',
-      },
-      {
-        to: '/finance/pledges',
-        icon: Target,
-        label: 'Pledges',
-      },
-      {
-        to: '/finance/expenses',
-        icon: TrendingDown,
-        label: 'Expenditure',
-      },
-      // {
-      //   to: '/finance/budget-planning',
-      //   icon: Calculator,
-      //   label: 'Budget Planning',
-      // },
-    ],
-  },
-  // {
-  //   to: '/communication',
-  //   icon: MessageSquare,
-  //   label: 'Communication',
-  // },
-  {
-    to: '/events',
-    icon: CalendarDays,
-    label: 'Events and Activities',
-  },
-  {
-    to: '/announcements',
-    icon: Megaphone,
-    label: 'Announcements',
-  },
-  {
-    to: '/assets',
-    icon: Package,
-    label: 'Assets',
-  },
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Home,
+  MapPin,
+  Users,
+  Settings,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Heart,
+  Target,
+  CalendarDays,
+  BarChart3,
+  FormInput,
+  Megaphone,
+  Package,
+  Gift,
+  CheckCircle,
+  Tag,
+  IdCard,
+};
 
-  // {
-  //   to: '/reports',
-  //   icon: BarChart3,
-  //   label: 'Reports & Insights',
-  // },
-  // {
-  //   to: '/activity-logs',
-  //   icon: Activity,
-  //   label: 'Activity Logs',
-  // },
-  {
-    to: '/user-management',
-    icon: Users,
-    label: 'Users',
-  },
-  {
-    to: '/settings',
-    icon: Settings,
-    label: 'Settings',
-  },
-];
+function buildNavItemsFromRegistry(items: RegistryNavItem[]): NavItem[] {
+  return items.map((item) => {
+    if ((item as NavGroupItem).type === 'group') {
+      const group = item as NavGroupItem;
+      return {
+        icon: iconMap[group.icon] || Users,
+        label: group.label,
+        children: group.children.map((child) => ({
+          to: child.path,
+          icon: iconMap[child.icon] || Settings,
+          label: child.label,
+        })),
+      };
+    }
+    const link = item as NavLinkItem;
+    return {
+      to: link.path,
+      icon: iconMap[link.icon] || Settings,
+      label: link.label,
+    };
+  });
+}
+
+const navItems: NavItem[] = buildNavItemsFromRegistry(NAV_ITEMS);
 
 export function Sidebar() {
   const isDev = import.meta.env.DEV;
@@ -202,27 +131,16 @@ export function Sidebar() {
     setMobileOpen,
   } = useSidebar();
 
-  const { canAccess, canAccessFinanceChild, canAccessPeopleChild } = useAccess();
+  const { canAccessPath } = useAccess();
   const filteredNavItems = navItems
     .filter((item) => !item.devOnly || isDev)
     .filter((item) => {
-      if (item.label === 'Finance' && !canAccess('finance')) return false;
-      if (item.label === 'Branches' && !canAccess('branches')) return false;
-      if (item.label === 'People') {
-        if (canAccess('people')) return true;
-        const anyChildAllowed = item.children?.some((child) => {
-          const seg = child.to?.split('/')[2];
-          const key = seg === 'tags' || seg === 'groups' ? 'tags_groups' : (seg === 'form-builder' ? 'form_builder' : seg);
-          if (!key) return false;
-          return canAccessPeopleChild(key as any);
-        });
-        if (!anyChildAllowed) return false;
+      if (item.children && item.children.length > 0) {
+        return item.children.some((child) => (child.to ? canAccessPath(child.to) : false));
       }
-      if (item.label === 'Events and Activities' && !canAccess('events')) return false;
-      if (item.label === 'Announcements' && !canAccess('announcements')) return false;
-      if (item.label === 'Assets' && !canAccess('assets')) return false;
-      if (item.label === 'Users' && !canAccess('user_management')) return false;
-      if (item.label === 'Settings' && !canAccess('settings')) return false;
+      if (item.to) {
+        return canAccessPath(item.to);
+      }
       return true;
     });
   const { signOut } = useAuth();
@@ -301,31 +219,25 @@ export function Sidebar() {
                     align="start"
                     className="w-48"
                   >
-                    {item.children?.filter((child) => {
-                      if (item.label === 'Finance' && child.to) {
-                        const key = (child.to.split('/')[2] || '') as any;
-                        return canAccessFinanceChild(key);
-                      }
-                      if (item.label === 'People' && child.to) {
-                        const seg = child.to.split('/')[2];
-                        const key = seg === 'tags' || seg === 'groups' ? 'tags_groups' : (seg === 'form-builder' ? 'form_builder' : seg);
-                        return key ? canAccessPeopleChild(key as any) : false;
-                      }
-                      return true;
-                    }).map((child) => {
-                      const ChildIcon = child.icon;
-                      return (
-                        <DropdownMenuItem key={child.to || child.label} asChild>
-                          <NavLink
-                            to={child.to!}
-                            className="flex items-center space-x-2 w-full"
+                    {item.children
+                      ?.filter((child) => (child.to ? canAccessPath(child.to) : false))
+                      .map((child) => {
+                        const ChildIcon = child.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={child.to || child.label}
+                            asChild
                           >
-                            <ChildIcon className="h-4 w-4" />
-                            <span>{child.label}</span>
-                          </NavLink>
-                        </DropdownMenuItem>
-                      );
-                    })}
+                            <NavLink
+                              to={child.to!}
+                              className="flex items-center space-x-2 w-full"
+                            >
+                              <ChildIcon className="h-4 w-4" />
+                              <span>{child.label}</span>
+                            </NavLink>
+                          </DropdownMenuItem>
+                        );
+                      })}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <TooltipContent side="right">
@@ -368,18 +280,7 @@ export function Sidebar() {
           {isExpanded && !isCollapsed && (
             <ul className="mt-1 ml-6 space-y-1">
               {item.children
-                ?.filter((child) => {
-                  if (item.label === 'Finance' && child.to) {
-                    const key = (child.to.split('/')[2] || '') as any;
-                    return canAccessFinanceChild(key);
-                  }
-                  if (item.label === 'People' && child.to) {
-                    const seg = child.to.split('/')[2];
-                    const key = seg === 'tags' || seg === 'groups' ? 'tags_groups' : (seg === 'form-builder' ? 'form_builder' : seg);
-                    return key ? canAccessPeopleChild(key as any) : false;
-                  }
-                  return true;
-                })
+                ?.filter((child) => (child.to ? canAccessPath(child.to) : false))
                 .map((child) => renderNavItem(child, level + 1))}
             </ul>
           )}
@@ -481,9 +382,9 @@ export function Sidebar() {
           </button>
           {isExpanded && (
             <ul className="mt-1 ml-6 space-y-1">
-              {item.children?.map((child) =>
-                renderMobileNavItem(child, level + 1)
-              )}
+              {item.children
+                ?.filter((child) => (child.to ? canAccessPath(child.to) : false))
+                .map((child) => renderMobileNavItem(child, level + 1))}
             </ul>
           )}
         </li>

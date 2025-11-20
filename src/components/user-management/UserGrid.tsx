@@ -1,4 +1,5 @@
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
+import { useAccess } from '@/registry/access/engine';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -27,6 +28,7 @@ export function UserGrid({
   branches = [],
 }: UserGridProps) {
   const { canManageUserData, canManageAllData } = useRoleCheck();
+  const { canCreateUsers } = useAccess();
   const isAdmin = canManageUserData();
 
   const handleAction = (action: UserAction, user: UserWithRelations) => {
@@ -121,7 +123,9 @@ export function UserGrid({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={processAvatarUrl(user.profile.avatar)} />
+                      <AvatarImage
+                        src={processAvatarUrl(user.profile.avatar)}
+                      />
                       <AvatarFallback className="text-sm">
                         {getUserInitials(user)}
                       </AvatarFallback>
@@ -151,6 +155,7 @@ export function UserGrid({
                       isAdmin={isAdmin}
                       onAction={handleAction}
                       canDelete={canManageAllData()}
+                      canCreateUsers={canCreateUsers()}
                     />
                   )}
                 </div>

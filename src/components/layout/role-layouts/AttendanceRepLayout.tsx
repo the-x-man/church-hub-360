@@ -1,17 +1,17 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { useAccess } from '@/lib/access-control';
+// import { useAccess } from '@/registry/access/engine';
 
 export function AttendanceRepLayout() {
   const location = useLocation();
-  const { hasAnyOverrides } = useAccess();
+  
   const allowedPrefixes = ['/people/attendance/marking', '/profile'];
-  const isAllowed = allowedPrefixes.some((p) => location.pathname.startsWith(p));
+  const isAllowed = allowedPrefixes.some((p) =>
+    location.pathname.startsWith(p)
+  );
 
-  if (hasAnyOverrides()) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  
 
   return (
     <div className="min-h-screen bg-background">
@@ -24,7 +24,11 @@ export function AttendanceRepLayout() {
             </Link>
           </div>
 
-          {!isAllowed ? <Navigate to="/people/attendance/marking" replace /> : <Outlet />}
+          {!isAllowed ? (
+            <Navigate to="/people/attendance/marking" replace />
+          ) : (
+            <Outlet />
+          )}
         </div>
       </main>
     </div>

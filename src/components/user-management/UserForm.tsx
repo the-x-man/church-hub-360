@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import MultipleSelector, { type Option } from '@/components/ui/multiselect';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 import type { UserRole } from '@/lib/auth';
 import type { UserWithRelations } from '@/types/user-management';
 import type { VisibilityOverrides } from '@/types/access-control';
+import { getRoleDefaultSections, getDefaultCapability, getToggleDisablesForRole } from '@/registry/access/policy';
 
 interface Branch {
   id: string;
@@ -106,75 +107,9 @@ export function UserForm({
     onSubmit(formData);
   };
 
-  const defaultsForRole = (role: UserRole): VisibilityOverrides => {
-    const allTrueExceptFinance: VisibilityOverrides = {
-      sections: {
-        branches: true,
-        people: { enabled: true, attendance: true },
-        finance: { enabled: false },
-        events: true,
-        announcements: true,
-        assets: true,
-        user_management: true,
-        settings: true,
-      },
-    };
-    switch (role) {
-      case 'admin':
-        return allTrueExceptFinance;
-      case 'branch_admin':
-        return {...allTrueExceptFinance, sections: {...allTrueExceptFinance.sections, settings: false, branches: false }};
-      case 'finance_admin':
-        return { sections: { finance: { enabled: true } } } as VisibilityOverrides;
-      case 'attendance_manager':
-        return { sections: { people: { enabled: true, attendance: true } } } as VisibilityOverrides;
-      case 'attendance_rep':
-        return { sections: { people: { attendance: true } } } as VisibilityOverrides;
-      default:
-        return { sections: {} } as VisibilityOverrides;
-    }
-  };
+  const defaultsForRole = (role: UserRole): VisibilityOverrides => ({ sections: getRoleDefaultSections(role) });
 
-  const disabledForRole = (role: UserRole): Record<string, boolean> => {
-    if(role === 'branch_admin') {
-      return { settings: true, branches: true };
-    }
-
-    if (role === 'attendance_manager') {
-      return {
-        branches: true,
-        finance: true,
-        events: true,
-        announcements: true,
-        assets: true,
-        user_management: true,
-        settings: true,
-        people_enabled: false,
-        people_attendance: false,
-      };
-    }
-    if (role === 'attendance_rep') {
-      return {
-        branches: true,
-        finance: true,
-        events: true,
-        announcements: true,
-        assets: true,
-        user_management: true,
-        settings: true,
-        people_enabled: true,
-        people_attendance: false,
-      };
-    }
-    if (role === 'finance_admin') {
-      return {
-        branches: true,
-        user_management: true,
-        settings: true,
-      };
-    }
-    return {};
-  };
+  const disabledForRole = (role: UserRole): Record<string, boolean> => getToggleDisablesForRole(role);
 
   const handleRoleChange = (role: UserRole) => {
     const defaults = defaultsForRole(role);
@@ -184,7 +119,7 @@ export function UserForm({
       assignAllBranches: role === 'admin' ? false : prev.assignAllBranches,
       selectedBranchIds: role === 'admin' ? [] : prev.selectedBranchIds,
       visibilityOverrides: defaults,
-      canCreateUsers: role === 'admin' ? true : prev.canCreateUsers,
+      canCreateUsers: getDefaultCapability(role).can_create_users ?? prev.canCreateUsers,
     }));
     setDisabledMap(disabledForRole(role));
   };
@@ -192,14 +127,14 @@ export function UserForm({
   useEffect(() => {
     if (mode === 'create') {
       const defaults = defaultsForRole(formData.role);
-      setFormData(prev => ({ ...prev, visibilityOverrides: defaults }));
+      setFormData(prev => ({ ...prev, visibilityOverrides: defaults, canCreateUsers: getDefaultCapability(formData.role).can_create_users }));
       setDisabledMap(disabledForRole(formData.role));
     }
   }, [mode]);
 
   const requiresBranch = ['write', 'read', 'branch_admin', 'finance_admin', 'attendance_manager', 'attendance_rep'].includes(formData.role) && !formData.assignAllBranches;
   
-  const canBeAssignedAllBranches = ['branch_admin', 'write', 'read', 'attendance_manager', 'attendance_rep'].includes(formData.role);
+  const canBeAssignedAllBranches = ['branch_admin', 'write', 'read', 'finance_admin', 'attendance_manager', 'attendance_rep'].includes(formData.role);
   
   const handleAssignAllBranchesChange = (checked: boolean) => {
     const activeBranchIds = branches.filter(b => b.is_active).map(b => b.id);
@@ -524,7 +459,7 @@ export function UserForm({
         </div>
       )}
 
-      {formData.role === 'admin' || formData.role === 'branch_admin' && (
+      {(formData.role === 'admin' || formData.role === 'branch_admin' ) && (
         <div className="flex items-center space-x-2 text-sm my-6">
           <Checkbox
             id="can-create-users"

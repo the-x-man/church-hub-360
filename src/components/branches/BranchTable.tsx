@@ -25,7 +25,7 @@ import {
 import { BranchForm } from '@/components/forms/BranchForm';
 import { Edit, Lock } from 'lucide-react';
 import { format } from 'date-fns';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 import type { Branch } from '@/types';
 
 interface BranchTableProps {

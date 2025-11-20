@@ -34,8 +34,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { UserRole } from '@/lib/auth';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { USER_ROLE_DISPLAY_NAMES, type UserRole } from '@/lib/auth';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 
 interface InactiveUser {
   id: string;
@@ -228,7 +228,7 @@ export default function InactiveUsersSection({
                                 : user.profiles?.email}
                             </h3>
                             <Badge variant="secondary" className="bg-muted">
-                              {user.role || 'User'}
+                              {USER_ROLE_DISPLAY_NAMES[user.role || 'User'] || 'User'}
                             </Badge>
                             <Badge variant="destructive" className="text-xs">
                               Inactive

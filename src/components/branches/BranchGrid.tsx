@@ -18,7 +18,7 @@ import {
 import { BranchForm } from '@/components/forms/BranchForm';
 import { MapPin, Calendar, Edit, Lock } from 'lucide-react';
 import { format } from 'date-fns';
-import { useRoleCheck } from '@/components/auth/RoleGuard';
+import { useRoleCheck } from '@/registry/access/RoleGuard';
 import type { Branch } from '@/types';
 
 interface BranchGridProps {
@@ -47,10 +47,7 @@ export function BranchGrid({ branches, isLoading }: BranchGridProps) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-48 bg-gray-100 animate-pulse rounded-lg"
-          />
+          <div key={i} className="h-48 bg-gray-100 animate-pulse rounded-lg" />
         ))}
       </div>
     );

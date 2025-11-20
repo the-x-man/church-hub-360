@@ -1,17 +1,23 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { useAccess } from '@/lib/access-control';
+import { useAccess } from '@/registry/access/engine';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 
 export function FinanceAdminLayout() {
   const location = useLocation();
-  const { hasAnyOverrides, canAccess } = useAccess();
+  const { canAccess, role } = useAccess();
+  const { currentOrganization, isLoading } = useOrganization();
   const allowedPrefixes = ['/finance', '/profile'];
   const isAllowed = allowedPrefixes.some((p) =>
     location.pathname.startsWith(p)
   );
 
-  if (hasAnyOverrides() || !canAccess('finance')) {
+  if (isLoading || !currentOrganization || !role) {
+    return <LoadingSpinner />;
+  }
+  if (!canAccess('finance')) {
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -26,7 +26,7 @@ import { AnnouncementsCard } from '@/components/dashboard/AnnouncementsCard';
 import { AttendanceTrendChart } from '@/components/dashboard/charts/AttendanceTrendChart';
 import { MembersGenderChart } from '@/components/dashboard/charts/MembersGenderChart';
 import { FinanceBreakdownChart } from '@/components/dashboard/charts/FinanceBreakdownChart';
-import { useAccess } from '@/lib/access-control';
+import { useAccess } from '@/registry/access/engine';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -34,8 +34,16 @@ export function Dashboard() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
   const { prefs } = useDashboardPreferences(orgId);
-  const { canAccess } = useAccess();
+  const { canAccess, canAccessChild, canAccessPath } = useAccess();
   const canSeeFinance = canAccess('finance');
+  const canSeeBranches = canAccess('branches');
+  const canSeeAssets = canAccess('assets');
+  const canSeeAnnouncements = canAccess('announcements');
+  const canSeeEvents = canAccess('events');
+  const canSeeMembership = canAccessChild('people', 'membership');
+  const canSeeTagsGroups = canAccessChild('people', 'tags_groups');
+  const canSeeAttendance = canAccessChild('people', 'attendance');
+  const canSeeBirthdays = canAccessChild('people', 'birthdays');
 
   const show = (key: keyof NonNullable<typeof prefs>['sections']) => {
     const enabled = prefs?.sections?.[key];
@@ -80,9 +88,7 @@ export function Dashboard() {
     //   icon: BarChart3,
     // },
   ];
-  const filteredQuickActions = quickActions.filter(
-    (a) => !(a.path.startsWith('/finance') && !canSeeFinance)
-  );
+  const filteredQuickActions = quickActions.filter((a) => canAccessPath(a.path));
 
   return (
     <div className="space-y-6">
@@ -140,27 +146,28 @@ export function Dashboard() {
         )}
         <div className="space-y-6 col-span-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {show('birthdays') && <UpcomingBirthdaysCard />}
-            {show('events') && <UpcomingEventsCard />}
-            {show('membership') && <MembershipCard />}
-            {show('tags_groups') && <TagsGroupsCard />}
-            {show('attendance') && <AttendanceCard />}
+            {canSeeBirthdays && show('birthdays') && <UpcomingBirthdaysCard />}
+            {canSeeEvents && show('events') && <UpcomingEventsCard />}
+            {canSeeMembership && show('membership') && <MembershipCard />}
+            {canSeeTagsGroups && show('tags_groups') && <TagsGroupsCard />}
+            {canSeeAttendance && show('attendance') && <AttendanceCard />}
             {canSeeFinance && show('finances') && <FinancesCard />}
-            {show('assets') && <AssetsCard />}
-            {show('branches') && <BranchesCard />}
+            {canSeeAssets && show('assets') && <AssetsCard />}
+            {canSeeBranches && show('branches') && <BranchesCard />}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {show('attendance') && show('attendance_trend_chart') && (
+            {canSeeAttendance && show('attendance') && show('attendance_trend_chart') && (
               <AttendanceTrendChart />
             )}
-            {show('membership') && show('members_gender_chart') && (
+            {canSeeMembership && show('membership') && show('members_gender_chart') && (
               <MembersGenderChart />
             )}
-            {canSeeFinance && show('finances') &&
-              show('finance_breakdown_chart') && <FinanceBreakdownChart />}
+            {canSeeFinance && show('finances') && show('finance_breakdown_chart') && (
+              <FinanceBreakdownChart />
+            )}
             {show('recent_groups') && <RecentGroupsTable />}
           </div>
-          {show('announcements') && <AnnouncementsCard />}
+          {canSeeAnnouncements && show('announcements') && <AnnouncementsCard />}
         </div>
       </div>
     </div>
