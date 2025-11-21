@@ -3,8 +3,9 @@ import { Calendar } from 'lucide-react'
 import { useEvents } from '@/hooks/events/useEvents'
 import { useMemo } from 'react'
 
-export function UpcomingEventsCard() {
-  const filters = useMemo(() => ({ date_from: new Date().toISOString(), status: 'upcoming' as const }), [])
+interface UpcomingEventsCardProps { branchId?: string }
+export function UpcomingEventsCard({ branchId }: UpcomingEventsCardProps) {
+  const filters = useMemo(() => ({ date_from: new Date().toISOString(), status: 'upcoming' as const, branch_id: branchId }), [branchId])
   const { data: events = [] } = useEvents(filters)
   const total = events.length
   const top = events.slice(0, 3)

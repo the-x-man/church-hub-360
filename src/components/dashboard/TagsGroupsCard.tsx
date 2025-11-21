@@ -4,11 +4,12 @@ import { useOrganization } from '@/contexts/OrganizationContext'
 import { useTagsQuery } from '@/hooks/useRelationalTags'
 import { useGroups } from '@/hooks/useGroups'
 
-export function TagsGroupsCard() {
+interface TagsGroupsCardProps { branchId?: string }
+export function TagsGroupsCard({ branchId }: TagsGroupsCardProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const { data: tags = [] } = useTagsQuery(orgId)
-  const { data: groupsPage } = useGroups({ page: 1, pageSize: 1 })
+  const { data: groupsPage } = useGroups({ page: 1, pageSize: 1, branchId })
   const groupsTotal = groupsPage?.totalCount || 0
   const tagsTotal = tags.length
 

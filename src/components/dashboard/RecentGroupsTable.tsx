@@ -2,21 +2,31 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
-export function RecentGroupsTable() {
+interface RecentGroupsTableProps { branchId?: string }
+export function RecentGroupsTable({ branchId }: RecentGroupsTableProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
+  const scope = useBranchScope(orgId)
   const { data: groups = [] } = useQuery({
-    queryKey: ['dashboard-recent-groups', orgId],
+    queryKey: ['dashboard-recent-groups', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all'],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('groups')
-        .select(`id,name,created_at,created_by`) // creator id
+        .select(`id,name,created_at,created_by,branch_id`)
         .eq('organization_id', orgId!)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(5)
+      if (branchId) {
+        query = query.eq('branch_id', branchId)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return []
+        query = query.in('branch_id', scope.branchIds)
+      }
+      const { data, error } = await query
       if (error) throw error
       const rows = (data || []) as Array<{ id: string; name: string; created_at: string; created_by: string | null }>
       const ids = Array.from(new Set(rows.map(r => r.created_by).filter(Boolean))) as string[]

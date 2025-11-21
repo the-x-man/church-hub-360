@@ -4,6 +4,7 @@ import { useAssets } from '@/hooks/assets/useAssets'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
 function monthBounds(d: Date) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
@@ -11,24 +12,34 @@ function monthBounds(d: Date) {
   return { startIso: start.toISOString(), endIso: new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() }
 }
 
-export function AssetsCard() {
-  const { data: assetsPage } = useAssets({ page: 1, pageSize: 1 })
+interface AssetsCardProps { branchId?: string }
+export function AssetsCard({ branchId }: AssetsCardProps) {
+  const { data: assetsPage } = useAssets({ page: 1, pageSize: 1, branch_id: branchId })
   const totalAssets = assetsPage?.total || 0
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const { startIso, endIso } = monthBounds(new Date())
+  const scope = useBranchScope(orgId)
 
   const { data: addedThisMonth = 0 } = useQuery({
-    queryKey: ['dashboard-assets-added', orgId, startIso, endIso],
+    queryKey: ['dashboard-assets-added', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all', startIso, endIso],
     enabled: !!orgId,
     queryFn: async () => {
-      const { count, error } = await supabase
+      let query = supabase
         .from('assets')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', orgId!)
         .eq('is_deleted', false)
         .gte('created_at', startIso)
         .lte('created_at', endIso)
+      if (branchId) {
+        query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return 0
+        const ids = scope.branchIds.join(',')
+        query = query.or(`branch_id.in.(${ids}),branch_id.is.null`)
+      }
+      const { count, error } = await query
       if (error) throw error
       return count || 0
     },

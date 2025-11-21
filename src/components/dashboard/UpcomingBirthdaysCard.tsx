@@ -4,6 +4,7 @@ import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
 function daysUntilBirthday(dobIso: string) {
   const now = new Date()
@@ -14,18 +15,27 @@ function daysUntilBirthday(dobIso: string) {
   return diff
 }
 
-export function UpcomingBirthdaysCard() {
+interface UpcomingBirthdaysCardProps { branchId?: string }
+export function UpcomingBirthdaysCard({ branchId }: UpcomingBirthdaysCardProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
+  const scope = useBranchScope(orgId)
   const { data: members = [] } = useQuery({
-    queryKey: ['dashboard-birthdays', orgId],
+    queryKey: ['dashboard-birthdays', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all'],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('members_summary')
-        .select('id, full_name, date_of_birth')
+        .select('id, full_name, date_of_birth, branch_id')
         .eq('organization_id', orgId!)
         .not('date_of_birth', 'is', null)
+      if (branchId) {
+        query = query.eq('branch_id', branchId)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return []
+        query = query.in('branch_id', scope.branchIds)
+      }
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },

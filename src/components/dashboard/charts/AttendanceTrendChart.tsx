@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
 function monthBounds(d: Date) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
@@ -10,20 +11,30 @@ function monthBounds(d: Date) {
   return { startIso: start.toISOString(), endIso: new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() }
 }
 
-export function AttendanceTrendChart() {
+interface AttendanceTrendChartProps { branchId?: string }
+export function AttendanceTrendChart({ branchId }: AttendanceTrendChartProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const { startIso, endIso } = monthBounds(new Date())
+  const scope = useBranchScope(orgId)
   const { data: trend = [] } = useQuery({
-    queryKey: ['dashboard-trend-attendance', orgId, startIso, endIso],
+    queryKey: ['dashboard-trend-attendance', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all', startIso, endIso],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('attendance_records')
-        .select('marked_at, attendance_sessions!inner(organization_id)')
+        .select('marked_at, attendance_sessions!inner(organization_id, branch_id)')
         .eq('attendance_sessions.organization_id', orgId!)
         .gte('marked_at', startIso)
         .lte('marked_at', endIso)
+      if (branchId) {
+        query = query.eq('attendance_sessions.branch_id', branchId)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return []
+        const ids = scope.branchIds.join(',')
+        query = query.or(`attendance_sessions.branch_id.in.(${ids}),attendance_sessions.branch_id.is.null`)
+      }
+      const { data, error } = await query
       if (error) throw error
       const counts: Record<string, number> = {}
       for (const r of (data || [])) {

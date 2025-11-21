@@ -1,8 +1,9 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { useAnnouncements } from '@/hooks/announcements/useAnnouncements'
 
-export function AnnouncementsCard() {
-  const { data: announcements = [] } = useAnnouncements()
+interface AnnouncementsCardProps { branchId?: string }
+export function AnnouncementsCard({ branchId }: AnnouncementsCardProps) {
+  const { data: announcements = [] } = useAnnouncements(branchId)
   const recent = announcements.slice(0, 5)
 
   return (

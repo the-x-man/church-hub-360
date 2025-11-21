@@ -27,6 +27,7 @@ import { AttendanceTrendChart } from '@/components/dashboard/charts/AttendanceTr
 import { MembersGenderChart } from '@/components/dashboard/charts/MembersGenderChart';
 import { FinanceBreakdownChart } from '@/components/dashboard/charts/FinanceBreakdownChart';
 import { useAccess } from '@/registry/access/engine';
+import React from 'react';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -89,6 +90,7 @@ export function Dashboard() {
     // },
   ];
   const filteredQuickActions = quickActions.filter((a) => canAccessPath(a.path));
+  const [selectedBranchId, setSelectedBranchId] = React.useState<string | null>(null);
 
   return (
     <div className="space-y-6">
@@ -100,7 +102,10 @@ export function Dashboard() {
         </p>
       </div>
 
-      <DashboardTopBar />
+      <DashboardTopBar
+        branchId={selectedBranchId}
+        onBranchChange={(id) => setSelectedBranchId(id ?? null)}
+      />
 
       <div className="flex items-center justify-end">
         <DashboardVisibilityDialog />
@@ -146,28 +151,46 @@ export function Dashboard() {
         )}
         <div className="space-y-6 col-span-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {canSeeBirthdays && show('birthdays') && <UpcomingBirthdaysCard />}
-            {canSeeEvents && show('events') && <UpcomingEventsCard />}
-            {canSeeMembership && show('membership') && <MembershipCard />}
-            {canSeeTagsGroups && show('tags_groups') && <TagsGroupsCard />}
-            {canSeeAttendance && show('attendance') && <AttendanceCard />}
-            {canSeeFinance && show('finances') && <FinancesCard />}
-            {canSeeAssets && show('assets') && <AssetsCard />}
+            {canSeeBirthdays && show('birthdays') && (
+              <UpcomingBirthdaysCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeEvents && show('events') && (
+              <UpcomingEventsCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeMembership && show('membership') && (
+              <MembershipCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeTagsGroups && show('tags_groups') && (
+              <TagsGroupsCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeAttendance && show('attendance') && (
+              <AttendanceCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeFinance && show('finances') && (
+              <FinancesCard branchId={selectedBranchId || undefined} />
+            )}
+            {canSeeAssets && show('assets') && (
+              <AssetsCard branchId={selectedBranchId || undefined} />
+            )}
             {canSeeBranches && show('branches') && <BranchesCard />}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {canSeeAttendance && show('attendance') && show('attendance_trend_chart') && (
-              <AttendanceTrendChart />
+              <AttendanceTrendChart branchId={selectedBranchId || undefined} />
             )}
             {canSeeMembership && show('membership') && show('members_gender_chart') && (
-              <MembersGenderChart />
+              <MembersGenderChart branchId={selectedBranchId || undefined} />
             )}
             {canSeeFinance && show('finances') && show('finance_breakdown_chart') && (
-              <FinanceBreakdownChart />
+              <FinanceBreakdownChart branchId={selectedBranchId || undefined} />
             )}
-            {show('recent_groups') && <RecentGroupsTable />}
+            {show('recent_groups') && (
+              <RecentGroupsTable branchId={selectedBranchId || undefined} />
+            )}
           </div>
-          {canSeeAnnouncements && show('announcements') && <AnnouncementsCard />}
+          {canSeeAnnouncements && show('announcements') && (
+            <AnnouncementsCard branchId={selectedBranchId || undefined} />
+          )}
         </div>
       </div>
     </div>

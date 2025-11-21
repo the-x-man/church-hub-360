@@ -3,6 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
 function monthRange(d: Date) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
@@ -12,22 +13,32 @@ function monthRange(d: Date) {
   return { s, e }
 }
 
-export function FinancesCard() {
+interface FinancesCardProps { branchId?: string }
+export function FinancesCard({ branchId }: FinancesCardProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const { s, e } = monthRange(new Date())
+  const scope = useBranchScope(orgId)
 
   const { data: incomeRows = [] } = useQuery({
-    queryKey: ['dashboard-income-month', orgId, s, e],
+    queryKey: ['dashboard-income-month', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all', s, e],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('income')
-        .select('amount,income_type')
+        .select('amount,income_type,branch_id')
         .eq('organization_id', orgId!)
         .eq('is_deleted', false)
         .gte('date', s)
         .lte('date', e)
+      if (branchId) {
+        query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return []
+        const ids = scope.branchIds.join(',')
+        query = query.or(`branch_id.in.(${ids}),branch_id.is.null`)
+      }
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
@@ -35,16 +46,24 @@ export function FinancesCard() {
   })
 
   const { data: expenseRows = [] } = useQuery({
-    queryKey: ['dashboard-expense-month', orgId, s, e],
+    queryKey: ['dashboard-expense-month', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all', s, e],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('expenses')
-        .select('amount')
+        .select('amount,branch_id')
         .eq('organization_id', orgId!)
         .eq('is_deleted', false)
         .gte('date', s)
         .lte('date', e)
+      if (branchId) {
+        query = query.or(`branch_id.eq.${branchId},branch_id.is.null`)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return []
+        const ids = scope.branchIds.join(',')
+        query = query.or(`branch_id.in.(${ids}),branch_id.is.null`)
+      }
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },

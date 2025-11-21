@@ -522,10 +522,16 @@ export function useMember(memberId: string | undefined) {
 }
 
 // Hook to fetch member statistics
-export function useMemberStatistics(organizationId: string | undefined) {
+export function useMemberStatistics(organizationId: string | undefined, branchId?: string) {
   const scope = useBranchScope(organizationId);
   return useQuery({
-    queryKey: memberKeys.membersStatistics(organizationId || ''),
+    queryKey: [
+      ...memberKeys.membersStatistics(organizationId || ''),
+      'branch',
+      branchId || 'all',
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<MemberStatistics> => {
       if (!organizationId) throw new Error('Organization ID is required');
 
@@ -537,12 +543,14 @@ export function useMemberStatistics(organizationId: string | undefined) {
 
       if (membersError) throw membersError;
 
-      const scopedMembers = scope.isScoped
-        ? (scope.branchIds.length > 0
-            ? (members || []).filter((m: any) => scope.branchIds.includes(m.branch_id))
-            : []
-          )
-        : (members || []);
+      let scopedMembers = members || [];
+      if (branchId) {
+        scopedMembers = scopedMembers.filter((m: any) => m.branch_id === branchId);
+      } else if (scope.isScoped) {
+        scopedMembers = scope.branchIds.length > 0
+          ? scopedMembers.filter((m: any) => scope.branchIds.includes(m.branch_id))
+          : [];
+      }
 
         // Fetch age group configuration (fallback to defaults if not present)
         let configAgeGroups: { name: string; min_age: number; max_age: number }[] = DEFAULT_AGE_GROUPS;

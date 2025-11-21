@@ -6,6 +6,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { BranchSelector } from '@/components/shared/BranchSelector';
+import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 
 function daysUntilBirthday(dobIso: string) {
   const now = new Date();
@@ -22,19 +24,35 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export function DashboardTopBar() {
+interface DashboardTopBarProps {
+  branchId?: string | null;
+  onBranchChange?: (id: string | undefined) => void;
+}
+
+export function DashboardTopBar({ branchId, onBranchChange }: DashboardTopBarProps) {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
+  const scope = useBranchScope(orgId);
 
   const { data: birthdays = [] } = useQuery({
-    queryKey: ['dashboard-birthdays', orgId],
+    queryKey: ['dashboard-birthdays', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all'],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('members_summary')
         .select('id, full_name, date_of_birth')
         .eq('organization_id', orgId!)
         .not('date_of_birth', 'is', null);
+
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
+      } else {
+        const scoped = applyBranchScope(query, scope, 'branch_id');
+        if (scoped.abortIfEmpty) return [];
+        query = scoped.query;
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -54,15 +72,25 @@ export function DashboardTopBar() {
   const later = upcoming.filter((m: any) => m.days > 3);
 
   const { data: events = [] } = useQuery({
-    queryKey: ['dashboard-events-upcoming', orgId],
+    queryKey: ['dashboard-events-upcoming', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all'],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('events_activities')
-        .select('id, start_time')
+        .select('id, start_time, branch_id')
         .eq('organization_id', orgId!)
         .eq('is_deleted', false)
         .gte('start_time', nowIso());
+
+      if (branchId) {
+        query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
+      } else {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) return [];
+        query = scoped.query;
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -132,6 +160,15 @@ export function DashboardTopBar() {
             {events.length}
           </span>
         </div>
+      </div>
+      <div className="flex items-center">
+        <BranchSelector
+          variant="single"
+          value={branchId || undefined}
+          onValueChange={(value) => onBranchChange?.(value as string | undefined)}
+          allowClear
+          placeholder="All branches"
+        />
       </div>
     </div>
   );

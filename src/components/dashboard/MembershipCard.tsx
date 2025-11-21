@@ -4,6 +4,7 @@ import { useMemberStatistics } from '@/hooks/useMemberQueries'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/utils/supabase'
+import { useBranchScope } from '@/hooks/useBranchScope'
 
 function monthBounds(d: Date) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
@@ -11,22 +12,31 @@ function monthBounds(d: Date) {
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) }
 }
 
-export function MembershipCard() {
+interface MembershipCardProps { branchId?: string }
+export function MembershipCard({ branchId }: MembershipCardProps) {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
-  const { data: stats } = useMemberStatistics(orgId)
+  const { data: stats } = useMemberStatistics(orgId, branchId)
   const { start, end } = monthBounds(new Date())
+  const scope = useBranchScope(orgId)
   const { data: newConvertsCount } = useQuery({
-    queryKey: ['dashboard-new-converts', orgId, start, end],
+    queryKey: ['dashboard-new-converts', orgId, branchId || 'all', scope.isScoped ? scope.branchIds : 'all', start, end],
     enabled: !!orgId,
     queryFn: async () => {
-      const { count, error } = await supabase
+      let query = supabase
         .from('members')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', orgId!)
         .eq('membership_type', 'New Convert')
         .gte('date_joined', start)
         .lte('date_joined', end)
+      if (branchId) {
+        query = query.eq('branch_id', branchId)
+      } else if (scope.isScoped) {
+        if (scope.branchIds.length === 0) return 0
+        query = query.in('branch_id', scope.branchIds)
+      }
+      const { count, error } = await query
       if (error) throw error
       return count || 0
     },
