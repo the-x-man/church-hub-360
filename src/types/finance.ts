@@ -81,8 +81,25 @@ export interface IncomeResponseRow extends IncomeRecord {
 
 export type IncomeType = 'general_income' | 'contribution' | 'donation' | 'pledge_payment';
 
+export type ExpenseCategory =
+  | 'utilities'
+  | 'maintenance'
+  | 'supplies'
+  | 'equipment'
+  | 'salaries'
+  | 'benefits'
+  | 'ministry_expenses'
+  | 'outreach'
+  | 'missions'
+  | 'events'
+  | 'transportation'
+  | 'insurance'
+  | 'professional_services'
+  | 'other';
+
 // Expense types
 export interface ExpenseRecord extends BaseFinanceRecord {
+  category: ExpenseCategory;
   purpose?: string;
   vendor?: string;
   receipt_number?: string;
@@ -353,6 +370,7 @@ export interface IncomeFormData {
 
 export interface ExpenseFormData {
   amount: number;
+  category: ExpenseCategory;
   purpose?: string;
   vendor?: string;
   payment_method: PaymentMethod;

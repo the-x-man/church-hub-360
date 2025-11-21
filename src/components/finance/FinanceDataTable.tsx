@@ -80,6 +80,7 @@ interface FinanceDataTableProps {
   printDateRangeLabel?: string;
   // Control whether the per-table print header renders (useful for aggregated report prints)
   showPrintHeader?: boolean;
+  groupByKey?: string;
 }
 
 export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
@@ -98,6 +99,7 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
   printDateFilter,
   printDateRangeLabel,
   showPrintHeader = true,
+  groupByKey,
 }) => {
   const { currentOrganization } = useOrganization();
   const tableRef = useRef<HTMLDivElement | null>(null);
@@ -212,7 +214,11 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
 
   const fileBase =
     exportFileName ||
-    [toSafeSegment(orgName), toSafeSegment(titleLabel), toSafeSegment(dateRangeLabel)]
+    [
+      toSafeSegment(orgName),
+      toSafeSegment(titleLabel),
+      toSafeSegment(dateRangeLabel),
+    ]
       .filter(Boolean)
       .join('-') + `-${format(new Date(), 'yyyy-MM-dd_HH-mm')}`;
 
@@ -423,42 +429,106 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((record, index) => (
-                <TableRow key={record.id || index}>
-                  {columns.map((column) => (
-                    <TableCell key={column.key}>
-                      {renderCellValue(column, record)}
-                    </TableCell>
-                  ))}
-                  {actions.length > 0 && (
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {actions.map((action) => (
-                            <DropdownMenuItem
-                              key={action.key}
-                              onClick={() => action.onClick(record)}
-                              className={
-                                action.variant === 'destructive'
-                                  ? 'text-destructive'
-                                  : ''
-                              }
-                            >
-                              {action.icon}
-                              <span className="ml-2">{action.label}</span>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
+              (() => {
+                if (!groupByKey) {
+                  return data.map((record, index) => (
+                    <TableRow key={record.id || index}>
+                      {columns.map((column) => (
+                        <TableCell key={column.key}>
+                          {renderCellValue(column, record)}
+                        </TableCell>
+                      ))}
+                      {actions.length > 0 && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {actions.map((action) => (
+                                <DropdownMenuItem
+                                  key={action.key}
+                                  onClick={() => action.onClick(record)}
+                                  className={
+                                    action.variant === 'destructive'
+                                      ? 'text-destructive'
+                                      : ''
+                                  }
+                                >
+                                  {action.icon}
+                                  <span className="ml-2">{action.label}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ));
+                }
+                const groups: Record<string, any[]> = {};
+                for (const rec of data) {
+                  const g = String(
+                    (rec as any)[groupByKey!] ?? 'Uncategorized'
+                  );
+                  groups[g] = groups[g] || [];
+                  groups[g].push(rec);
+                }
+                const orderedGroups = Object.keys(groups).sort((a, b) =>
+                  a.localeCompare(b)
+                );
+                return orderedGroups.map((grp) => (
+                  <React.Fragment key={grp}>
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+                      >
+                        <div className="font-semibold text-primary">
+                          {humanizeUnderscore(grp)} ({groups[grp].length})
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {groups[grp].map((record, index) => (
+                      <TableRow key={(record as any).id || `${grp}-${index}`}>
+                        {columns.map((column) => (
+                          <TableCell key={column.key}>
+                            {renderCellValue(column, record)}
+                          </TableCell>
+                        ))}
+                        {actions.length > 0 && (
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {actions.map((action) => (
+                                  <DropdownMenuItem
+                                    key={action.key}
+                                    onClick={() => action.onClick(record)}
+                                    className={
+                                      action.variant === 'destructive'
+                                        ? 'text-destructive'
+                                        : ''
+                                    }
+                                  >
+                                    {action.icon}
+                                    <span className="ml-2">{action.label}</span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </React.Fragment>
+                ));
+              })()
             )}
           </TableBody>
         </Table>

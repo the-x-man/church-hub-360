@@ -16,6 +16,7 @@ create table public.expenses (
   approval_date timestamp with time zone null,
   is_deleted boolean not null default false,
   purpose text null,
+  "Category" text null,
   constraint expenses_pkey primary key (id),
   constraint expenses_branch_id_fkey foreign KEY (branch_id) references branches (id) on delete set null,
   constraint expenses_created_by_fkey foreign KEY (created_by) references auth.users (id) on delete set null,
@@ -40,10 +41,6 @@ create table public.expenses (
     )
   )
 ) TABLESPACE pg_default;
-
-create unique INDEX IF not exists uniq_expense_receipt_per_org on public.expenses using btree (organization_id, receipt_number) TABLESPACE pg_default
-where
-  (receipt_number is not null);
 
 create index IF not exists idx_expenses_org on public.expenses using btree (organization_id) TABLESPACE pg_default;
 

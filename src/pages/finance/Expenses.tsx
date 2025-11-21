@@ -7,16 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+ 
 import React, { useMemo, useState } from 'react';
 
 import {
@@ -28,14 +20,11 @@ import type {
   TableAction,
   TableColumn,
 } from '@/components/finance/FinanceDataTable';
-import { DatePicker } from '@/components/shared/DatePicker';
 import { Pagination } from '@/components/shared/Pagination';
-import { EditableField } from '@/components/shared/EditableField';
-import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead';
+ 
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useMemberDetails, type MemberSearchResult } from '@/hooks/useMemberSearch';
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from '@/hooks/finance/expenses';
-import { useExpensePreferences } from '@/hooks/finance/useExpensePreferences';
 import type {
   ExpenseFormData,
   ExpenseRecord,
@@ -43,17 +32,18 @@ import type {
   PaymentMethod,
 } from '@/types/finance';
 import { format } from 'date-fns';
-import { DollarSign, Edit, Eye, Trash2 } from 'lucide-react';
-import { paymentMethodOptions } from '@/components/finance/constants';
-import { PledgeOptionsSelect } from '@/components/finance/pledges/PledgeOptionsSelect';
-import { BranchSelector } from '@/components/shared/BranchSelector';
+import { ChartColumn, ChartLine, DollarSign, Edit, Eye, Trash2, Settings } from 'lucide-react';
+
+import { ExpenseForm } from '@/components/finance/ExpenseForm';
+import { useExpensePreferences } from '@/hooks/finance/useExpensePreferences';
+import { ExpensePreferencesDrawer } from '@/components/finance/ExpensePreferencesDrawer';
 
 const Expenses: React.FC = () => {
   const { currentOrganization } = useOrganization();
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
-  const { purposeOptions, addPurpose } = useExpensePreferences();
+  
 
   // Pagination & server data
   const [page, setPage] = useState(1);
@@ -61,6 +51,7 @@ const Expenses: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<ExpenseRecord | null>(
     null
   );
@@ -78,6 +69,14 @@ const Expenses: React.FC = () => {
   const [search, setSearch] = useState<string | undefined>(undefined);
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const { categoryKeys, categoryOptions } = useExpensePreferences();
+  const categoryLabelMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    categoryKeys.forEach((k: string, idx: number) => {
+      m[k] = categoryOptions[idx];
+    });
+    return m;
+  }, [categoryKeys, categoryOptions]);
 
   const { data: paginatedExpenses, isLoading } = useExpenses({
     page,
@@ -89,7 +88,8 @@ const Expenses: React.FC = () => {
   // Form state
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: 0,
-    purpose: 'Utilities',
+    category: 'utilities',
+    purpose: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
     payment_method: 'cash',
@@ -127,7 +127,8 @@ const Expenses: React.FC = () => {
   const resetForm = () => {
     setFormData({
       amount: 0,
-      purpose: 'Utilities',
+      category: 'utilities',
+      purpose: '',
       description: '',
       date: new Date().toISOString().split('T')[0],
       payment_method: 'cash',
@@ -155,6 +156,7 @@ const Expenses: React.FC = () => {
           id: selectedExpense.id,
           updates: {
             amount: formData.amount,
+            category: (formData as any).category as any,
             purpose: formData.purpose,
             payment_method: formData.payment_method,
             date: formData.date,
@@ -172,6 +174,7 @@ const Expenses: React.FC = () => {
       // Create new expense via hook
         await createExpense.mutateAsync({
           amount: formData.amount,
+          category: (formData as any).category as any,
           purpose: formData.purpose,
           payment_method: formData.payment_method,
           date: formData.date,
@@ -195,6 +198,7 @@ const Expenses: React.FC = () => {
     setSelectedExpense(expense);
     setFormData({
       amount: expense.amount,
+      category: (expense as any).category || 'other',
       purpose: expense.purpose || '',
       description: expense.description || '',
       date: expense.date,
@@ -278,6 +282,16 @@ const Expenses: React.FC = () => {
       label: 'Expense Date',
       sortable: true,
       render: (value: string) => format(new Date(value), 'MMM dd, yyyy'),
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      sortable: true,
+      render: (_: any, row: any) => {
+        const key = row?.category as string | undefined;
+        if (!key) return '-';
+        return categoryLabelMap[key] || String(key).replace('_', ' ');
+      },
     },
     {
       key: 'purpose',
@@ -375,7 +389,11 @@ const Expenses: React.FC = () => {
           </p>
         </div>
 
-        
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" title="Configure Preferences" className='cursor-pointer' onClick={() => setIsPrefsOpen(true)}>
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-auto">
             <DialogHeader>
@@ -384,195 +402,26 @@ const Expenses: React.FC = () => {
                 Record a new expense for the church.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        amount: parseFloat(e.target.value) || 0,
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <PledgeOptionsSelect
-                    label="Purpose"
-                    value={formData.purpose || null}
-                    options={purposeOptions}
-                    onChange={(val) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        purpose: val || '',
-                      }))
-                    }
-                    onCreateOption={async (label) => {
-                      await addPurpose(label);
-                    }}
-                    placeholder="Search purposes..."
-                    buttonClassName="w-full justify-start"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="Brief description of the expense"
-                  required
-                />
-              </div>
-             
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <DatePicker
-                    value={formData.date}
-                    onChange={(date) =>
-                      setFormData((prev) => ({ ...prev, date }))
-                    }
-                    label={undefined}
-                    formatDateLabel={(date) => format(date, 'MMM dd, yyyy')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method *</Label>
-                  <Select
-                    value={formData.payment_method}
-                    onValueChange={(value: PaymentMethod) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        payment_method: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className='w-full'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethodOptions.map((method) => (
-                        <SelectItem key={method.value} value={method.value}>
-                          {method.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Branch (optional)</Label>
-                  <BranchSelector
-                    variant="single"
-                    value={formData.branch_id || undefined}
-                    onValueChange={(v) =>
-                      setFormData((prev) => ({ ...prev, branch_id: (v as string | undefined) ?? null }))
-                    }
-                    allowClear
-                    placeholder="All branches (joint record)"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <EditableField
-                    label="Approved By"
-                    value={approvedTypeaheadValueSingle[0]?.display_name || 'None'}
-                    renderEditor={() => (
-                      <MemberSearchTypeahead
-                        organizationId={currentOrganization?.id || ''}
-                        value={approvedTypeaheadValueSingle}
-                        onChange={(items) => setApprovedBy(items[0]?.id ? String(items[0].id) : null)}
-                        placeholder="Search members"
-                      />
-                    )}
-                    startInEdit={false}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Approval Date</Label>
-                  <DatePicker
-                    value={approvalDate}
-                    onChange={(date) => setApprovalDate(date)}
-                    label={undefined}
-                    disableFuture={false}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="vendor">Vendor</Label>
-                  <Input
-                    id="vendor"
-                    value={formData.vendor}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        vendor: e.target.value,
-                      }))
-                    }
-                    placeholder="Vendor or supplier name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="receiptNumber">Receipt Number</Label>
-                  <Input
-                    id="receiptNumber"
-                    value={formData.receipt_number}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        receipt_number: e.target.value,
-                      }))
-                    }
-                    placeholder="Receipt or invoice number"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                  }
-                  placeholder="Additional notes or details"
-                  rows={3}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Add Expense</Button>
-              </DialogFooter>
-            </form>
+            <ExpenseForm
+              data={formData}
+              onChange={(next) => setFormData(next)}
+              onApprovedByChange={setApprovedBy}
+              approvalDate={approvalDate}
+              onApprovalDateChange={setApprovalDate}
+              approvedTypeaheadValueSingle={approvedTypeaheadValueSingle}
+              organizationId={currentOrganization?.id || ''}
+              onSubmit={handleSubmit}
+              submitLabel="Add Expense"
+            />
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -593,7 +442,7 @@ const Expenses: React.FC = () => {
             id: 'expense_records',
             title: 'Expense Records',
             value: stats.recordCount.toString(),
-            icon: <span>📊</span>,
+            icon: <ChartColumn className="h-4 w-4" />,
             subtitle: 'total entries',
           },
           {
@@ -602,7 +451,7 @@ const Expenses: React.FC = () => {
             value: `GHS${stats.averageExpense.toLocaleString('en-US', {
               minimumFractionDigits: 2,
             })}`,
-            icon: <span>📈</span>,
+            icon: <ChartLine className="h-4 w-4" />,
             subtitle: 'per record',
           },
           {
@@ -645,6 +494,7 @@ const Expenses: React.FC = () => {
         loading={isLoading}
         printTitle="Expenses"
         printDateFilter={filters.date_filter}
+        groupByKey="category"
         onSort={(key, dir) => {
           setSortKey(key);
           setSortDirection(dir);
@@ -669,217 +519,34 @@ const Expenses: React.FC = () => {
         />
       </div>
 
-      {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-auto" >
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
             <DialogDescription>
               Update the expense information.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-amount">Amount *</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      amount: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                {/* Category field removed from UI in edit dialog. Kept in formData for backend compatibility. */}
-              </div>
-            </div>
-
-            
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <PledgeOptionsSelect
-                  label="Purpose"
-                  value={formData.purpose || null}
-                  options={purposeOptions}
-                  onChange={(val) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      purpose: val || '',
-                    }))
-                  }
-                  onCreateOption={async (label) => {
-                    await addPurpose(label);
-                  }}
-                  placeholder="Search purposes..."
-                  buttonClassName="w-full justify-start"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description *</Label>
-                <Input
-                  id="edit-description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="Brief description of the expense"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Branch (optional)</Label>
-                <BranchSelector
-                  variant="single"
-                  value={formData.branch_id || undefined}
-                  onValueChange={(v) =>
-                    setFormData((prev) => ({ ...prev, branch_id: (v as string | undefined) ?? null }))
-                  }
-                  allowClear
-                  placeholder="All branches (joint record)"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date *</Label>
-                <DatePicker
-                  value={formData.date}
-                  onChange={(date) => setFormData((prev) => ({ ...prev, date }))}
-                  label={undefined}
-                  formatDateLabel={(date) => format(date, 'MMM dd, yyyy')}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-paymentMethod">Payment Method *</Label>
-                <Select
-                  value={formData.payment_method}
-                  onValueChange={(value: PaymentMethod) =>
-                    setFormData((prev) => ({ ...prev, payment_method: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentMethodOptions.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Branch (optional)</Label>
-                <BranchSelector
-                  variant="single"
-                  value={formData.branch_id || undefined}
-                  onValueChange={(v) =>
-                    setFormData((prev) => ({ ...prev, branch_id: (v as string | undefined) ?? null }))
-                  }
-                  allowClear
-                  placeholder="All branches (joint record)"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-vendor">Vendor</Label>
-                <Input
-                  id="edit-vendor"
-                  value={formData.vendor}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, vendor: e.target.value }))
-                  }
-                  placeholder="Vendor or supplier name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-receiptNumber">Receipt Number</Label>
-                <Input
-                  id="edit-receiptNumber"
-                  value={formData.receipt_number}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      receipt_number: e.target.value,
-                    }))
-                  }
-                  placeholder="Receipt or invoice number"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <EditableField
-                  label="Approved By"
-                  value={approvedTypeaheadValueSingle[0]?.display_name || 'None'}
-                  renderEditor={() => (
-                    <MemberSearchTypeahead
-                      organizationId={currentOrganization?.id || ''}
-                      value={approvedTypeaheadValueSingle}
-                      onChange={(items) => setApprovedBy(items[0]?.id ? String(items[0].id) : null)}
-                      placeholder="Search members"
-                    />
-                  )}
-                  startInEdit={false}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Approval Date</Label>
-                <DatePicker
-                  value={approvalDate}
-                  onChange={(date) => setApprovalDate(date)}
-                  label={undefined}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                placeholder="Additional notes or details"
-                rows={3}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Update Expense</Button>
-            </DialogFooter>
-          </form>
+          <ExpenseForm
+            data={formData}
+            onChange={(next) => setFormData(next)}
+            onApprovedByChange={setApprovedBy}
+            approvalDate={approvalDate}
+            onApprovalDateChange={setApprovalDate}
+            approvedTypeaheadValueSingle={approvedTypeaheadValueSingle}
+            organizationId={currentOrganization?.id || ''}
+            onSubmit={handleSubmit}
+            submitLabel="Update Expense"
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1022,6 +689,7 @@ const Expenses: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ExpensePreferencesDrawer open={isPrefsOpen} onOpenChange={setIsPrefsOpen} />
     </div>
   );
 };

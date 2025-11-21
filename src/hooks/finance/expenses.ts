@@ -4,7 +4,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { FinanceFilter, ExpenseRecord, PaymentMethod } from '@/types/finance';
+import type { FinanceFilter, ExpenseRecord, PaymentMethod, ExpenseCategory } from '@/types/finance';
 
 export interface ExpenseQueryParams {
   page?: number;
@@ -42,7 +42,10 @@ function applyFinanceFilters(
 
   // Purpose filter maps to `description` field values used as standardized purposes
   if (filters.purpose_filter && filters.purpose_filter.length) {
-    query = query.in('description', filters.purpose_filter as string[]);
+    const vals = (filters.purpose_filter as string[])
+      .map((v) => `'${String(v).replace(/'/g, "''")}'`)
+      .join(',');
+    query = query.or(`description.in.(${vals}),purpose.in.(${vals})`);
   }
 
   // Approved by filter matches member/user IDs stored in `approved_by`
@@ -203,6 +206,7 @@ export function useExpense(id: string | null) {
 
 export interface CreateExpenseInput {
   amount: number;
+  category: ExpenseCategory;
   purpose?: string;
   payment_method: PaymentMethod;
   date: string; // YYYY-MM-DD
@@ -229,6 +233,7 @@ export function useCreateExpense() {
         organization_id: currentOrganization.id,
         branch_id: input.branch_id || null,
         amount: input.amount,
+        category: input.category,
         purpose: input.purpose || null,
         payment_method: input.payment_method,
         date: input.date,

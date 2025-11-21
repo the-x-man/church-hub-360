@@ -58,7 +58,7 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
   const [showFilters, setShowFilters] = React.useState(false);
   const [pendingFilters, setPendingFilters] = React.useState<FinanceFilter>(filters);
   const { currentOrganization } = useOrganization();
-  const { purposeOptions } = useExpensePreferences();
+  const { purposeOptions, categoryKeys, categoryOptions, getPurposeOptions } = useExpensePreferences();
 
   // Sync pending filters when advanced panel opens or when external filters change
   React.useEffect(() => {
@@ -87,6 +87,7 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
     setPendingFilters({
       ...filters,
       purpose_filter: undefined,
+      category_filter: undefined,
       approved_by_filter: undefined,
       payment_method_filter: undefined,
       amount_range: undefined,
@@ -97,6 +98,7 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
   const getActiveFilterCount = () => {
     let count = 0;
     if (filters.purpose_filter?.length) count++;
+    if (filters.category_filter?.length) count++;
     if (filters.approved_by_filter?.length) count++;
     if (filters.payment_method_filter?.length) count++;
     if (filters.branch_id_filter?.length) count++;
@@ -205,7 +207,7 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
       </div>
 
       {/* Active Filters Display */}
-      {(datePresetValue || filters.purpose_filter?.length || filters.approved_by_filter?.length || filters.payment_method_filter?.length || (filters.amount_range && (filters.amount_range.min !== undefined || filters.amount_range.max !== undefined))) && (
+      {(datePresetValue || filters.purpose_filter?.length || filters.category_filter?.length || filters.approved_by_filter?.length || filters.payment_method_filter?.length || (filters.amount_range && (filters.amount_range.min !== undefined || filters.amount_range.max !== undefined))) && (
         <div className="flex flex-wrap gap-2">
           {/* Date filter badge */}
           {(() => {
@@ -273,6 +275,29 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
                 size="sm"
                 className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
                 onClick={() => onFiltersChange({ ...filters, purpose_filter: undefined })}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </Badge>
+          )}
+
+          {/* Category filter */}
+          {filters.category_filter && filters.category_filter.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              {(() => {
+                const labels = filters.category_filter!.map((key) => {
+                  const idx = categoryKeys.indexOf(key as any);
+                  return idx >= 0 ? categoryOptions[idx] : key;
+                });
+                return labels.length <= 2
+                  ? `Category: ${labels.join(', ')}`
+                  : `Category: ${labels.slice(0, 2).join(', ')}, +${labels.length - 2} more`;
+              })()}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                onClick={() => onFiltersChange({ ...filters, category_filter: undefined })}
               >
                 <X className="h-2 w-2" />
               </Button>
@@ -380,7 +405,39 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Purpose Filter */}
+            <div>
+              <Label>Category</Label>
+              <Select
+                value={pendingFilters.category_filter?.[0] || 'all'}
+                onValueChange={(value) => {
+                  const nextCategory = value === 'all' ? undefined : [value as any];
+                  const selectedKey = value === 'all' ? undefined : (value as string);
+                  const allowedPurposes = selectedKey ? (getPurposeOptions(selectedKey) as string[]) : (purposeOptions as string[]);
+                  const currentPurpose = pendingFilters.purpose_filter?.[0];
+                  const nextPurpose = currentPurpose && selectedKey && !allowedPurposes.includes(currentPurpose)
+                    ? undefined
+                    : pendingFilters.purpose_filter;
+                  setPendingFilters({
+                    ...pendingFilters,
+                    category_filter: nextCategory,
+                    purpose_filter: nextPurpose,
+                  });
+                }}
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categoryKeys.map((key: string, idx: number) => (
+                    <SelectItem key={key} value={key as any}>
+                      {categoryOptions[idx]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Purpose</Label>
               <Select
@@ -397,7 +454,12 @@ export const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All purposes</SelectItem>
-                  {purposeOptions.map((option) => (
+                  {(
+                    (pendingFilters.category_filter?.[0]
+                      ? (getPurposeOptions(pendingFilters.category_filter?.[0] as any) as string[])
+                      : (purposeOptions as string[])
+                    )
+                  ).map((option: string) => (
                     <SelectItem key={option} value={option}>
                       {option}
                     </SelectItem>
