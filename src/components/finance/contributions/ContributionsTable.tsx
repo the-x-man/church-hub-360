@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import type {
   TableAction,
   TableColumn,
@@ -33,6 +33,8 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
   printDateRangeLabel,
   printOrganizationName,
 }) => {
+  const [sortKey, setSortKey] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const columns: TableColumn[] = [
     {
       key: 'contributor_name',
@@ -122,6 +124,12 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
           .replace(/\b\w/g, (l) => l.toUpperCase()),
     },
     {
+      key: 'branch',
+      label: 'Branch',
+      sortable: true,
+      render: (_: any, record: IncomeResponseRow) => record.branch?.name || 'All branches',
+    },
+    {
       key: 'date',
       label: 'Date',
       sortable: true,
@@ -163,15 +171,38 @@ export const ContributionsTable: React.FC<ContributionsTableProps> = ({
     },
   ];
 
+  const sortedData = useMemo(() => {
+    if (sortKey === 'branch') {
+      const copy = [...data];
+      copy.sort((a, b) => {
+        const an = (a.branch?.name || '').toLowerCase();
+        const bn = (b.branch?.name || '').toLowerCase();
+        if (an < bn) return sortDirection === 'asc' ? -1 : 1;
+        if (an > bn) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return copy;
+    }
+    return data;
+  }, [data, sortKey, sortDirection]);
+
+  const handleSort = (key: string, direction: 'asc' | 'desc') => {
+    setSortKey(key);
+    setSortDirection(direction);
+  };
+
   return (
     <FinanceDataTable
-      data={data}
+      data={sortedData}
       columns={columns}
       actions={actions}
       printTitle={printTitle}
       printDateFilter={printDateFilter}
       printDateRangeLabel={printDateRangeLabel}
       printOrganizationName={printOrganizationName}
+      onSort={handleSort}
+      sortKey={sortKey}
+      sortDirection={sortDirection}
     />
   );
 };

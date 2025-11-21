@@ -25,6 +25,7 @@ import { MemberSearchTypeahead } from '@/components/shared/MemberSearchTypeahead
 import { GroupSelect } from '@/components/finance/GroupSelect';
 import { TagItemSelect } from '@/components/finance/TagItemSelect';
 import { OccasionSessionSelector } from '@/components/shared/OccasionSessionSelector';
+import { BranchSelector } from '@/components/shared/BranchSelector';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useMemberDetails, type MemberSearchResult } from '@/hooks/useMemberSearch';
 import { useOccasionDetails, useSessionDetails } from '@/hooks/attendance/useAttendanceSearch';
@@ -33,6 +34,7 @@ import { useTagsQuery } from '@/hooks/useRelationalTags';
 import { useDebounceValue } from '@/hooks/useDebounce';
 import { Switch } from '@/components/ui/switch';
 import type { AmountComparison, AmountOperator } from '@/utils/finance/search';
+import { useBranches } from '@/hooks/useBranchQueries';
 
 interface FilterOption {
   value: string;
@@ -93,6 +95,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
   const [showFilters, setShowFilters] = React.useState(false);
   const [pendingFilters, setPendingFilters] = React.useState<FinanceFilter>(filters);
   const { currentOrganization } = useOrganization();
+  const { data: branches = [] } = useBranches(currentOrganization?.id);
 
   // Local amount search mode state
   const [searchMode, setSearchMode] = React.useState<'text' | 'amount'>('text');
@@ -168,6 +171,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
       attendance_occasion_filter: undefined,
       attendance_session_filter: undefined,
       income_type_filter: undefined,
+      branch_id_filter: undefined,
     });
   };
 
@@ -183,6 +187,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
     if (filters.attendance_occasion_filter?.length) count++;
     if (filters.attendance_session_filter?.length) count++;
     if (filters.income_type_filter?.length) count++;
+    if (filters.branch_id_filter?.length) count++;
     return count;
   };
 
@@ -439,6 +444,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
         (filters.attendance_occasion_filter && filters.attendance_occasion_filter.length) ||
         (filters.attendance_session_filter && filters.attendance_session_filter.length) ||
         (filters.income_type_filter && filters.income_type_filter.length) ||
+        (filters.branch_id_filter && filters.branch_id_filter.length) ||
         (recordTypeFilter && recordTypeFilter !== 'all')) && (
         <div className="flex flex-wrap gap-2">
           {/* Date filter badge */}
@@ -670,6 +676,29 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
             </Badge>
           )}
 
+          {/* Branch */}
+          {filters.branch_id_filter && filters.branch_id_filter.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              {(() => {
+                const ids = filters.branch_id_filter!;
+                const labels = ids
+                  .map((id) => branches.find((b: any) => b.id === id)?.name)
+                  .filter((n): n is string => !!n);
+                return labels.length <= 2
+                  ? `Branch: ${labels.join(', ')}`
+                  : `Branch: ${labels.slice(0, 2).join(', ')}, +${labels.length - 2} more`;
+              })()}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                onClick={() => onFiltersChange({ ...filters, branch_id_filter: undefined })}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </Badge>
+          )}
+
           {/* Members */}
           {filters.member_filter && filters.member_filter.length > 0 && (
             <Badge variant="secondary" className="gap-1">
@@ -877,6 +906,23 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
                 className="min-w-0"
               />
             )}
+
+            {/* Branch Filter */}
+            <div>
+              <Label>Branch</Label>
+              <BranchSelector
+                variant="single"
+                value={pendingFilters.branch_id_filter?.[0]}
+                onValueChange={(value) => {
+                  setPendingFilters({
+                    ...pendingFilters,
+                    branch_id_filter: value ? [value as string] : undefined,
+                  });
+                }}
+                allowClear
+                placeholder="All branches"
+              />
+            </div>
           </div>
 
           {/* Apply button row */}

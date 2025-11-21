@@ -123,7 +123,7 @@ export function useExpenses(params?: ExpenseQueryParams) {
 
       let query = supabase
         .from('expenses')
-        .select('*, created_by_user:profiles(first_name, last_name)')
+        .select('*, branch:branches(id, name), created_by_user:profiles(first_name, last_name)')
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
         .order('date', { ascending: false })

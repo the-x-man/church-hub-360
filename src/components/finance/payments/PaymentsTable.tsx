@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { FinanceDataTable, type TableColumn, type TableAction } from '@/components/finance';
 import type { PledgePayment, DateFilter } from '@/types/finance';
 import { Edit, Trash2 } from 'lucide-react';
@@ -18,6 +18,8 @@ interface PaymentsTableProps {
 }
 
 export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDelete, loading, printTitle, printDateFilter, printDateRangeLabel, printOrganizationName }) => {
+  const [sortKey, setSortKey] = useState<string>('payment_date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const columns: TableColumn[] = [
     {
       key: 'payment_date',
@@ -57,6 +59,12 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDe
       },
     },
     {
+      key: 'branch',
+      label: 'Branch',
+      sortable: true,
+      render: (_: unknown, record: PledgePayment) => record.branch?.name || 'All branches',
+    },
+    {
       key: 'notes',
       label: 'Notes',
       render: (value: string | undefined) => value || '-',
@@ -91,9 +99,24 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDe
     },
   ];
 
+  const sortedData = useMemo(() => {
+    if (sortKey === 'branch') {
+      const copy = [...data];
+      copy.sort((a, b) => {
+        const an = (a.branch?.name || '').toLowerCase();
+        const bn = (b.branch?.name || '').toLowerCase();
+        if (an < bn) return sortDirection === 'asc' ? -1 : 1;
+        if (an > bn) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return copy;
+    }
+    return data;
+  }, [data, sortKey, sortDirection]);
+
   return (
     <FinanceDataTable
-      data={data}
+      data={sortedData}
       columns={columns}
       actions={actions}
       loading={loading}
@@ -101,6 +124,12 @@ export const PaymentsTable: React.FC<PaymentsTableProps> = ({ data, onEdit, onDe
       printDateFilter={printDateFilter}
       printDateRangeLabel={printDateRangeLabel}
       printOrganizationName={printOrganizationName}
+      onSort={(key, dir) => {
+        setSortKey(key);
+        setSortDirection(dir);
+      }}
+      sortKey={sortKey}
+      sortDirection={sortDirection}
     />
   );
 };

@@ -76,21 +76,31 @@ const Income: React.FC = () => {
       );
     }
 
-    filtered.sort((a, b) => {
-      let aValue = a[sortKey as keyof IncomeResponseRow] as any;
-      let bValue = b[sortKey as keyof IncomeResponseRow] as any;
+    if (sortKey === 'branch') {
+      filtered.sort((a, b) => {
+        const an = (a.branch?.name || '').toLowerCase();
+        const bn = (b.branch?.name || '').toLowerCase();
+        if (an < bn) return sortDirection === 'asc' ? -1 : 1;
+        if (an > bn) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      filtered.sort((a, b) => {
+        let aValue = (a as any)[sortKey];
+        let bValue = (b as any)[sortKey];
 
-      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
-      if (aValue == null && bValue == null) return 0;
-      if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
-      if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
+        if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
 
     return filtered;
   }, [incomesQuery.data?.data, filters, sortKey, sortDirection]);
@@ -202,6 +212,12 @@ const Income: React.FC = () => {
       render: (value) =>
         (paymentMethodOptions.find((opt) => opt.value === value)?.label ||
           value) as string,
+    },
+    {
+      key: 'branch',
+      label: 'Branch',
+      sortable: true,
+      render: (_: any, record: IncomeResponseRow) => record.branch?.name || 'All branches',
     },
     {
       key: 'receipt_number',

@@ -319,6 +319,7 @@ export function Pledges() {
             end_date: selectedPledge.end_date,
             payment_frequency: selectedPledge.payment_frequency,
             description: selectedPledge.description || undefined,
+            branch_id: selectedPledge.branch_id,
           }}
           onSuccess={() => {
             setPage(1);

@@ -77,9 +77,15 @@ export function SingleBranchSelector({
   );
 
   const visibleBranches = useMemo(() => {
-    if (canManageAllData()) return filteredBranches;
-    return filteredBranches.filter((b) => assignedBranchIds.includes(b.id));
-  }, [filteredBranches, assignedBranchIds, canManageAllData]);
+    const base = canManageAllData()
+      ? filteredBranches
+      : filteredBranches.filter((b) => assignedBranchIds.includes(b.id));
+    if (value && !base.some((b) => b.id === value)) {
+      const current = filteredBranches.find((b) => b.id === value);
+      return current ? [current, ...base] : base;
+    }
+    return base;
+  }, [filteredBranches, assignedBranchIds, canManageAllData, value]);
 
   const selectedBranch = visibleBranches.find((branch) => branch.id === value);
 
@@ -197,8 +203,9 @@ export function MultiBranchSelector({
   }, [filteredBranches, assignedBranchIds, canManageAllData]);
 
   const selectedBranches = useMemo(() => {
-    return visibleBranches.filter((branch) => value.includes(branch.id));
-  }, [visibleBranches, value]);
+    const byId = new Map(filteredBranches.map((b) => [b.id, b] as const));
+    return value.map((id) => byId.get(id)).filter(Boolean) as typeof filteredBranches;
+  }, [filteredBranches, value]);
 
   const isAllSelected = useMemo(() => {
     return (

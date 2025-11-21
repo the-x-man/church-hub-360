@@ -42,6 +42,7 @@ import type {
 } from '@/types/finance';
 import React, { useEffect, useMemo, useState } from 'react';
 import { paymentMethodOptions } from './constants';
+import { BranchSelector } from '@/components/shared/BranchSelector';
 
 
 type IncomeFieldKey =
@@ -687,6 +688,20 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
             {errors.payment_method && (
               <p className="text-destructive text-sm mt-1" aria-live="polite">{errors.payment_method}</p>
             )}
+          </div>
+
+          {/* Branch (optional) */}
+          <div className="space-y-2">
+            <Label>Branch (optional)</Label>
+            <BranchSelector
+              variant="single"
+              value={form.branch_id || undefined}
+              onValueChange={(v) =>
+                setForm((prev) => ({ ...prev, branch_id: (v as string | undefined) ?? null }))
+              }
+              allowClear
+              placeholder="All branches (joint record)"
+            />
           </div>
 
           {/* Date & Envelope */}

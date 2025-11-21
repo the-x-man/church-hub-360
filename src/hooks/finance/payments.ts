@@ -3,8 +3,9 @@ import { supabase } from '@/utils/supabase';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { DateFilter, PaymentMethod, PledgePayment, IncomeResponseRow } from '@/types/finance';
+import type { DateFilter, PaymentMethod, PledgePayment, IncomeResponseRow, PaymentFilter } from '@/types/finance';
 import type { AmountComparison } from '@/utils/finance/search';
+import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 
 export interface PaymentsQueryParams {
   page?: number;
@@ -13,6 +14,7 @@ export interface PaymentsQueryParams {
   dateFilter?: DateFilter;
   amountSearch?: AmountComparison | null;
   paymentMethodFilter?: PaymentMethod[];
+  filters?: PaymentFilter;
 }
 
 export interface PaginatedPaymentsResponse {
@@ -74,6 +76,7 @@ function applyAmountSearch(query: any, amountSearch?: AmountComparison | null) {
 
 export function useAllPledgePayments(params?: PaymentsQueryParams) {
   const { currentOrganization } = useOrganization();
+  const scope = useBranchScope(currentOrganization?.id);
 
   const queryParams: Required<Pick<PaymentsQueryParams, 'page' | 'pageSize'>> & PaymentsQueryParams = {
     page: 1,
@@ -82,7 +85,11 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
   };
 
   return useQuery({
-    queryKey: paymentKeys.list(currentOrganization?.id || '', queryParams),
+    queryKey: [
+      ...paymentKeys.list(currentOrganization?.id || '', queryParams),
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<PaginatedPaymentsResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
@@ -91,6 +98,7 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
         .select(
           `*,
            created_by_user:profiles(first_name, last_name),
+           branch:branches(id, name),
            pledge:pledge_records(
              id,
              pledge_type,
@@ -101,6 +109,7 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
              group_id,
              tag_item_id,
              branch_id,
+             branch:branches(id, name),
              member:members(id, first_name, middle_name, last_name),
              group:groups(id, name),
              tag_item:tag_items(id, name)
@@ -120,12 +129,31 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
         query = query.or(orClauses.join(','));
       }
 
+      if (queryParams.filters?.branch_id_filter && queryParams.filters.branch_id_filter.length) {
+        const ids = (queryParams.filters.branch_id_filter as string[]).join(',');
+        query = query.or(`branch_id.in.(${ids}),branch_id.is.null`);
+      }
+
       if (queryParams.paymentMethodFilter && queryParams.paymentMethodFilter.length) {
         query = query.in('payment_method', queryParams.paymentMethodFilter as string[]);
       }
 
       query = applyDateFilter(query, queryParams.dateFilter);
       query = applyAmountSearch(query, queryParams.amountSearch);
+
+      {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: queryParams.page!,
+            pageSize: queryParams.pageSize!,
+          };
+        }
+        query = scoped.query;
+      }
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;
@@ -178,7 +206,8 @@ export function useAllPledgePayments(params?: PaymentsQueryParams) {
           pledge_label = String(r.pledge_id || '').slice(0, 8) ? `${String(r.pledge_id).slice(0, 8)}…` : 'Pledge';
         }
 
-        return { ...r, member_name, group_name, tag_item_name, contributor_name, pledge_label } as any;
+        const resolvedBranch = r.branch || (r.pledge?.branch ?? null);
+        return { ...r, member_name, group_name, tag_item_name, contributor_name, pledge_label, branch: resolvedBranch } as any;
       });
 
       return {
@@ -276,6 +305,7 @@ export interface PaginatedIncomeFromPaymentsResponse {
 
 export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
   const { currentOrganization } = useOrganization();
+  const scope = useBranchScope(currentOrganization?.id);
 
   const queryParams: Required<Pick<PaymentsQueryParams, 'page' | 'pageSize'>> & PaymentsQueryParams = {
     page: 1,
@@ -284,7 +314,11 @@ export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
   };
 
   return useQuery({
-    queryKey: paymentKeys.incomes(currentOrganization?.id || '', queryParams),
+    queryKey: [
+      ...paymentKeys.incomes(currentOrganization?.id || '', queryParams),
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<PaginatedIncomeFromPaymentsResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
@@ -293,6 +327,7 @@ export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
         .select(
           `*,
            created_by_user:profiles(first_name, last_name),
+           branch:branches(id, name),
            pledge:pledge_records(
              id,
              pledge_type,
@@ -303,6 +338,7 @@ export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
              group_id,
              tag_item_id,
              branch_id,
+             branch:branches(id, name),
              member:members(id, first_name, middle_name, last_name),
              group:groups(id, name),
              tag_item:tag_items(id, name)
@@ -322,12 +358,31 @@ export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
         query = query.or(orClauses.join(','));
       }
 
+      if (queryParams.filters?.branch_id_filter && queryParams.filters.branch_id_filter.length) {
+        const ids = (queryParams.filters.branch_id_filter as string[]).join(',');
+        query = query.or(`branch_id.in.(${ids}),branch_id.is.null`);
+      }
+
       if (queryParams.paymentMethodFilter && queryParams.paymentMethodFilter.length) {
         query = query.in('payment_method', queryParams.paymentMethodFilter as string[]);
       }
 
       query = applyDateFilter(query, queryParams.dateFilter);
       query = applyAmountSearch(query, queryParams.amountSearch);
+
+      {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: queryParams.page!,
+            pageSize: queryParams.pageSize!,
+          };
+        }
+        query = scoped.query;
+      }
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;
@@ -396,6 +451,7 @@ export function usePledgePaymentsAsIncome(params?: PaymentsQueryParams) {
           tag_item_id: r.pledge?.tag_item_id || undefined,
           payment_method: r.payment_method,
           receipt_number: undefined,
+          branch: r.branch || r.pledge?.branch || null,
         } as IncomeResponseRow;
 
         return income;

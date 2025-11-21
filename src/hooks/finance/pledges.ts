@@ -10,6 +10,7 @@ import type {
   PledgeStatus,
   PledgeFilter,
 } from '@/types/finance';
+import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 
 export interface PledgesQueryParams {
   page?: number;
@@ -106,11 +107,18 @@ function applyPledgeFilters(
     }
   }
 
+  // Branch filter (include joint records)
+  if (filters.branch_id_filter && filters.branch_id_filter.length) {
+    const ids = (filters.branch_id_filter as string[]).join(',');
+    query = query.or(`branch_id.in.(${ids}),branch_id.is.null`);
+  }
+
   return query;
 }
 
 export function usePledges(params?: PledgesQueryParams) {
   const { currentOrganization } = useOrganization();
+  const scope = useBranchScope(currentOrganization?.id);
 
   const queryParams: Required<Pick<PledgesQueryParams, 'page' | 'pageSize'>> & PledgesQueryParams = {
     page: 1,
@@ -119,7 +127,11 @@ export function usePledges(params?: PledgesQueryParams) {
   };
 
   return useQuery({
-    queryKey: pledgeKeys.list(currentOrganization?.id || '', queryParams),
+    queryKey: [
+      ...pledgeKeys.list(currentOrganization?.id || '', queryParams),
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<PaginatedPledgesResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
@@ -130,6 +142,7 @@ export function usePledges(params?: PledgesQueryParams) {
            member:members(id, first_name, middle_name, last_name),
            group:groups(id, name),
            tag_item:tag_items(id, name),
+           branch:branches(id, name),
            created_by_user:profiles(first_name, last_name)`,
           { count: 'exact' }
         )
@@ -174,6 +187,20 @@ export function usePledges(params?: PledgesQueryParams) {
       }
 
       query = applyPledgeFilters(query, queryParams.filters);
+
+      {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: queryParams.page!,
+            pageSize: queryParams.pageSize!,
+          };
+        }
+        query = scoped.query;
+      }
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;
@@ -241,7 +268,7 @@ export function usePledge(id: string | null) {
 
       const { data, error } = await supabase
         .from('pledge_records')
-        .select(`*, member:members(id, first_name, middle_name, last_name), group:groups(id, name), tag_item:tag_items(id, name), created_by_user:profiles(first_name, last_name)`)
+        .select(`*, member:members(id, first_name, middle_name, last_name), group:groups(id, name), tag_item:tag_items(id, name), branch:branches(id, name), created_by_user:profiles(first_name, last_name)`)
         .eq('id', id)
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
@@ -433,6 +460,7 @@ export function useDeletePledge() {
 
 export function usePledgePayments(pledgeId: string | null, params?: PledgePaymentsQueryParams) {
   const { currentOrganization } = useOrganization();
+  const scope = useBranchScope(currentOrganization?.id);
 
   const queryParams: Required<Pick<PledgePaymentsQueryParams, 'page' | 'pageSize'>> & PledgePaymentsQueryParams = {
     page: 1,
@@ -441,7 +469,11 @@ export function usePledgePayments(pledgeId: string | null, params?: PledgePaymen
   };
 
   return useQuery({
-    queryKey: pledgeKeys.pledgePayments(pledgeId || '', queryParams),
+    queryKey: [
+      ...pledgeKeys.pledgePayments(pledgeId || '', queryParams),
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<PaginatedPledgePaymentsResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
       if (!pledgeId) throw new Error('Pledge ID is required');
@@ -453,6 +485,20 @@ export function usePledgePayments(pledgeId: string | null, params?: PledgePaymen
         .eq('is_deleted', false)
         .order('payment_date', { ascending: false })
         .order('created_at', { ascending: false });
+
+      {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: queryParams.page!,
+            pageSize: queryParams.pageSize!,
+          };
+        }
+        query = scoped.query;
+      }
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;
@@ -484,6 +530,7 @@ export interface CreatePledgePaymentInput {
   payment_date: string; // YYYY-MM-DD
   payment_method: PaymentMethod;
   notes?: string;
+  branch_id?: string | null;
 }
 
 export function useCreatePledgePayment() {
@@ -496,6 +543,15 @@ export function useCreatePledgePayment() {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
       if (!user?.id) throw new Error('User not authenticated');
 
+      const { data: pledgeRow, error: pledgeError } = await supabase
+        .from('pledge_records')
+        .select('branch_id')
+        .eq('id', input.pledge_id)
+        .eq('organization_id', currentOrganization.id)
+        .single();
+      if (pledgeError) throw pledgeError;
+      const pledgeBranchId = (pledgeRow as any)?.branch_id || null;
+
       const payload = {
         organization_id: currentOrganization.id,
         pledge_id: input.pledge_id,
@@ -504,6 +560,7 @@ export function useCreatePledgePayment() {
         payment_method: input.payment_method,
         notes: input.notes || null,
         created_by: user.id,
+        branch_id: pledgeBranchId,
       };
 
       const { data, error } = await supabase

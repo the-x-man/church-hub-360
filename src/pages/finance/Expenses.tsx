@@ -43,7 +43,7 @@ import type {
   PaymentMethod,
 } from '@/types/finance';
 import { format } from 'date-fns';
-import { Edit, Eye, Trash2 } from 'lucide-react';
+import { DollarSign, Edit, Eye, Trash2 } from 'lucide-react';
 import { paymentMethodOptions } from '@/components/finance/constants';
 import { PledgeOptionsSelect } from '@/components/finance/pledges/PledgeOptionsSelect';
 import { BranchSelector } from '@/components/shared/BranchSelector';
@@ -76,6 +76,8 @@ const Expenses: React.FC = () => {
 
   // Text search for expenses
   const [search, setSearch] = useState<string | undefined>(undefined);
+  const [sortKey, setSortKey] = useState<string>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const { data: paginatedExpenses, isLoading } = useExpenses({
     page,
@@ -223,6 +225,21 @@ const Expenses: React.FC = () => {
     return paginatedExpenses?.data || [];
   }, [paginatedExpenses]);
 
+  const sortedExpenses = useMemo(() => {
+    if (sortKey === 'branch') {
+      const copy = [...filteredExpenses];
+      copy.sort((a: any, b: any) => {
+        const an = (a.branch?.name || '').toLowerCase();
+        const bn = (b.branch?.name || '').toLowerCase();
+        if (an < bn) return sortDirection === 'asc' ? -1 : 1;
+        if (an > bn) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return copy;
+    }
+    return filteredExpenses;
+  }, [filteredExpenses, sortKey, sortDirection]);
+
   // Calculate statistics
   const stats = useMemo(() => {
 
@@ -299,6 +316,12 @@ const Expenses: React.FC = () => {
       ),
     },
     {
+      key: 'branch',
+      label: 'Branch',
+      sortable: true,
+      render: (_: any, row: any) => row.branch?.name || 'All branches',
+    },
+    {
       key: 'created_at',
       label: 'Created At',
       sortable: true,
@@ -354,7 +377,7 @@ const Expenses: React.FC = () => {
 
         
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[95vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Add New Expense</DialogTitle>
               <DialogDescription>
@@ -563,7 +586,7 @@ const Expenses: React.FC = () => {
             value: `GHS${stats.totalExpenses.toLocaleString('en-US', {
               minimumFractionDigits: 2,
             })}`,
-            icon: <span className="text-red-600">💰</span>,
+            icon: <DollarSign className="h-4 w-4" />,
             color: 'destructive',
           },
           {
@@ -616,12 +639,18 @@ const Expenses: React.FC = () => {
 
       {/* Data Table */}
       <FinanceDataTable
-        data={filteredExpenses}
+        data={sortedExpenses}
         columns={columns}
         actions={actions}
         loading={isLoading}
         printTitle="Expenses"
         printDateFilter={filters.date_filter}
+        onSort={(key, dir) => {
+          setSortKey(key);
+          setSortDirection(dir);
+        }}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
       />
 
       <div className="mt-4">

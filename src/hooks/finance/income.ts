@@ -12,6 +12,7 @@ import type {
   IncomeResponseRow,
 } from '@/types/finance';
 import type { AmountComparison } from '@/utils/finance/search';
+import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 
 export interface IncomeQueryParams {
   page?: number;
@@ -91,7 +92,8 @@ function applyFinanceFilters(
   }
 
   if (filters.branch_id_filter && filters.branch_id_filter.length) {
-    query = query.in('branch_id', filters.branch_id_filter as string[]);
+    const ids = (filters.branch_id_filter as string[]).join(',');
+    query = query.or(`branch_id.in.(${ids}),branch_id.is.null`);
   }
 
   // Date filter: always rely on provided start/end from UI mapping
@@ -112,6 +114,7 @@ function applyFinanceFilters(
 
 export function useIncomes(params?: IncomeQueryParams) {
   const { currentOrganization } = useOrganization();
+  const scope = useBranchScope(currentOrganization?.id);
 
   const queryParams: Required<Pick<IncomeQueryParams, 'page' | 'pageSize'>> & IncomeQueryParams = {
     page: 1,
@@ -120,7 +123,11 @@ export function useIncomes(params?: IncomeQueryParams) {
   };
 
   return useQuery({
-    queryKey: incomeKeys.list(currentOrganization?.id || '', queryParams),
+    queryKey: [
+      ...incomeKeys.list(currentOrganization?.id || '', queryParams),
+      'branchScope',
+      scope.isScoped ? scope.branchIds : 'all',
+    ],
     queryFn: async (): Promise<PaginatedIncomeResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
@@ -131,6 +138,7 @@ export function useIncomes(params?: IncomeQueryParams) {
            member:members(id, first_name, middle_name, last_name, profile_image_url),
            group:groups(id, name),
            tag_item:tag_items(id, name, color),
+           branch:branches(id, name),
            created_by_user:profiles(first_name, last_name),
            attendance_occasions(name),
            attendance_sessions(name, attendance_occasions(name))`,
@@ -185,6 +193,20 @@ export function useIncomes(params?: IncomeQueryParams) {
       }
 
       query = applyFinanceFilters(query, queryParams.filters);
+
+      {
+        const scoped = applyBranchScope(query, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: queryParams.page!,
+            pageSize: queryParams.pageSize!,
+          };
+        }
+        query = scoped.query;
+      }
 
       const from = (queryParams.page! - 1) * queryParams.pageSize!;
       const to = from + queryParams.pageSize! - 1;

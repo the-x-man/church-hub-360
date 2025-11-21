@@ -13,6 +13,9 @@ import { format } from 'date-fns';
 import React from 'react';
 import { useDebounceValue } from '@/hooks/useDebounce';
 import type { AmountComparison, AmountOperator } from '@/utils/finance/search';
+import { BranchSelector } from '@/components/shared/BranchSelector';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { useBranches } from '@/hooks/useBranchQueries';
 
 
 type PledgeFilterVisibilityKey =
@@ -51,6 +54,8 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
   const debouncedSearchTerm = useDebounceValue(searchTerm, 1000);
   const [showFilters, setShowFilters] = React.useState(false);
   const [pendingFilters, setPendingFilters] = React.useState<PledgeFilter>(filters);
+  const { currentOrganization } = useOrganization();
+  const { data: branches = [] } = useBranches(currentOrganization?.id);
 
   // Local amount search mode state
   const [searchMode, setSearchMode] = React.useState<'text' | 'amount'>('text');
@@ -117,6 +122,7 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
       amount_paid_range: undefined,
       amount_remaining_range: undefined,
       progress_range: undefined,
+      branch_id_filter: undefined,
     });
   };
 
@@ -127,6 +133,7 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
     if (filters.amount_paid_range?.min !== undefined || filters.amount_paid_range?.max !== undefined) count++;
     if (filters.amount_remaining_range?.min !== undefined || filters.amount_remaining_range?.max !== undefined) count++;
     if (filters.progress_range?.min !== undefined || filters.progress_range?.max !== undefined) count++;
+    if (filters.branch_id_filter?.length) count++;
     return count;
   };
 
@@ -272,6 +279,7 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
         (filters.amount_paid_range && (filters.amount_paid_range.min !== undefined || filters.amount_paid_range.max !== undefined)) ||
         (filters.amount_remaining_range && (filters.amount_remaining_range.min !== undefined || filters.amount_remaining_range.max !== undefined)) ||
         (filters.progress_range && (filters.progress_range.min !== undefined || filters.progress_range.max !== undefined)) ||
+        (filters.branch_id_filter && filters.branch_id_filter.length) ||
         dateBadgeLabel
       ) && (
         <div className="flex flex-wrap gap-2">
@@ -375,6 +383,29 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
               </Button>
             </Badge>
           )}
+
+          {/* Branch */}
+          {filters.branch_id_filter && filters.branch_id_filter.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              {(() => {
+                const ids = filters.branch_id_filter!;
+                const labels = ids
+                  .map((id) => branches.find((b: any) => b.id === id)?.name)
+                  .filter((n): n is string => !!n);
+                return labels.length <= 2
+                  ? `Branch: ${labels.join(', ')}`
+                  : `Branch: ${labels.slice(0, 2).join(', ')}, +${labels.length - 2} more`;
+              })()}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                onClick={() => onFiltersChange({ ...filters, branch_id_filter: undefined })}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </Badge>
+          )}
         </div>
       )}
 
@@ -449,11 +480,11 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
             </div>
           )}
 
-          {/* Amount Paid Range */}
-          {isVisible('amount_paid_range') && (
-            <div>
-              <Label>Amount Paid</Label>
-              <div className="flex gap-2 mt-1">
+            {/* Amount Paid Range */}
+            {isVisible('amount_paid_range') && (
+              <div>
+                <Label>Amount Paid</Label>
+                <div className="flex gap-2 mt-1">
                 <Input
                   type="number"
                   placeholder="Min"
@@ -479,8 +510,25 @@ export const PledgeFilterBar: React.FC<PledgeFilterBarProps> = ({
                   }}
                 />
               </div>
+              </div>
+            )}
+
+            {/* Branch Filter */}
+            <div>
+              <Label>Branch</Label>
+              <BranchSelector
+                variant="single"
+                value={pendingFilters.branch_id_filter?.[0]}
+                onValueChange={(value) => {
+                  setPendingFilters({
+                    ...pendingFilters,
+                    branch_id_filter: value ? [value as string] : undefined,
+                  });
+                }}
+                allowClear
+                placeholder="All branches"
+              />
             </div>
-          )}
 
           {/* Amount Remaining Range */}
           {isVisible('amount_remaining_range') && (

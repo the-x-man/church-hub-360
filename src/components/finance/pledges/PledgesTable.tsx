@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { FinanceDataTable, type TableColumn, type TableAction } from '@/components/finance';
 import type { PledgeRecord, DateFilter } from '@/types/finance';
 import { format } from 'date-fns';
+import { useMemo, useState } from 'react';
 
 interface PledgesTableProps {
   data: PledgeRecord[];
@@ -19,6 +20,9 @@ interface PledgesTableProps {
 }
 
 export function PledgesTable({ data, actions = [], loading, printTitle, printDateFilter, printDateRangeLabel, printOrganizationName, exportable = true, showPrintHeader = true }: PledgesTableProps) {
+  const [sortKey, setSortKey] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   const pledgeColumns: TableColumn[] = [
     {
       key: 'created_at',
@@ -33,6 +37,7 @@ export function PledgesTable({ data, actions = [], loading, printTitle, printDat
       },
     },
     { key: 'contributor_name', label: 'Source', sortable: true },
+    { key: 'branch', label: 'Branch', sortable: true, render: (_: unknown, row: PledgeRecord) => row.branch?.name || 'All branches' },
     {
       key: 'pledge_type',
       label: 'Pledge Type',
@@ -84,9 +89,29 @@ export function PledgesTable({ data, actions = [], loading, printTitle, printDat
     { key: 'end_date', label: 'End Date', sortable: true },
   ];
 
+  const sortedData = useMemo(() => {
+    if (sortKey === 'branch') {
+      const copy = [...data];
+      copy.sort((a, b) => {
+        const an = (a.branch?.name || '').toLowerCase();
+        const bn = (b.branch?.name || '').toLowerCase();
+        if (an < bn) return sortDirection === 'asc' ? -1 : 1;
+        if (an > bn) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return copy;
+    }
+    return data;
+  }, [data, sortKey, sortDirection]);
+
+  const handleSort = (key: string, direction: 'asc' | 'desc') => {
+    setSortKey(key);
+    setSortDirection(direction);
+  };
+
   return (
     <FinanceDataTable
-      data={data}
+      data={sortedData}
       columns={pledgeColumns}
       actions={actions}
       loading={loading}
@@ -96,6 +121,9 @@ export function PledgesTable({ data, actions = [], loading, printTitle, printDat
       printOrganizationName={printOrganizationName}
       exportable={exportable}
       showPrintHeader={showPrintHeader}
+      onSort={handleSort}
+      sortKey={sortKey}
+      sortDirection={sortDirection}
     />
   );
 }

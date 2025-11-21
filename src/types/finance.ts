@@ -65,6 +65,7 @@ export interface IncomeResponseRow extends IncomeRecord {
   member?: IncomeMemberRelation | null;
   group?: IncomeGroupRelation | null;
   tag_item?: IncomeTagItemRelation | null;
+  branch?: { id: string; name: string } | null;
   // Link to pledge record when this income represents a pledge payment
   pledge_id?: string;
   // Derived display fields computed in hooks
@@ -88,6 +89,7 @@ export interface ExpenseRecord extends BaseFinanceRecord {
   payment_method: PaymentMethod;
   approved_by?: string;
   approval_date?: string;
+  branch?: { id: string; name: string } | null;
   created_by_user?: {
     first_name: string;
     last_name: string;
@@ -140,6 +142,7 @@ export interface PledgeRecord {
   id: string;
   organization_id: string;
   branch_id: string;
+  branch?: { id: string; name: string } | null;
   // Source fields
   source_type?: 'church' | 'member' | 'tag_item' | 'group' | 'other';
   source?: string; // when source_type === 'other'
@@ -179,6 +182,8 @@ export interface PledgePayment {
   payment_date: string;
   payment_method: PaymentMethod;
   notes?: string;
+  branch_id: string | null;
+  branch?: { id: string; name: string } | null;
   created_by: string;
   created_at: string;
   created_by_user?: {
@@ -306,6 +311,7 @@ export interface PledgeFilter {
   member_filter?: string[];
   group_filter?: string[];
   tag_item_filter?: string[];
+  branch_id_filter?: string[];
 }
 
 export interface FinanceStats {
@@ -399,6 +405,7 @@ export interface PaymentFilter {
   date_filter: DateFilter;
   payment_method_filter?: PaymentMethod[];
   amount_range?: { min?: number; max?: number };
+  branch_id_filter?: string[];
 }
 
 // Extended Budget Planning Types

@@ -168,7 +168,7 @@ export function PledgeFormDialog({ open, onOpenChange, mode, title, initialData,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>{title || (mode === 'add' ? 'Add New Pledge' : 'Edit Pledge')}</DialogTitle>
           <DialogDescription>
