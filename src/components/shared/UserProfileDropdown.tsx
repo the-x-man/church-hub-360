@@ -31,7 +31,7 @@ import { HelpDrawer } from './HelpDrawer';
 import { UpdateDrawer } from '../../modules/auto-update/UpdateDrawer';
 import { openExternalUrl } from '../../utils/external-url';
 import { useUpdateStore } from '../../modules/auto-update/stores/updateStore';
-import { processAvatarUrl } from '../../utils/asset-path';
+import { processAvatarUrl, isElectron } from '../../utils/asset-path';
 import { useRoleCheck } from '@/registry/access/RoleGuard';
 
 export function UserProfileDropdown() {
@@ -189,17 +189,18 @@ export function UserProfileDropdown() {
             </DropdownMenuItem>
           )}
 
-          {/* Check for Updates */}
-          <DropdownMenuItem
-            onClick={handleCheckForUpdates}
-            className="cursor-pointer"
-          >
-            <Download className="mr-3 h-4 w-4" />
-            <span>Check for Updates</span>
-            {hasUpdate && (
-              <div className="ml-auto h-2 w-2 rounded-full bg-green-500" />
-            )}
-          </DropdownMenuItem>
+          {isElectron() && (
+            <DropdownMenuItem
+              onClick={handleCheckForUpdates}
+              className="cursor-pointer"
+            >
+              <Download className="mr-3 h-4 w-4" />
+              <span>Check for Updates</span>
+              {hasUpdate && (
+                <div className="ml-auto h-2 w-2 rounded-full bg-green-500" />
+              )}
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuSeparator />
 
@@ -236,12 +237,14 @@ export function UserProfileDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <UpdateDrawer
-        isOpen={isUpdateDrawerOpen}
-        onOpenChange={setIsUpdateDrawerOpen}
-      >
-        {null}
-      </UpdateDrawer>
+      {isElectron() && (
+        <UpdateDrawer
+          isOpen={isUpdateDrawerOpen}
+          onOpenChange={setIsUpdateDrawerOpen}
+        >
+          {null}
+        </UpdateDrawer>
+      )}
     </div>
   );
 }

@@ -41,6 +41,7 @@ import { ThemeSwitcher } from '../components/shared/ThemeSwitcher';
 import { UpdateSettings } from '../modules/auto-update/UpdateSettings';
 import type { UpdateOrganizationData } from '../types/organizations';
 import { toast } from 'sonner';
+import { isElectron } from '../utils/asset-path';
 
 export function Settings() {
   const { currentOrganization, updateOrganization } = useOrganization();
@@ -294,7 +295,7 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="organization" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isElectron() ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger
             value="organization"
             className="flex items-center space-x-2"
@@ -316,10 +317,12 @@ export function Settings() {
             <Bell className="h-4 w-4" />
             <span>Notifications</span>
           </TabsTrigger>
-          <TabsTrigger value="updates" className="flex items-center space-x-2">
-            <Download className="h-4 w-4" />
-            <span>Updates</span>
-          </TabsTrigger>
+          {isElectron() && (
+            <TabsTrigger value="updates" className="flex items-center space-x-2">
+              <Download className="h-4 w-4" />
+              <span>Updates</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="organization" className="space-y-6">
@@ -622,19 +625,21 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="updates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Software Updates</CardTitle>
-              <CardDescription>
-                Check for application updates and install new versions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UpdateSettings />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isElectron() && (
+          <TabsContent value="updates" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Software Updates</CardTitle>
+                <CardDescription>
+                  Check for application updates and install new versions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UpdateSettings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
