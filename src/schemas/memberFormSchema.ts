@@ -17,7 +17,7 @@ export const defaultMembershipSchema = z.object({
   
   // Contact Information
   phone: z.string().min(1, 'Phone number is required').regex(/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number'),
-  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   
   // Address Information
   address_line_1: z.string().min(1, 'Address line 1 is required').max(100, 'Address line 1 must be less than 100 characters'),

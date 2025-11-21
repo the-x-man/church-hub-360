@@ -45,7 +45,7 @@ export interface DefaultMembershipFormData {
   gender: string;
   marital_status: string;
   phone: string;
-  email: string;
+  email?: string;
   address_line_1: string;
   address_line_2?: string;
   city: string;
@@ -277,9 +277,7 @@ export const DefaultMembershipForm = forwardRef<
       if (!lastName.trim()) {
         newErrors.last_name = 'Last name is required';
       }
-      if (!email.trim()) {
-        newErrors.email = 'Email is required';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         newErrors.email = 'Please enter a valid email address';
       }
       if (!phone.trim()) {
@@ -765,7 +763,7 @@ export const DefaultMembershipForm = forwardRef<
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  Email Address <span className="text-red-500">*</span>
+                  Email Address
                 </Label>
                 <Input
                   id="email"
