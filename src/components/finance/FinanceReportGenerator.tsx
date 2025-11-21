@@ -21,6 +21,8 @@ import { useReactToPrint } from 'react-to-print';
 import { parseISO, format as formatDate } from 'date-fns';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useReportTemplateLabels } from '@/hooks/reports/useReportTemplateLabels';
+import { BranchSelector } from '@/components/shared/BranchSelector';
+import { useBranches } from '@/hooks/useBranchQueries';
 import {
   DEFAULT_INCOME_STATEMENT_LABELS,
   DEFAULT_PLEDGES_SUMMARY_LABELS,
@@ -208,6 +210,13 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
   // Export helpers
   const printRef = React.useRef<HTMLDivElement | null>(null);
   const { currentOrganization } = useOrganization();
+  const { data: allBranches = [] } = useBranches(currentOrganization?.id);
+  const branchName = React.useMemo(() => {
+    const bid = filters.branch_id_filter?.[0];
+    if (!bid) return undefined;
+    const b = (allBranches as any[]).find((br) => br.id === bid);
+    return b?.name as string | undefined;
+  }, [filters.branch_id_filter, allBranches]);
 
   const sheetFromPivot = (title: string, rows: PivotRow[]) => {
     const header = ['Item', ...columnOrder.map((k) => columnLabels[k] || k), 'Total'];
@@ -603,6 +612,19 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
             <div>
               <DatePresetPicker value={datePresetValue} onChange={handleDatePresetChange} />
             </div>
+            <div>
+              <Label className="mb-1 block">Branch</Label>
+              <BranchSelector
+                variant="single"
+                value={filters.branch_id_filter?.[0]}
+                onValueChange={(v) => onFiltersChange?.({
+                  ...filters,
+                  branch_id_filter: v ? [v as string] : undefined,
+                })}
+                allowClear
+                placeholder="All branches"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="mb-1 block">Group by</Label>
@@ -679,13 +701,14 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
             {/* Global print-only header to unify report title */}
             <div className="hidden print:block mb-4">
               {currentOrganization?.name && (
-                <h2 className="text-gray-700 dark:text-gray-300 text-base">
-                  {currentOrganization.name}
-                </h2>
-              )}
-              <h1 className="text-lg font-bold">{reportTitle}</h1>
-              <p className="text-sm text-muted-foreground">{rangeLabel}</p>
-            </div>
+              <h2 className="text-gray-700 dark:text-gray-300 text-base">
+                {currentOrganization.name}
+              </h2>
+            )}
+            <h1 className="text-lg font-bold">{reportTitle}</h1>
+            <p className="text-sm text-muted-foreground">{rangeLabel}</p>
+            <p className="text-sm text-muted-foreground">{branchName ? `Branch: ${branchName}` : 'Branch: All branches'}</p>
+          </div>
             {layout === 'pivot' ? (
               <div className="space-y-6">
                 {sections.map((sec) => (
@@ -711,28 +734,28 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
             ) : layout === 'list' ? (
               <div className="space-y-6">
                 {selectedItems.includes('all_income') && (
-                  <IncomeDetailListSection title={`All Income (${rangeLabel})`} data={incomes}/>
+                  <IncomeDetailListSection title={`All Income (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={incomes}/>
                 )}
 
                 {selectedItems.includes('general_income') && (
-                  <IncomeDetailListSection title={`General Income (${rangeLabel})`} data={incomes.filter((r) => r.income_type === 'general_income')} />
+                  <IncomeDetailListSection title={`General Income (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={incomes.filter((r) => r.income_type === 'general_income')} />
                 )}
                 {selectedItems.includes('contributions') && (
-                  <IncomeDetailListSection title={`Contributions (${rangeLabel})`} data={incomes.filter((r) => r.income_type === 'contribution')} />
+                  <IncomeDetailListSection title={`Contributions (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={incomes.filter((r) => r.income_type === 'contribution')} />
                 )}
                 {selectedItems.includes('donations') && (
-                  <IncomeDetailListSection title={`Donations (${rangeLabel})`} data={incomes.filter((r) => r.income_type === 'donation')} />
+                  <IncomeDetailListSection title={`Donations (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={incomes.filter((r) => r.income_type === 'donation')} />
                 )}
                 {selectedItems.includes('pledge_payments') && (
-                  <PledgePaymentsDetailListSection title={`Pledge Payments (${rangeLabel})`} data={payments as any} />
+                  <PledgePaymentsDetailListSection title={`Pledge Payments (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={payments as any} />
                 )}
                 
                 {selectedItems.includes('expenses') && (
-                  <ExpensesDetailListSection title={`Expenses (${rangeLabel})`} data={expenses} />
+                  <ExpensesDetailListSection title={`Expenses (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={expenses} />
                 )}
                 {selectedItems.includes('pledges') && (
                   <section className="space-y-2">
-                    <h3 className="text-base font-semibold tracking-tight">{`Pledges (${rangeLabel})`}</h3>
+                    <h3 className="text-base font-semibold tracking-tight">{`Pledges (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`}</h3>
                     <PledgesTable data={pledges} exportable={false} showPrintHeader={false} />
                   </section>
                 )}
@@ -746,13 +769,14 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
                     periodLabel={rangeLabel}
                     groupUnit={groupUnit}
                     dateFilter={filters.date_filter}
+                    branchLabel={branchName}
                   />
                 )}
                 {templateStyle === 'pledges_summary' && (
-                  <PledgesSummary pledges={pledges} periodLabel={rangeLabel} />
+                  <PledgesSummary pledges={pledges} periodLabel={rangeLabel} branchLabel={branchName} />
                 )}
                 {templateStyle === 'donations_breakdown' && (
-                  <DonationsBreakdown contributionsAndDonations={incomes.filter((r) => r.income_type === 'contribution' || r.income_type === 'donation')} periodLabel={rangeLabel} />
+                  <DonationsBreakdown contributionsAndDonations={incomes.filter((r) => r.income_type === 'contribution' || r.income_type === 'donation')} periodLabel={rangeLabel} branchLabel={branchName} />
                 )}
               </div>
             )}

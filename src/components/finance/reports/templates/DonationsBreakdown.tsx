@@ -9,9 +9,10 @@ import { useReportTemplateLabels } from "@/hooks/reports/useReportTemplateLabels
 interface DonationsBreakdownProps {
   contributionsAndDonations: IncomeResponseRow[];
   periodLabel: string;
+  branchLabel?: string;
 }
 
-export function DonationsBreakdown({ contributionsAndDonations, periodLabel }: DonationsBreakdownProps) {
+export function DonationsBreakdown({ contributionsAndDonations, periodLabel, branchLabel }: DonationsBreakdownProps) {
   const { labels, setLabel } = useReportTemplateLabels('donations_breakdown', DEFAULT_DONATIONS_BREAKDOWN_LABELS);
 
   // Split into contributions and donations for stats and per-category columns
@@ -56,7 +57,7 @@ export function DonationsBreakdown({ contributionsAndDonations, periodLabel }: D
           onSave={(key, v) => setLabel(key, v)}
         />
       }
-      subtitle={`For the period: ${periodLabel}`}
+      subtitle={`For the period: ${periodLabel}${branchLabel ? ` • Branch: ${branchLabel}` : ''}`}
     >
       {/* Summary stats cards */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">

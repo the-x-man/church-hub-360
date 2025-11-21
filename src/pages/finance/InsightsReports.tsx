@@ -9,53 +9,70 @@ import { contributionDonationStatsConfig } from '@/components/finance/contributi
 import { FinanceReportGenerator } from '@/components/finance/FinanceReportGenerator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatsFilterBar, type StatsFilterItem } from '@/components/finance/StatsFilterBar';
+import { StatsFilterBar, type StatsFilter } from '@/components/finance/StatsFilterBar';
+import { useBranches } from '@/hooks/useBranchQueries';
 import { resolveDateFilterRange } from '@/utils/finance/dateRange';
 import { useIncomes } from '@/hooks/finance/income';
 import { useExpenses } from '@/hooks/finance/expenses';
 import { usePledges } from '@/hooks/finance/pledges';
 import { useAllPledgePayments, usePledgePaymentsAsIncome } from '@/hooks/finance/payments';
-import type { FinanceFilter, IncomeResponseRow, ExpenseRecord, PledgeRecord, PledgePayment, DateFilter } from '@/types/finance';
+import type { FinanceFilter, IncomeResponseRow, ExpenseRecord, PledgeRecord, PledgePayment } from '@/types/finance';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 export function InsightsReports() {
   const [filters, setFilters] = React.useState<FinanceFilter>({
     date_filter: { type: 'preset', preset: 'this_month' },
   });
   const [mode, setMode] = React.useState<'stats' | 'builder'>('stats');
-  const [statsFilters, setStatsFilters] = React.useState<{ date_filter: DateFilter; item: StatsFilterItem }>({
+  const [statsFilters, setStatsFilters] = React.useState<StatsFilter>({
     date_filter: { type: 'preset', preset: 'this_month' },
     item: 'all',
+    branch_id_filter: undefined,
   });
   const [pageSize] = React.useState<number>(50);
+  const { currentOrganization } = useOrganization();
+  const { data: allBranches = [] } = useBranches(currentOrganization?.id);
+  const statsBranchName = React.useMemo(() => {
+    const bid = statsFilters.branch_id_filter?.[0];
+    if (!bid) return undefined;
+    const b = (allBranches as any[]).find((br) => br.id === bid);
+    return b?.name as string | undefined;
+  }, [statsFilters.branch_id_filter, allBranches]);
 
-  // Queries — scoped by filters and larger page size to improve summary accuracy
+  // Effective branch/date filters per mode
+  const effectiveBranchFilter = mode === 'stats' ? statsFilters.branch_id_filter : filters.branch_id_filter;
+  const effectiveDateFilter = mode === 'stats' ? statsFilters.date_filter : filters.date_filter;
+
+  // Queries — scoped by active filters and larger page size to improve summary accuracy
   const generalIncomeQ = useIncomes({
     page: 1,
     pageSize,
-    filters,
+    filters: { ...filters, date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter },
     income_type: 'general_income',
   });
   const contribDonateQ = useIncomes({
     page: 1,
     pageSize,
-    filters,
+    filters: { ...filters, date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter },
     income_types: ['contribution', 'donation'],
   });
   const pledgePaymentsIncomeQ = usePledgePaymentsAsIncome({
     page: 1,
     pageSize,
-    dateFilter: filters.date_filter,
+    dateFilter: effectiveDateFilter,
+    filters: { date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter },
   });
-  const expensesQ = useExpenses({ page: 1, pageSize, filters });
+  const expensesQ = useExpenses({ page: 1, pageSize, filters: { ...filters, date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter } });
   const pledgesQ = usePledges({
     page: 1,
     pageSize,
-    filters: { date_filter: filters.date_filter },
+    filters: { date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter },
   });
   const paymentsQ = useAllPledgePayments({
     page: 1,
     pageSize,
-    dateFilter: filters.date_filter,
+    dateFilter: effectiveDateFilter,
+    filters: { date_filter: effectiveDateFilter, branch_id_filter: effectiveBranchFilter },
   });
 
   // Derived arrays
@@ -220,6 +237,7 @@ export function InsightsReports() {
           <Card>
             <CardHeader>
               <CardTitle>General Stats</CardTitle>
+              <p className="text-sm text-muted-foreground">{statsBranchName ? `Branch: ${statsBranchName}` : 'Branch: All branches'}</p>
             </CardHeader>
             <CardContent>
               {statsFilters.item === 'all' && (

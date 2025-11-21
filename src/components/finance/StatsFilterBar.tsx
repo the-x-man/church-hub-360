@@ -10,12 +10,14 @@ import {
 import { DatePresetPicker, type DatePresetValue } from "@/components/attendance/reports/DatePresetPicker";
 import { mapPickerToDateFilter, mapDateFilterToPicker } from "@/utils/finance/dateFilter";
 import type { DateFilter } from "@/types/finance";
+import { BranchSelector } from "@/components/shared/BranchSelector";
 
 export type StatsFilterItem = "all" | "income" | "contrib" | "expenses" | "pledges";
 
 export interface StatsFilter {
   date_filter: DateFilter;
   item: StatsFilterItem;
+  branch_id_filter?: string[];
 }
 
 interface StatsFilterBarProps {
@@ -37,6 +39,13 @@ export function StatsFilterBar({ value, onChange }: StatsFilterBarProps) {
     onChange({ ...value, item: next });
   };
 
+  const handleBranchChange = (branchId?: string) => {
+    onChange({
+      ...value,
+      branch_id_filter: branchId ? [branchId] : undefined,
+    });
+  };
+
   return (
     <div className="w-full rounded-lg border bg-card text-card-foreground shadow-sm">
       <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -47,7 +56,7 @@ export function StatsFilterBar({ value, onChange }: StatsFilterBarProps) {
           />
         </div>
 
-        <div className="flex flex-col gap-0.5 md:col-span-2">
+        <div className="flex flex-col gap-0.5">
           <Label className="text-sm">Finance Item</Label>
           <Select value={value.item} onValueChange={handleItemChange}>
             <SelectTrigger className="w-full">
@@ -61,6 +70,17 @@ export function StatsFilterBar({ value, onChange }: StatsFilterBarProps) {
               <SelectItem value="pledges">Pledges</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <Label className="text-sm">Branch</Label>
+          <BranchSelector
+            variant="single"
+            value={value.branch_id_filter?.[0]}
+            onValueChange={(v) => handleBranchChange(v as string | undefined)}
+            allowClear
+            placeholder="All branches"
+          />
         </div>
       </div>
     </div>

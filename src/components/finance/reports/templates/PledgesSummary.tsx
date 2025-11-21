@@ -9,9 +9,10 @@ import { DEFAULT_PLEDGES_SUMMARY_LABELS } from "@/db/reportTemplatePrefsDb";
 interface PledgesSummaryProps {
   pledges: PledgeRecord[];
   periodLabel: string;
+  branchLabel?: string;
 }
 
-export function PledgesSummary({ pledges, periodLabel }: PledgesSummaryProps) {
+export function PledgesSummary({ pledges, periodLabel, branchLabel }: PledgesSummaryProps) {
   const summary = React.useMemo(() => pledgesSummary(pledges), [pledges]);
   const { labels, setLabel } = useReportTemplateLabels('pledges_summary', DEFAULT_PLEDGES_SUMMARY_LABELS);
 
@@ -24,7 +25,7 @@ export function PledgesSummary({ pledges, periodLabel }: PledgesSummaryProps) {
           onSave={(key, value) => setLabel(key, value)}
         />
       }
-      subtitle={`For the period: ${periodLabel}`}
+      subtitle={`For the period: ${periodLabel}${branchLabel ? ` • Branch: ${branchLabel}` : ''}`}
     >
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-lg border p-4">

@@ -19,6 +19,7 @@ interface IncomeStatementProps {
   periodLabel: string;
   groupUnit?: GroupUnit;
   dateFilter?: DateFilter;
+  branchLabel?: string;
 }
 
 export function IncomeStatement({
@@ -27,6 +28,7 @@ export function IncomeStatement({
   periodLabel,
   groupUnit,
   dateFilter,
+  branchLabel,
 }: IncomeStatementProps) {
   const inc = React.useMemo(() => incomeSections(incomes), [incomes]);
   const exp = React.useMemo(() => expenseSections(expenses), [expenses]);
@@ -100,7 +102,7 @@ export function IncomeStatement({
           onSave={(key, v) => setLabel(key as any, v)}
         />
       }
-      subtitle={`For the period: ${periodLabel}`}
+      subtitle={`For the period: ${periodLabel}${branchLabel ? ` • Branch: ${branchLabel}` : ''}`}
     >
       {/* Revenue */}
       <section>
