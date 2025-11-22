@@ -45,6 +45,8 @@ export function IncomeDetailListSection({
     amount: r.amount,
     method: r.payment_method || '',
     source: r.contributor_name || '',
+    receipt: r.receipt_number || '',
+    check_number: r.check_number || '',
     notes: r.notes || '',
   }));
 
@@ -69,6 +71,8 @@ export function IncomeDetailListSection({
           },
           { key: 'method', label: 'Method' },
           { key: 'source', label: 'Source' },
+          { key: 'receipt', label: 'Receipt' },
+          { key: 'check_number', label: 'Check No.' },
           { key: 'notes', label: 'Notes' },
         ]}
         data={rows}
@@ -91,6 +95,7 @@ export function ExpensesDetailListSection({
     method: r.payment_method || '',
     vendor: r.vendor || '',
     receipt: r.receipt_number || '',
+    check_number: r.check_number || '',
     notes: r.notes || '',
   }));
 
@@ -115,6 +120,7 @@ export function ExpensesDetailListSection({
           { key: 'method', label: 'Method' },
           { key: 'vendor', label: 'Vendor' },
           { key: 'receipt', label: 'Receipt' },
+          { key: 'check_number', label: 'Check No.' },
           { key: 'notes', label: 'Notes' },
         ]}
         data={rows}
@@ -142,6 +148,7 @@ export function PledgePaymentsDetailListSection({
     amount: r.amount,
     method: r.payment_method || '',
     source: (r as any).contributor_name || '',
+    check_number: r.check_number || '',
     recordedBy: r.created_by_user
       ? `${r.created_by_user.first_name || ''} ${
           r.created_by_user.last_name || ''
@@ -170,6 +177,7 @@ export function PledgePaymentsDetailListSection({
           },
           { key: 'method', label: 'Method' },
           { key: 'source', label: 'Source' },
+          { key: 'check_number', label: 'Check No.' },
           { key: 'recordedBy', label: 'Recorded By' },
           { key: 'notes', label: 'Notes' },
         ]}
