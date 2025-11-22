@@ -504,7 +504,7 @@ export const FinanceFilterBar: React.FC<FinanceFilterBarProps> = ({
           )}
 
           {/* Record type quick filter */}
-          {recordTypeFilter && recordTypeFilter !== 'all' && (
+          {recordTypeFilter && recordTypeFilter !== 'all' && incomeTypeFilterOptions.length > 1 && (
             <Badge variant="secondary" className="gap-1">
               Type: {recordTypeFilter.split('_').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')}
               <Button
