@@ -34,7 +34,7 @@ export const mockExpenseRecords: ExpenseRecord[] = [
     amount: 1200.00,
     category: 'maintenance',
     vendor: 'ABC Cleaning Services',
-    payment_method: 'check',
+    payment_method: 'cheque',
     date: '2024-01-10',
     description: 'Monthly cleaning and maintenance',
     receipt_number: 'EXP-2024-002',
@@ -128,7 +128,7 @@ export const mockContributionRecords: ContributionRecord[] = [
     member_name: 'David Wilson',
     amount: 1000.00,
     contribution_type: 'building_fund',
-    payment_method: 'check',
+    payment_method: 'cheque',
     date: '2024-01-14',
     description: 'Building fund contribution',
     envelope_number: 'ENV-003',
@@ -238,7 +238,7 @@ export const mockFinanceMembers = [
 
 export const generateMockExpenseRecord = (overrides: Partial<ExpenseRecord> = {}): ExpenseRecord => {
   const purposes: string[] = ['Utilities', 'Maintenance', 'Supplies', 'Salaries', 'Ministry Expenses'];
-  const paymentMethods: PaymentMethod[] = ['cash', 'check', 'bank_transfer', 'credit_card'];
+  const paymentMethods: PaymentMethod[] = ['cash', 'cheque', 'bank_transfer', 'credit_card'];
   
   return {
     id: `expense-${Date.now()}`,

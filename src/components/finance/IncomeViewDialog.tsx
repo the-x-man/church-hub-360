@@ -191,7 +191,7 @@ export const IncomeViewDialog: React.FC<IncomeViewDialogProps> = ({
             {contribution.check_number && (
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">
-                  Check Number
+                  Cheque Number
                 </Label>
                 <p>{contribution.check_number}</p>
               </div>

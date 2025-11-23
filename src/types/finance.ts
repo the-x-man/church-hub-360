@@ -267,7 +267,7 @@ export type BudgetStatus =
 // Common types
 export type PaymentMethod = 
   | 'cash'
-  | 'check'
+  | 'cheque'
   | 'credit_card'
   | 'debit_card'
   | 'bank_transfer'

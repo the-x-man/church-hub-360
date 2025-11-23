@@ -12,7 +12,7 @@ export const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
     { value: 'cash', label: 'Cash' },
     { value: 'mobile_payment', label: 'Mobile Money' },
     { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'check', label: 'Check' },
+    { value: 'cheque', label: 'Cheque' },
     { value: 'credit_card', label: 'Credit Card' },
     { value: 'debit_card', label: 'Debit Card' },
     { value: 'online', label: 'Online' },

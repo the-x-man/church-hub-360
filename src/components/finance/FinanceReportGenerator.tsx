@@ -249,7 +249,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
         });
       } else if (layout === 'list') {
         const pushIncomeSheet = (title: string, src: IncomeResponseRow[]) => {
-          const header = ['Date', 'Item/Occasion', 'Category', 'Amount', 'Method', 'Source', 'Receipt', 'Check Number', 'Notes'];
+          const header = ['Date', 'Item/Occasion', 'Category', 'Amount', 'Method', 'Source', 'Receipt', 'Cheque Number', 'Notes'];
           const rows: (string | number)[][] = [header];
           src.forEach((r) => {
             rows.push([
@@ -269,7 +269,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
         };
 
         const pushExpenseSheet = (title: string, src: ExpenseRecord[]) => {
-          const header = ['Date', 'Item', 'Amount', 'Method', 'Vendor', 'Receipt', 'Check Number', 'Notes'];
+          const header = ['Date', 'Item', 'Amount', 'Method', 'Vendor', 'Receipt', 'Cheque Number', 'Notes'];
           const rows: (string | number)[][] = [header];
           src.forEach((r) => {
             rows.push([
@@ -393,7 +393,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
       } else if (layout === 'list') {
         const pushIncome = (title: string, src: IncomeResponseRow[]) => {
           lines.push(`# ${title}`);
-          lines.push('Date,Item/Occasion,Category,Amount,Method,Source,Receipt,Check Number,Notes');
+          lines.push('Date,Item/Occasion,Category,Amount,Method,Source,Receipt,Cheque Number,Notes');
           src.forEach((r) => {
             const row = [
               r.date || r.created_at || '',
@@ -412,7 +412,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
         };
         const pushExpenses = (src: ExpenseRecord[]) => {
           lines.push(`# ${pivotLabels['expenses']}`);
-          lines.push('Date,Item,Amount,Method,Vendor,Receipt,Check Number,Notes');
+          lines.push('Date,Item,Amount,Method,Vendor,Receipt,Cheque Number,Notes');
           src.forEach((r) => {
             const row = [
               r.date || r.created_at || '',

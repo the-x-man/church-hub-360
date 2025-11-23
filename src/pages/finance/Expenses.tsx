@@ -656,7 +656,7 @@ const Expenses: React.FC = () => {
               {selectedExpense.check_number && (
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">
-                    Check Number
+                    Cheque Number
                   </Label>
                   <p>{selectedExpense.check_number}</p>
                 </div>

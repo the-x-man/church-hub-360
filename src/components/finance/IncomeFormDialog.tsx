@@ -343,10 +343,10 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
     if (!form.payment_method) {
       nextErrors.payment_method = 'Please select a payment method.';
     }
-    if (form.payment_method === 'check') {
+    if (form.payment_method === 'cheque') {
       const cn = (form.check_number || '').trim();
       if (!cn) {
-        nextErrors.check_number = 'Check number is required for check payments.';
+        nextErrors.check_number = 'Cheque number is required for cheque payments.';
       }
     }
 
@@ -706,14 +706,14 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
             )}
           </div>
 
-          {form.payment_method === 'check' && (
+          {form.payment_method === 'cheque' && (
             <div className="space-y-2">
-              <Label htmlFor="checkNumber">Check Number *</Label>
+              <Label htmlFor="checkNumber">Cheque Number *</Label>
               <Input
                 id="checkNumber"
                 value={form.check_number || ''}
                 onChange={(e) => setForm((prev) => ({ ...prev, check_number: e.target.value }))}
-                placeholder="Enter check number"
+                placeholder="Enter cheque number"
                 required
               />
               {errors.check_number && (

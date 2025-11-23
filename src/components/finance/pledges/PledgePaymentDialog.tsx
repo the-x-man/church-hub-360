@@ -44,7 +44,11 @@ export function PledgePaymentDialog({
   const [checkNumber, setCheckNumber] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
-  const canSubmit = !!pledge && amount > 0 && !!paymentDate && (paymentMethod !== 'check' || (checkNumber || '').trim().length > 0);
+  const canSubmit =
+    !!pledge &&
+    amount > 0 &&
+    !!paymentDate &&
+    (paymentMethod !== 'cheque' || (checkNumber || '').trim().length > 0);
   const isSubmitting = createPayment.isPending;
 
   const handleSubmit = async () => {
@@ -112,14 +116,14 @@ export function PledgePaymentDialog({
             </Select>
           </div>
 
-          {paymentMethod === 'check' && (
+          {paymentMethod === 'cheque' && (
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="payment_check_number">Check Number *</Label>
+              <Label htmlFor="payment_check_number">Cheque Number *</Label>
               <Input
                 id="payment_check_number"
                 value={checkNumber}
                 onChange={(e) => setCheckNumber(e.target.value)}
-                placeholder="Enter check number"
+                placeholder="Enter cheque number"
                 required
               />
             </div>

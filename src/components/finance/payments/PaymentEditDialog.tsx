@@ -30,7 +30,12 @@ interface PaymentEditDialogProps {
   onSuccess?: () => void;
 }
 
-export function PaymentEditDialog({ open, onOpenChange, payment, onSuccess }: PaymentEditDialogProps) {
+export function PaymentEditDialog({
+  open,
+  onOpenChange,
+  payment,
+  onSuccess,
+}: PaymentEditDialogProps) {
   const updatePayment = useUpdatePayment();
 
   const [amount, setAmount] = useState<number>(0);
@@ -49,7 +54,11 @@ export function PaymentEditDialog({ open, onOpenChange, payment, onSuccess }: Pa
     }
   }, [open, payment]);
 
-  const canSubmit = !!payment && amount > 0 && !!paymentDate && (paymentMethod !== 'check' || (checkNumber || '').trim().length > 0);
+  const canSubmit =
+    !!payment &&
+    amount > 0 &&
+    !!paymentDate &&
+    (paymentMethod !== 'cheque' || (checkNumber || '').trim().length > 0);
   const isSubmitting = updatePayment.isPending;
 
   const handleSubmit = async () => {
@@ -73,9 +82,7 @@ export function PaymentEditDialog({ open, onOpenChange, payment, onSuccess }: Pa
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Payment</DialogTitle>
-          <DialogDescription>
-            Update payment details
-          </DialogDescription>
+          <DialogDescription>Update payment details</DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,12 +98,19 @@ export function PaymentEditDialog({ open, onOpenChange, payment, onSuccess }: Pa
           </div>
 
           <div className="space-y-2">
-            <DatePicker label="Payment Date" value={paymentDate} onChange={setPaymentDate} />
+            <DatePicker
+              label="Payment Date"
+              value={paymentDate}
+              onChange={setPaymentDate}
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Payment Method</Label>
-            <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
+            <Select
+              value={paymentMethod}
+              onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -110,21 +124,35 @@ export function PaymentEditDialog({ open, onOpenChange, payment, onSuccess }: Pa
             </Select>
           </div>
 
-          {paymentMethod === 'check' && (
+          {paymentMethod === 'cheque' && (
             <div className="space-y-2">
-              <Label htmlFor="check_number">Check Number</Label>
-              <Input id="check_number" value={checkNumber} onChange={(e) => setCheckNumber(e.target.value)} placeholder="Enter check number" />
+              <Label htmlFor="check_number">Cheque Number</Label>
+              <Input
+                id="check_number"
+                value={checkNumber}
+                onChange={(e) => setCheckNumber(e.target.value)}
+                placeholder="Enter cheque number"
+              />
             </div>
           )}
 
           <div className="md:col-span-2 space-y-2">
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes" />
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes"
+            />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
