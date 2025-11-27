@@ -8,15 +8,15 @@
 
 module.exports = {
   // Version information
-  version: "1.0.0",
+  version: "1.0.1",
   
   // Release notes in markdown format
-  releaseNotes: `### Added
-- Initial MVP release 
-
-### Improved / Changed
+  releaseNotes: `### Improved / Changed
+- Enhanced member profile editing experience
+- Added asset depreciation estimations and asset sale income recording
 
 ### Bug Fixes
+- Fixed issue with custom fields not captured and displayed correctly
 `,
 
 
@@ -87,7 +87,7 @@ module.exports = {
     createCommit: true,
     createTag: true,
     pushChanges: true, // Set to true to automatically push
-    commitMessage: "Release v1.0.0"
+    commitMessage: "Release v1.0.1"
   },
 
   // Validation rules
