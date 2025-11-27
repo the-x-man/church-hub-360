@@ -42,39 +42,36 @@ export function convertToFlattenedFieldData(
       return;
     }
 
-    // Extract parts from fieldKey (format: row-{rowId}-col-{colId}-{index})
-    const parts = fieldKey.split('-');
-    if (parts.length < 5) {
-      console.warn(`Invalid field key format: ${fieldKey}`);
-      return;
-    }
-
-    const rowId = `${parts[0]}-${parts[1]}`; // row-{rowId}
-    const fullColId = `${parts[2]}-${parts[3]}-${parts[4]}`; // col-{colId}-{index}
-
-    // Find the exact match in schema
+    // Find the exact match in schema by iterating through rows and columns
+    // This is safer than splitting the key which might fail with UUIDs containing dashes
+    let matchedRowId: string | null = null;
+    let matchedColId: string | null = null;
     let componentId: string | null = null;
     let componentType: string | null = null;
     
     for (const row of membershipFormSchema.rows) {
-      if (row.id === rowId) {
+      // Optimization: Check if fieldKey starts with row.id to narrow down
+      if (fieldKey.startsWith(row.id)) {
         for (const column of row.columns) {
-          if (column.id === fullColId && column.component) {
+          const potentialKey = `${row.id}-${column.id}`;
+          if (potentialKey === fieldKey && column.component) {
+            matchedRowId = row.id;
+            matchedColId = column.id;
             componentId = column.component.id;
             componentType = column.component.type;
             break;
           }
         }
-        if (componentId) break;
       }
+      if (matchedRowId) break;
     }
 
     // Only store if we found the component
-    if (componentId && componentType) {
+    if (matchedRowId && matchedColId && componentId && componentType) {
       flattenedFormData[fieldKey] = {
         value: fieldValue,
-        rowId,
-        columnId: fullColId,
+        rowId: matchedRowId,
+        columnId: matchedColId,
         componentId,
         componentType
       };

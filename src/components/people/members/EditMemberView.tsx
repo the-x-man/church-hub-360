@@ -279,7 +279,7 @@ export const EditMemberView = ({ member, tags, onCancel, onUpdateSuccess }: Edit
         </Button>
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 bg-neutral-100 dark:bg-neutral-800/50 px-4 py-2 rounded-md border">
+        <div className="sticky top-16 z-50 flex items-center justify-between mb-6 bg-neutral-100/95 dark:bg-neutral-800/95 backdrop-blur supports-[backdrop-filter]:bg-neutral-100/60 px-4 py-2 rounded-md border shadow-sm">
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold">Edit Member</h1>
@@ -348,6 +348,23 @@ export const EditMemberView = ({ member, tags, onCancel, onUpdateSuccess }: Edit
                 />
               </CardContent>
             </Card>
+            
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                 variant="outline"
+                 onClick={onCancel}
+                 disabled={isSubmitting}
+               >
+                 Cancel
+               </Button>
+               <Button
+                 onClick={handleUpdate}
+                 disabled={isSubmitting}
+               >
+                 <Save className="h-4 w-4 mr-2" />
+                 {isSubmitting ? 'Saving...' : 'Save Changes'}
+               </Button>
+            </div>
           </div>
 
           {/* Right Sidebar - Member Info */}
