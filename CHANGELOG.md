@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-12-22
+
+### New Features
+
+### Bug Fixes
+- Fixed issues expenses categories grouping and pagination
+
+
 ## [1.2.0] - 2025-12-22
 
 ### New Features
