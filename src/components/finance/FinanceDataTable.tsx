@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -15,7 +15,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Edit, Trash2, Eye, Receipt } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Receipt,
+  ChevronRight,
+  ChevronDown,
+} from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -105,6 +113,17 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
 }) => {
   const { currentOrganization } = useOrganization();
   const tableRef = useRef<HTMLDivElement | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<string, boolean>
+  >({});
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   const handleSort = (key: string) => {
     if (!onSort) return;
 
@@ -348,9 +367,7 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
     <div className="rounded-md border">
       {exportable && (
         <div className="flex items-center justify-between p-2 border-b bg-muted/50">
-          <div className="flex items-center gap-2">
-            {toolbarExtra}
-          </div>
+          <div className="flex items-center gap-2">{toolbarExtra}</div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -379,7 +396,10 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
           </div>
         </div>
       )}
-      <div ref={tableRef} className="print-wrapper">
+      <div
+        ref={tableRef}
+        className="print-wrapper max-h-[70vh] overflow-y-auto"
+      >
         {/* Inline print CSS to enforce landscape and remove scrollbars when printing */}
         <style>{printPageStyle}</style>
         {/* Print-only header (optional) */}
@@ -421,7 +441,7 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                 </TableHead>
               ))}
               {actions.length > 0 && (
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[50px] print:w-2"></TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -446,10 +466,10 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                         </TableCell>
                       ))}
                       {actions.length > 0 && (
-                        <TableCell>
+                        <TableCell className='print:hidden'>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
+                              <Button variant="ghost" className="h-8 w-8 p-0 print:hidden">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -475,66 +495,105 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                     </TableRow>
                   ));
                 }
-                const groups: Record<string, any[]> = {};
+                // Grouping Logic (Case Insensitive)
+                const groups: Record<
+                  string,
+                  { label: string; items: any[] }
+                > = {};
                 for (const rec of data) {
-                  const g = String(
+                  const rawLabel = String(
                     (rec as any)[groupByKey!] ?? 'Uncategorized'
                   );
-                  groups[g] = groups[g] || [];
-                  groups[g].push(rec);
+                  const key = rawLabel.toLowerCase();
+
+                  if (!groups[key]) {
+                    groups[key] = { label: rawLabel, items: [] };
+                  }
+                  groups[key].items.push(rec);
                 }
-                const orderedGroups = Object.keys(groups).sort((a, b) =>
+
+                const orderedKeys = Object.keys(groups).sort((a, b) =>
                   a.localeCompare(b)
                 );
-                return orderedGroups.map((grp) => (
-                  <React.Fragment key={grp}>
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length + (actions.length > 0 ? 1 : 0)}
+
+                return orderedKeys.map((key) => {
+                  const group = groups[key];
+                  const label = group.label;
+                  const isCollapsed = collapsedGroups[key];
+
+                  return (
+                    <React.Fragment key={key}>
+                      <TableRow
+                        className="bg-muted/30 cursor-pointer hover:bg-muted/50"
+                        onClick={() => toggleGroup(key)}
                       >
-                        <div className="font-semibold text-primary">
-                          {humanizeUnderscore(grp)} ({groups[grp].length})
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {groups[grp].map((record, index) => (
-                      <TableRow key={(record as any).id || `${grp}-${index}`}>
-                        {columns.map((column) => (
-                          <TableCell key={column.key}>
-                            {renderCellValue(column, record)}
-                          </TableCell>
-                        ))}
-                        {actions.length > 0 && (
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {actions.map((action) => (
-                                  <DropdownMenuItem
-                                    key={action.key}
-                                    onClick={() => action.onClick(record)}
-                                    className={
-                                      action.variant === 'destructive'
-                                        ? 'text-destructive'
-                                        : ''
-                                    }
-                                  >
-                                    {action.icon}
-                                    <span className="ml-2">{action.label}</span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        )}
+                        <TableCell
+                          colSpan={
+                            columns.length + (actions.length > 0 ? 1 : 0)
+                          }
+                        >
+                          <div className="flex items-center gap-2 font-semibold text-primary select-none">
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground print:hidden" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground print:hidden" />
+                            )}
+                            {humanizeUnderscore(label)} ({group.items.length})
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    ))}
-                  </React.Fragment>
-                ));
+                      {group.items.map((record, index) => (
+                        <TableRow
+                          key={(record as any).id || `${key}-${index}`}
+                          className={
+                            isCollapsed ? 'hidden print:table-row' : ''
+                          }
+                        >
+                          {columns.map((column) => (
+                            <TableCell key={column.key}>
+                              {renderCellValue(column, record)}
+                            </TableCell>
+                          ))}
+                          {actions.length > 0 && (
+                            <TableCell className='print:hidden'>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 print:hidden"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {actions.map((action) => (
+                                    <DropdownMenuItem
+                                      key={action.key}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Prevent toggling group when clicking action
+                                        action.onClick(record);
+                                      }}
+                                      className={
+                                        action.variant === 'destructive'
+                                          ? 'text-destructive'
+                                          : ''
+                                      }
+                                    >
+                                      {action.icon}
+                                      <span className="ml-2">
+                                        {action.label}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  );
+                });
               })()
             )}
           </TableBody>

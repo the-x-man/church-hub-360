@@ -36,16 +36,22 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
   // Fetch install type on mount
   useEffect(() => {
     async function fetchInstallType() {
-      if (window.electron?.ipcRenderer) {
-        try {
+      try {
+        if (window.electron?.getPlatformInfo) {
+          const info = await window.electron.getPlatformInfo();
+          setInstallType(info.installType || 'package');
+          setPlatform(info.platform || '');
+        } else if (window.electron?.ipcRenderer) {
           const info = await window.electron.ipcRenderer.invoke(
             'get-platform-info'
           );
           setInstallType(info.installType || 'package');
           setPlatform(info.platform || '');
-        } catch (e) {
-          setInstallType('package');
         }
+      } catch (e) {
+        console.error('Failed to get platform info:', e);
+        // Default to package/unknown if check fails
+        setInstallType('package');
       }
     }
     fetchInstallType();
@@ -252,10 +258,7 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
   }
 
   // Show install updates button for AppImage or Windows
-  if (
-    (installType === 'appimage' || platform === 'win32') &&
-    isDownloadComplete
-  ) {
+  if ((installType === 'appimage' || platform === 'win32') && hasUpdate) {
     return (
       <Button
         onClick={handleInstallUpdates}
@@ -265,10 +268,14 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
           'border border-green-600 hover:border-green-700 text-green-600 bg-white hover:bg-green-50/60 text-[11px] rounded-full py-0 h-7',
           className
         )}
-        title="This will install available updates and restart the app"
+        title={
+          isDownloadComplete
+            ? 'This will install available updates and restart the app'
+            : 'Download and install available updates'
+        }
       >
         <Download className="h-3 w-3 mr-2" />
-        Install Updates
+        {isDownloadComplete ? 'Install Updates' : 'Install Updates'}
       </Button>
     );
   }
@@ -293,7 +300,7 @@ export const RestartToUpdateButton: React.FC<RestartToUpdateButtonProps> = ({
         title="Go to the download page to get the latest version"
       >
         <Download className="h-3 w-3 mr-2" />
-        Download from Website
+        Download updates
       </Button>
     );
   }

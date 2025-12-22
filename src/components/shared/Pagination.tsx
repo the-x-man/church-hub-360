@@ -6,7 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 
 interface PaginationProps {
   currentPage: number;
@@ -16,6 +21,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   itemName?: string; // e.g., "members", "groups", "items"
+  rowsPerPageLabel?: string;
   pageSizeOptions?: number[];
 }
 
@@ -27,6 +33,7 @@ export function Pagination({
   onPageChange,
   onPageSizeChange,
   itemName = 'items',
+  rowsPerPageLabel = 'Rows per page:',
   pageSizeOptions = [10, 20, 50, 100],
 }: PaginationProps) {
   const startItem = (currentPage - 1) * pageSize + 1;
@@ -45,7 +52,9 @@ export function Pagination({
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rows per page:</span>
+          <span className="text-sm text-muted-foreground">
+            {rowsPerPageLabel}
+          </span>
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => onPageSizeChange(Number(value))}
@@ -82,13 +91,13 @@ export function Pagination({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <div className="flex items-center gap-1 mx-2">
             <span className="text-sm text-muted-foreground">
               Page {currentPage} of {totalPages}
             </span>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"

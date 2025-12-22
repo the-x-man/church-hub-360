@@ -13,6 +13,8 @@ export interface ExpenseQueryParams {
   pageSize?: number;
   search?: string;
   filters?: FinanceFilter;
+  sortKey?: string;
+  sortDirection?: 'asc' | 'desc';
   enabled?: boolean;
 }
 
@@ -22,6 +24,7 @@ export interface PaginatedExpensesResponse {
   totalPages: number;
   currentPage: number;
   pageSize: number;
+  isGrouped?: boolean;
 }
 
 export const expenseKeys = {
@@ -128,53 +131,141 @@ export function useExpenses(params?: ExpenseQueryParams) {
     queryFn: async (): Promise<PaginatedExpensesResponse> => {
       if (!currentOrganization?.id) throw new Error('Organization ID is required');
 
+      // ---------------------------------------------------------------------------
+      // STRATEGY: Group-Based Pagination
+      // To ensure categories are not split across pages, we paginate by distinct Categories first.
+      // 1. Fetch all distinct categories matching the filters.
+      // 2. Paginate the categories.
+      // 3. Fetch all expenses belonging to the paginated categories.
+      // ---------------------------------------------------------------------------
+
+      // Step 1: Fetch all categories matching filters (Metadata only)
+      // Note: For very large datasets, this should be optimized with an RPC 'get_distinct_categories'
+      let catQuery = supabase
+        .from('expenses')
+        .select('category')
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_deleted', false);
+
+      if (queryParams.search && queryParams.search.trim()) {
+        const q = queryParams.search.trim();
+        catQuery = catQuery.or(
+          `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%`
+        );
+      }
+
+      catQuery = applyFinanceFilters(catQuery, queryParams.filters);
+
+      {
+        const scoped = applyBranchScope(catQuery, scope, 'branch_id', true);
+        if (scoped.abortIfEmpty) {
+             return { data: [], totalCount: 0, totalPages: 1, currentPage: 1, pageSize: queryParams.pageSize!, isGrouped: true };
+        }
+        catQuery = scoped.query;
+      }
+
+      const { data: catData, error: catError } = await catQuery;
+      if (catError) throw catError;
+
+      // Extract unique categories (Case Insensitive)
+      const categoryMap = new Map<string, Set<string>>();
+      (catData || []).forEach((c: any) => {
+          const lower = String(c.category).toLowerCase();
+          if (!categoryMap.has(lower)) {
+              categoryMap.set(lower, new Set());
+          }
+          categoryMap.get(lower)!.add(c.category);
+      });
+
+      const uniqueCategories = Array.from(categoryMap.keys());
+      
+      // Determine Category Sort Direction
+      // If explicit sort by category, use provided direction. Default ASC.
+      const categorySortAsc = (queryParams.sortKey === 'category' && queryParams.sortDirection === 'desc') ? false : true;
+      
+      uniqueCategories.sort((a, b) => {
+          if (a < b) return categorySortAsc ? -1 : 1;
+          if (a > b) return categorySortAsc ? 1 : -1;
+          return 0;
+      });
+
+      const totalCategories = uniqueCategories.length;
+      const totalPages = Math.ceil(totalCategories / queryParams.pageSize!);
+      const currentPage = queryParams.page! > totalPages && totalPages > 0 ? totalPages : queryParams.page!;
+
+      // Step 2: Paginate Categories
+      const fromIndex = (currentPage - 1) * queryParams.pageSize!;
+      const toIndex = fromIndex + queryParams.pageSize!;
+      const pagedKeys = uniqueCategories.slice(fromIndex, toIndex);
+
+      if (pagedKeys.length === 0) {
+          return {
+            data: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: currentPage,
+            pageSize: queryParams.pageSize!,
+            isGrouped: true
+          };
+      }
+
+      // Resolve back to original category strings for the query
+      const targetCategories = pagedKeys.flatMap(k => Array.from(categoryMap.get(k) || []));
+
+      // Step 3: Fetch Expenses for Paged Categories
       let query = supabase
         .from('expenses')
         .select('*, branch:branches(id, name), created_by_user:profiles(first_name, last_name)')
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
+        .in('category', targetCategories);
 
+      // Re-apply filters (technically redundant for category filtering but needed for other filters like date/amount/search to apply to the rows)
       if (queryParams.search && queryParams.search.trim()) {
         const q = queryParams.search.trim();
         query = query.or(
           `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%`
         );
       }
-
       query = applyFinanceFilters(query, queryParams.filters);
-
+      
+      // Re-apply branch scope
       {
-        const scoped = applyBranchScope(query, scope, 'branch_id', true);
-        if (scoped.abortIfEmpty) {
-          return {
-            data: [],
-            totalCount: 0,
-            totalPages: 1,
-            currentPage: queryParams.page!,
-            pageSize: queryParams.pageSize!,
-          };
-        }
-        query = scoped.query;
+         const scoped = applyBranchScope(query, scope, 'branch_id', true);
+         query = scoped.query;
       }
 
-      const from = (queryParams.page! - 1) * queryParams.pageSize!;
-      const to = from + queryParams.pageSize! - 1;
-      query = query.range(from, to);
+      // SORTING LOGIC
+      // Primary Sort: Category (to match our pagination grouping)
+      query = query.order('category', { ascending: categorySortAsc });
 
-      const { data, error, count } = await query;
+      // Secondary Sort: The requested sort key (within the category)
+      if (queryParams.sortKey && queryParams.sortKey !== 'category') {
+         if (queryParams.sortKey === 'branch') {
+             // Handle relation sort
+             query = query.order('name', { foreignTable: 'branch', ascending: queryParams.sortDirection === 'asc' });
+         } else {
+             // Handle standard column sort
+             query = query.order(queryParams.sortKey, { ascending: queryParams.sortDirection === 'asc' });
+         }
+      } else {
+         // Default Secondary: Date DESC
+         query = query.order('date', { ascending: false });
+      }
+      
+      // Tertiary Sort: Created At (Stability)
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
       if (error) throw error;
-
-      const totalCount = count || 0;
-      const totalPages = Math.ceil(totalCount / queryParams.pageSize!);
 
       return {
         data: data || [],
-        totalCount,
-        totalPages,
-        currentPage: queryParams.page!,
+        totalCount: totalCategories, // Return Total Categories count for Pagination
+        totalPages: totalPages,
+        currentPage: currentPage,
         pageSize: queryParams.pageSize!,
+        isGrouped: true
       };
     },
     staleTime: 5 * 60 * 1000,

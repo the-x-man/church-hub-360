@@ -90,6 +90,8 @@ const Expenses = () => {
     pageSize,
     filters,
     search,
+    sortKey,
+    sortDirection,
   });
 
   // Dedicated query for stats to fetch all matching records (up to 10k)
@@ -268,6 +270,10 @@ const Expenses = () => {
     return paginatedExpenses?.data || [];
   }, [paginatedExpenses]);
 
+  // Client-side sorting is redundant if server-side sorting is correct and we want to preserve server grouping.
+  // However, for 'branch' sort which is a relation, we might need client-side or specific server handling.
+  // Since we updated server to handle category/date grouping, we should just use the data as is, unless it's a special client-side key.
+  
   const sortedExpenses = useMemo(() => {
     if (sortKey === 'branch') {
       const copy = [...filteredExpenses];
@@ -280,6 +286,7 @@ const Expenses = () => {
       });
       return copy;
     }
+    // For other keys, we trust the server order which respects grouping
     return filteredExpenses;
   }, [filteredExpenses, sortKey, sortDirection]);
 
@@ -543,8 +550,9 @@ const Expenses = () => {
             setPageSize(ps);
             setPage(1);
           }}
-          itemName="expenses"
-          pageSizeOptions={[10, 25, 50, 100]}
+          itemName={paginatedExpenses?.isGrouped ? "categories" : "expenses"}
+          rowsPerPageLabel={paginatedExpenses?.isGrouped ? "Categories per page:" : "Rows per page:"}
+          pageSizeOptions={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]}
         />
       </div>
 
