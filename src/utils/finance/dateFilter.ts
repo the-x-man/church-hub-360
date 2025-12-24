@@ -171,3 +171,27 @@ export function getPresetLabel(preset?: string): string {
       return 'Custom Range';
   }
 }
+
+export function getDateBounds(df: DateFilter): { start?: string; end?: string } {
+  if (df?.start_date || df?.end_date) {
+    return { start: df.start_date, end: df.end_date };
+  }
+  if (df?.type === 'preset' && df?.preset) {
+    const mapped = mapDateFilterToPicker(df);
+    const from = mapped.range?.from;
+    const to = mapped.range?.to;
+    return {
+      start: from ? from.toISOString() : undefined,
+      end: to ? to.toISOString() : undefined,
+    };
+  }
+  return {};
+}
+
+export function applyDateFilterQuery(query: any, df?: DateFilter, column: string = 'date') {
+  if (!df) return query;
+  const { start, end } = getDateBounds(df);
+  if (start) query = query.gte(column, start);
+  if (end) query = query.lte(column, end);
+  return query;
+}

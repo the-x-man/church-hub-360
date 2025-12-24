@@ -8,6 +8,7 @@ import type { FinanceFilter, ExpenseRecord, PaymentMethod, ExpenseCategory } fro
 import { insertFinanceActivityLog, sanitizeMetadata } from '@/utils/finance/activityLog';
 import { activityLogKeys } from '@/hooks/finance/activityLogs';
 import { applyAmountComparison, type AmountComparison } from '@/utils/finance/search';
+import { applyDateFilterQuery } from '@/utils/finance/dateFilter';
 
 export interface ExpenseQueryParams {
   page?: number;
@@ -80,34 +81,7 @@ export function applyFinanceFilters(
   }
 
   if (filters.date_filter) {
-    const df = filters.date_filter;
-    const today = new Date();
-    if (df.type === 'preset') {
-      if (df.preset === 'this_month') {
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_month') {
-        const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        const end = new Date(today.getFullYear(), today.getMonth(), 0);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'this_year') {
-        const start = new Date(today.getFullYear(), 0, 1);
-        const end = new Date(today.getFullYear(), 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      } else if (df.preset === 'last_year') {
-        const start = new Date(today.getFullYear() - 1, 0, 1);
-        const end = new Date(today.getFullYear() - 1, 11, 31);
-        query = query.gte('date', start.toISOString().split('T')[0]);
-        query = query.lte('date', end.toISOString().split('T')[0]);
-      }
-    } else if (df.type === 'custom') {
-      if (df.start_date) query = query.gte('date', df.start_date);
-      if (df.end_date) query = query.lte('date', df.end_date);
-    }
+    query = applyDateFilterQuery(query, filters.date_filter, 'date');
   }
 
   return query;

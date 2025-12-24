@@ -14,6 +14,7 @@ import type { AmountComparison } from '@/utils/finance/search';
 import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
 import { insertFinanceActivityLog, sanitizeMetadata } from '@/utils/finance/activityLog';
 import { activityLogKeys } from '@/hooks/finance/activityLogs';
+import { applyDateFilterQuery } from '@/utils/finance/dateFilter';
 
 export interface IncomeQueryParams {
   page?: number;
@@ -98,17 +99,8 @@ export function applyFinanceFilters(
     query = query.or(`branch_id.in.(${ids}),branch_id.is.null`);
   }
 
-  // Date filter: always rely on provided start/end from UI mapping
   if (filters.date_filter) {
-    const df = filters.date_filter;
-    if (df.start_date) {
-      const start = df.start_date.length >= 10 ? df.start_date.slice(0, 10) : df.start_date;
-      query = query.gte('date', start);
-    }
-    if (df.end_date) {
-      const end = df.end_date.length >= 10 ? df.end_date.slice(0, 10) : df.end_date;
-      query = query.lte('date', end);
-    }
+    query = applyDateFilterQuery(query, filters.date_filter, 'date');
   }
 
   return query;

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import type { DateFilter, PaymentMethod, PledgePayment, IncomeResponseRow, PaymentFilter } from '@/types/finance';
 import type { AmountComparison } from '@/utils/finance/search';
 import { useBranchScope, applyBranchScope } from '@/hooks/useBranchScope';
+import { applyDateFilterQuery } from '@/utils/finance/dateFilter';
 
 export interface PaymentsQueryParams {
   page?: number;
@@ -35,23 +36,7 @@ export const paymentKeys = {
 };
 
 function applyDateFilter(query: any, df?: DateFilter) {
-  if (!df) return query;
-  if (df.type === 'preset') {
-    // Preset mapping handled by DatePresetPicker; rely on explicit start/end when provided
-    // If presets are mapped to explicit dates before passing, do nothing here.
-    return query;
-  }
-  if (df.type === 'custom') {
-    if (df.start_date) {
-      const start = df.start_date.length >= 10 ? df.start_date.slice(0, 10) : df.start_date;
-      query = query.gte('payment_date', start);
-    }
-    if (df.end_date) {
-      const end = df.end_date.length >= 10 ? df.end_date.slice(0, 10) : df.end_date;
-      query = query.lte('payment_date', end);
-    }
-  }
-  return query;
+  return applyDateFilterQuery(query, df, 'payment_date');
 }
 
 function applyAmountSearch(query: any, amountSearch?: AmountComparison | null) {
