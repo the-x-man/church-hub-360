@@ -71,14 +71,32 @@ const Income: React.FC = () => {
 
   const { categoryOptions } = useIncomePreferences();
 
+  // Build category filter options by combining preferences with categories present in data
+  const categoryFilterOptions = useMemo(() => {
+    const fromPrefs = (categoryOptions || []).filter(Boolean);
+    const fromData = Array.from(
+      new Set(
+        (incomesQuery.data?.data || [])
+          .map((r) => r.category)
+          .filter((c): c is string => !!c)
+      )
+    );
+    const combined = Array.from(new Set([...fromPrefs, ...fromData]));
+    return combined.map((t) => ({ value: t, label: t }));
+  }, [categoryOptions, incomesQuery.data?.data]);
+
   // Filter and sort data (client-side, after server filters/search)
   const filteredAndSortedData = useMemo(() => {
     let filtered = [...(incomesQuery.data?.data || [])];
 
     if (filters.category_filter?.length) {
-      filtered = filtered.filter((record) =>
-        (filters.category_filter || []).includes(record.category)
+      const selected = (filters.category_filter || []).map((c) =>
+        String(c).toLowerCase()
       );
+      filtered = filtered.filter((record) => {
+        const cat = String(record.category || '').toLowerCase();
+        return selected.includes(cat);
+      });
     }
 
     if (filters.payment_method_filter?.length) {
@@ -313,10 +331,7 @@ const Income: React.FC = () => {
       <FinanceFilterBar
         filters={filters}
         onFiltersChange={setFilters}
-        categoryOptions={categoryOptions.map((t: string) => ({
-          value: t,
-          label: t,
-        }))}
+        categoryOptions={categoryFilterOptions}
         paymentMethodOptions={paymentMethodOptions}
         searchPlaceholder="Search income records..."
         onSearchChange={setSearch}
