@@ -90,9 +90,13 @@ export function ExpensesDetailListSection({
   title,
   data,
   grouping = 'category',
-}: SectionProps<ExpenseRecord> & { grouping?: 'category' | 'purpose' }) {
+  categoryLabelMap,
+}: SectionProps<ExpenseRecord> & {
+  grouping?: 'category' | 'purpose';
+  categoryLabelMap?: Record<string, string>;
+}) {
   if (grouping === 'category') {
-    const { items } = expenseSections(data, 'category');
+    const { items } = expenseSections(data, 'category', categoryLabelMap);
     const rows = items.map((item) => ({
       item: item.label,
       amount: item.amount,

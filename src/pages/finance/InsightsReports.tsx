@@ -308,8 +308,16 @@ export function InsightsReports() {
         <FinanceReportGenerator
           filters={filters}
           onFiltersChange={setFilters}
-          incomes={[...generalIncome, ...contribDonateIncome, ...pledgePaymentsIncome]}
-          expenses={expenses}
+          incomes={[...generalIncome, ...contribDonateIncome, ...pledgePaymentsIncome].sort((a, b) => {
+            const da = new Date(a.date || a.created_at || 0).getTime();
+            const db = new Date(b.date || b.created_at || 0).getTime();
+            return db - da;
+          })}
+          expenses={[...expenses].sort((a, b) => {
+            const da = new Date(a.date || a.created_at || 0).getTime();
+            const db = new Date(b.date || b.created_at || 0).getTime();
+            return db - da;
+          })}
           pledges={pledges}
           payments={payments}
           loading={loading}

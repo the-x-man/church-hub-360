@@ -310,7 +310,6 @@ export const expenseStatsConfig = (data: {
       title: 'Total Expenses',
       value: formatCurrency(data.totalExpenses),
       icon: <DollarSign className="h-4 w-4" />,
-      trend: { direction: 'down', value: 8, label: 'vs last month' },
       color: 'destructive',
     },
     {
@@ -359,7 +358,6 @@ export const contributionStatsConfig = (data: {
       title: 'Total Contributions',
       value: formatCurrency(data.totalContributions),
       icon: <DollarSign className="h-4 w-4" />,
-      trend: { direction: 'up', value: 15, label: 'vs last month' },
       color: 'success',
     },
     {

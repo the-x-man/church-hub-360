@@ -47,6 +47,7 @@ import { paymentMethodOptions } from './constants';
 import { BranchSelector } from '@/components/shared/BranchSelector';
 import { useEditRequest } from '@/hooks/finance/useEditRequests';
 import { EditRequestLockedView } from '@/components/finance/edit-request/EditRequestLockedView';
+import { format } from 'date-fns';
 
 
 type IncomeFieldKey =
@@ -335,6 +336,9 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
     }
     if (!form.category) {
       nextErrors.category = 'Please select a category.';
+    }
+    if (!form.branch_id) {
+      nextErrors.branch_id = 'Please select a branch.';
     }
 
     // Source Type and related selection
@@ -752,18 +756,20 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
             </div>
           )}
 
-          {/* Branch (optional) */}
+          {/* Branch */}
           <div className="space-y-2">
-            <Label>Branch (optional)</Label>
+            <Label>Branch *</Label>
             <BranchSelector
               variant="single"
               value={form.branch_id || undefined}
               onValueChange={(v) =>
                 setForm((prev) => ({ ...prev, branch_id: (v as string | undefined) ?? null }))
               }
-              allowClear
-              placeholder="All branches (joint record)"
+              placeholder="Select branch"
             />
+             {errors.branch_id && (
+                <p className="text-destructive text-sm mt-1" aria-live="polite">{errors.branch_id}</p>
+              )}
           </div>
 
           {/* Date & Envelope */}
@@ -776,6 +782,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
                 timeLabel="Time"
                 align="start"
                 id="income-date"
+                formatDateLabel={(date) => format(date, 'MMM dd, yyyy')}
               />
               {errors.date && (
                 <p className="text-destructive text-sm mt-1" aria-live="polite">{errors.date}</p>

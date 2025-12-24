@@ -33,12 +33,34 @@ export function incomeSections(incomes: IncomeResponseRow[]) {
   };
 }
 
-export function expenseSections(expenses: ExpenseRecord[], grouping: 'category' | 'purpose' = 'category') {
-  const map = sumByCategory(expenses, (r) => 
-    grouping === 'category' ? (r.category || 'Unspecified') : (r.purpose || 'Unspecified')
-  );
+export function formatCategoryLabel(key: string, labelMap?: Record<string, string>) {
+  if (!key) return '';
+  // 1. Try exact match from preferences
+  if (labelMap && labelMap[key]) {
+    return labelMap[key];
+  }
+  // 2. Fallback: manual formatting (replace underscores, capitalize words)
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function expenseSections(
+  expenses: ExpenseRecord[],
+  grouping: 'category' | 'purpose' = 'category',
+  categoryLabelMap?: Record<string, string>
+) {
+  const map = sumByCategory(expenses, (r) => {
+    if (grouping === 'purpose') return r.purpose || 'Unspecified';
+    const key = r.category || 'Unspecified';
+    return formatCategoryLabel(key, categoryLabelMap);
+  });
+  const items = Array.from(map.entries()).map(([label, amount]) => ({ label, amount }));
+  // Sort items alphabetically by label
+  items.sort((a, b) => a.label.localeCompare(b.label));
+
   return {
-    items: Array.from(map.entries()).map(([label, amount]) => ({ label, amount })),
+    items,
     total: expenses.reduce((s, r) => s + (r.amount || 0), 0),
   };
 }

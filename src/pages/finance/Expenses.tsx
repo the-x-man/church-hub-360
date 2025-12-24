@@ -44,6 +44,7 @@ import { EditRequestLockedView } from '@/components/finance/edit-request/EditReq
 
 import { mapDateFilterToPicker, mapPickerToDateFilter } from '@/utils/finance/dateFilter';
 import { paymentMethodOptions } from '@/components/finance/constants';
+import { toast } from 'sonner';
 
 const Expenses = () => {
   const { currentOrganization } = useOrganization();
@@ -177,6 +178,11 @@ const Expenses = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.branch_id) {
+      toast.error('Please select a branch.');
+      return;
+    }
 
     // Map purpose to description if description is empty
     const finalDescription = formData.description && formData.description.trim()

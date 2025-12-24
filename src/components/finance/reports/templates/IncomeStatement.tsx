@@ -12,6 +12,7 @@ import {
 } from '@/db/reportTemplatePrefsDb';
 import { useReportTemplateLabels } from '@/hooks/reports/useReportTemplateLabels';
 import { buildPivotSpec, dateToBucketKey, type GroupUnit } from '@/utils/finance/grouping';
+import { useExpensePreferences } from '@/hooks/finance/useExpensePreferences';
 
 interface IncomeStatementProps {
   incomes: IncomeResponseRow[];
@@ -32,8 +33,19 @@ export function IncomeStatement({
   branchLabel,
   expenseGrouping = 'purpose',
 }: IncomeStatementProps) {
+  const { prefs: expensePrefs } = useExpensePreferences();
+  const categoryLabelMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    if (expensePrefs?.categories) {
+      expensePrefs.categories.forEach((c: any) => {
+        map[c.key] = c.label;
+      });
+    }
+    return map;
+  }, [expensePrefs]);
+
   const inc = React.useMemo(() => incomeSections(incomes), [incomes]);
-  const exp = React.useMemo(() => expenseSections(expenses, expenseGrouping), [expenses, expenseGrouping]);
+  const exp = React.useMemo(() => expenseSections(expenses, expenseGrouping, categoryLabelMap), [expenses, expenseGrouping, categoryLabelMap]);
 
   const totalIncome = inc.generalTotal + inc.otherTotal;
   const totalExpense = exp.total;

@@ -10,7 +10,7 @@ import { DatePresetPicker, type DatePresetValue } from '@/components/attendance/
 import { mapPickerToDateFilter, mapDateFilterToPicker } from '@/utils/finance/dateFilter';
 import { formatDateFilterLabel } from '@/utils/finance/dateRange';
 import { buildPivotSpec, dateToBucketKey, type GroupUnit } from '@/utils/finance/grouping';
-import { expenseSections } from '@/utils/finance/reports/aggregations';
+import { expenseSections, formatCategoryLabel } from '@/utils/finance/reports/aggregations';
 import { PivotTable, type PivotRow } from '@/components/finance/reports/PivotTable';
 import { IncomeStatement } from '@/components/finance/reports/templates/IncomeStatement';
 import { PledgesSummary } from '@/components/finance/reports/templates/PledgesSummary';
@@ -22,6 +22,7 @@ import { useReactToPrint } from 'react-to-print';
 import { parseISO, format as formatDate } from 'date-fns';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useReportTemplateLabels } from '@/hooks/reports/useReportTemplateLabels';
+import { useExpensePreferences } from '@/hooks/finance/useExpensePreferences';
 import { BranchSelector } from '@/components/shared/BranchSelector';
 import { useBranches } from '@/hooks/useBranchQueries';
 import {
@@ -85,6 +86,17 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
   const { labels: incomeLabels } = useReportTemplateLabels('income_statement', DEFAULT_INCOME_STATEMENT_LABELS);
   const { labels: pledgesLabels } = useReportTemplateLabels('pledges_summary', DEFAULT_PLEDGES_SUMMARY_LABELS);
   const { labels: donationsLabels } = useReportTemplateLabels('donations_breakdown', DEFAULT_DONATIONS_BREAKDOWN_LABELS);
+  
+  const { prefs: expensePrefs } = useExpensePreferences();
+  const categoryLabelMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    if (expensePrefs?.categories) {
+      expensePrefs.categories.forEach((c: any) => {
+        map[c.key] = c.label;
+      });
+    }
+    return map;
+  }, [expensePrefs]);
 
   React.useEffect(() => {
     setDatePresetValue(mapDateFilterToPicker(filters.date_filter));
@@ -139,6 +151,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
       }
     }
     const rows: PivotRow[] = Array.from(rowsMap.values()).map(({ label, columns }) => ({ rowLabel: label, columns }));
+    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
     return { title: label, rows };
   };
 
@@ -147,12 +160,16 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
     for (const r of source) {
       const bucket = dateToBucketKey(r.date, groupUnit);
       if (!columnOrder.includes(bucket)) continue;
-      const rowLabel = String(expenseGrouping === 'category' ? (r.category || 'Unspecified') : (r.purpose || 'Unspecified'));
+      const rowLabel =
+        expenseGrouping === 'category'
+          ? formatCategoryLabel(r.category || 'Unspecified', categoryLabelMap)
+          : r.purpose || 'Unspecified';
       const row = rowsMap.get(rowLabel) || {};
       sumInto(row, bucket, r.amount || 0);
       rowsMap.set(rowLabel, row);
     }
     const rows: PivotRow[] = Array.from(rowsMap.entries()).map(([rowLabel, columns]) => ({ rowLabel, columns }));
+    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
     return { title: 'Expenses', rows };
   };
 
@@ -167,6 +184,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
       rowsMap.set(rowLabel, row);
     }
     const rows: PivotRow[] = Array.from(rowsMap.entries()).map(([rowLabel, columns]) => ({ rowLabel, columns }));
+    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
     return { title: 'Pledges', rows };
   };
 
@@ -801,7 +819,12 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
                 )}
                 
                 {selectedItems.includes('expenses') && (
-                  <ExpensesDetailListSection title={`Expenses (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} data={expenses} grouping={expenseGrouping} />
+                  <ExpensesDetailListSection 
+                    title={`Expenses (${rangeLabel})${branchName ? ` • Branch: ${branchName}` : ''}`} 
+                    data={expenses} 
+                    grouping={expenseGrouping} 
+                    categoryLabelMap={categoryLabelMap}
+                  />
                 )}
                 {selectedItems.includes('pledges') && (
                   <section className="space-y-2">

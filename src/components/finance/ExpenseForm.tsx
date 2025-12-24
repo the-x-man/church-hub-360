@@ -65,8 +65,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 branch_id: (v as string | undefined) ?? null,
               })
             }
-            allowClear
-            placeholder="All branches (joint record)"
+            placeholder="Select branch"
           />
         </div>
 

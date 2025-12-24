@@ -150,7 +150,7 @@ export function useExpenses(params?: ExpenseQueryParams) {
       if (queryParams.search && queryParams.search.trim()) {
         const q = queryParams.search.trim();
         catQuery = catQuery.or(
-          `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%`
+          `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%,category.ilike.%${q}%,purpose.ilike.%${q}%`
         );
       }
 
@@ -224,7 +224,7 @@ export function useExpenses(params?: ExpenseQueryParams) {
       if (queryParams.search && queryParams.search.trim()) {
         const q = queryParams.search.trim();
         query = query.or(
-          `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%`
+          `description.ilike.%${q}%,vendor.ilike.%${q}%,receipt_number.ilike.%${q}%,category.ilike.%${q}%,purpose.ilike.%${q}%`
         );
       }
       query = applyFinanceFilters(query, queryParams.filters);
