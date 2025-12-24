@@ -1,7 +1,7 @@
 {
   "name": "church-hub-360",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "ChurchHub360 is an all-in-one church management platform designed to simplify membership, finances, attendance, and communication",
   "author": "FMT Software Solutions",
   "main": "electron-app/dist/main.js",

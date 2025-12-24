@@ -8,13 +8,13 @@
 
 module.exports = {
   // Version information
-  version: "1.2.1",
+  version: "1.2.2",
   
   // Release notes in markdown format
   releaseNotes: `### New Features
 
 ### Bug Fixes
-- Fixed issues expenses categories grouping and pagination
+- Fixed issues around finance filtering and reports
 `,
 
 
@@ -85,7 +85,7 @@ module.exports = {
     createCommit: true,
     createTag: true,
     pushChanges: true, // Set to true to automatically push
-    commitMessage: "Release v1.2.1"
+    commitMessage: "Release v1.2.2"
   },
 
   // Validation rules
