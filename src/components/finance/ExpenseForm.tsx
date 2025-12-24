@@ -108,7 +108,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2 col-span-2">
-          <Label>Branch</Label>
+          <Label>Branch *</Label>
           <BranchSelector
             variant="single"
             value={data.branch_id || undefined}

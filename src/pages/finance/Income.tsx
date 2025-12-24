@@ -387,7 +387,6 @@ const Income: React.FC = () => {
         onSuccess={() => setIsAddDialogOpen(false)}
         initialData={{
           income_type: 'general_income',
-          category: 'Offering',
           source_type: 'church',
         }}
         allowedIncomeTypes={['general_income']}

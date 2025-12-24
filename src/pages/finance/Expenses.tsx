@@ -107,7 +107,7 @@ const Expenses = () => {
   // Form state
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: 0,
-    category: 'utilities',
+    category: '' as any,
     purpose: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
@@ -162,7 +162,7 @@ const Expenses = () => {
   const resetForm = () => {
     setFormData({
       amount: 0,
-      category: 'utilities',
+      category: '' as any,
       purpose: '',
       description: '',
       date: new Date().toISOString().split('T')[0],

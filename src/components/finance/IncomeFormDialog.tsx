@@ -163,7 +163,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
 
   const [form, setForm] = useState<CreateIncomeInput>(() => ({
     amount: (initialData as any)?.amount ?? 0,
-    category: (initialData as any)?.category ?? (categoryOptions?.[0] ?? ''),
+    category: (initialData as any)?.category ?? '',
     payment_method: (initialData as any)?.payment_method ?? 'cash',
     date: (initialData as any)?.date ?? new Date().toISOString(),
     description: (initialData as any)?.description ?? '',
@@ -222,7 +222,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
       setForm((prev) => ({
         ...prev,
         amount: data?.amount ?? 0,
-        category: data?.category ?? (categoryOptions?.[0] ?? ''),
+        category: data?.category ?? '',
         payment_method: data?.payment_method ?? 'cash',
         date: data?.date ?? new Date().toISOString(),
         description: data?.description ?? '',
@@ -297,7 +297,7 @@ export const IncomeFormDialog: React.FC<IncomeFormDialogProps> = ({
     setForm((prev) => ({
       ...prev,
       amount: 0,
-      category: categoryOptions?.[0] ?? '',
+      category: '',
       payment_method: 'cash',
       date: new Date().toISOString(),
       description: '',
