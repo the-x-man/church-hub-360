@@ -8,16 +8,18 @@ import { FileText, FileSpreadsheet, Printer } from 'lucide-react';
 import type { FinanceFilter, IncomeResponseRow, ExpenseRecord, PledgeRecord, PledgePayment } from '@/types/finance';
 import { DatePresetPicker, type DatePresetValue } from '@/components/attendance/reports/DatePresetPicker';
 import { mapPickerToDateFilter, mapDateFilterToPicker } from '@/utils/finance/dateFilter';
+import { buildPivotSpec, type GroupUnit } from '@/utils/finance/grouping';
 import { formatDateFilterLabel } from '@/utils/finance/dateRange';
-import { buildPivotSpec, dateToBucketKey, type GroupUnit } from '@/utils/finance/grouping';
-import { expenseSections, formatCategoryLabel } from '@/utils/finance/reports/aggregations';
+import { expenseSections } from '@/utils/finance/reports/aggregations';
 import { PivotTable, type PivotRow } from '@/components/finance/reports/PivotTable';
 import { IncomeStatement } from '@/components/finance/reports/templates/IncomeStatement';
 import { PledgesSummary } from '@/components/finance/reports/templates/PledgesSummary';
 import { DonationsBreakdown } from '@/components/finance/reports/templates/DonationsBreakdown';
 import { IncomeDetailListSection, ExpensesDetailListSection, PledgePaymentsDetailListSection } from '@/components/finance/reports/DetailList';
 import { PledgesTable } from '@/components/finance/pledges/PledgesTable';
-import * as XLSX from 'xlsx';
+import * as XLSXBase from 'xlsx';
+import * as XLSXStyle from 'xlsx-js-style';
+const XLSX = XLSXStyle as unknown as typeof XLSXBase;
 import { useReactToPrint } from 'react-to-print';
 import { parseISO, format as formatDate } from 'date-fns';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -30,6 +32,13 @@ import {
   DEFAULT_PLEDGES_SUMMARY_LABELS,
   DEFAULT_DONATIONS_BREAKDOWN_LABELS,
 } from '@/db/reportTemplatePrefsDb';
+import { buildIncomePivot as buildIncomePivotExt, buildExpensesPivot as buildExpensesPivotExt, buildPledgesPivot as buildPledgesPivotExt } from '@/components/finance/report-generator/pivot';
+import { buildPivotWorkbook } from '@/components/finance/report-generator/excel/pivotExcel';
+import { buildListWorkbook } from '@/components/finance/report-generator/excel/listExcel';
+import { buildIncomeStatementWorkbook } from '@/components/finance/report-generator/excel/templates/incomeStatementExcel';
+import { buildPledgesSummaryWorkbook } from '@/components/finance/report-generator/excel/templates/pledgesSummaryExcel';
+import { buildDonationsBreakdownWorkbook } from '@/components/finance/report-generator/excel/templates/donationsBreakdownExcel';
+import { paymentMethodOptions } from '@/components/finance/constants';
 
 type FinanceItemType = 'general_income' | 'contributions' | 'donations' | 'pledge_payments' | 'expenses' | 'pledges' | 'all_income';
 
@@ -126,94 +135,33 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
   }, {});
   const rangeLabel = formatDateFilterLabel(filters.date_filter) || '';
 
-  const sumInto = (target: Record<string, number>, key: string, amount: number) => {
-    target[key] = (target[key] || 0) + (amount || 0);
-  };
-
-  const buildIncomePivot = (source: IncomeResponseRow[], label: string, filterType?: 'general_income' | 'contribution' | 'donation' | 'pledge_payment'): { title: string; rows: PivotRow[] } => {
-    const filtered = filterType ? source.filter((r) => r.income_type === filterType) : source;
-    // For pledge payments, group by pledge_id (unique), but display a human-friendly label
-    const rowsMap = new Map<string, { label: string; columns: Record<string, number> }>();
-    for (const r of filtered) {
-      const bucket = dateToBucketKey(r.date, groupUnit);
-      if (!columnOrder.includes(bucket)) continue; // keep within range
-      if (filterType === 'pledge_payment') {
-        const key = String(r.pledge_id || 'Pledge');
-        const displayLabel = String(r.occasion_name || r.description || 'Pledge');
-        const entry = rowsMap.get(key) || { label: displayLabel, columns: {} };
-        sumInto(entry.columns, bucket, r.amount || 0);
-        rowsMap.set(key, entry);
-      } else {
-        const rowLabel = String(r.category || 'Unknown');
-        const entry = rowsMap.get(rowLabel) || { label: rowLabel, columns: {} };
-        sumInto(entry.columns, bucket, r.amount || 0);
-        rowsMap.set(rowLabel, entry);
-      }
-    }
-    const rows: PivotRow[] = Array.from(rowsMap.values()).map(({ label, columns }) => ({ rowLabel: label, columns }));
-    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
-    return { title: label, rows };
-  };
-
-  const buildExpensesPivot = (source: ExpenseRecord[]): { title: string; rows: PivotRow[] } => {
-    const rowsMap = new Map<string, Record<string, number>>();
-    for (const r of source) {
-      const bucket = dateToBucketKey(r.date, groupUnit);
-      if (!columnOrder.includes(bucket)) continue;
-      const rowLabel =
-        expenseGrouping === 'category'
-          ? formatCategoryLabel(r.category || 'Unspecified', categoryLabelMap)
-          : r.purpose || 'Unspecified';
-      const row = rowsMap.get(rowLabel) || {};
-      sumInto(row, bucket, r.amount || 0);
-      rowsMap.set(rowLabel, row);
-    }
-    const rows: PivotRow[] = Array.from(rowsMap.entries()).map(([rowLabel, columns]) => ({ rowLabel, columns }));
-    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
-    return { title: 'Expenses', rows };
-  };
-
-  const buildPledgesPivot = (source: PledgeRecord[]): { title: string; rows: PivotRow[] } => {
-    const rowsMap = new Map<string, Record<string, number>>();
-    for (const r of source) {
-      const bucket = dateToBucketKey(r.start_date, groupUnit);
-      if (!columnOrder.includes(bucket)) continue;
-      const rowLabel = String(r.pledge_type || 'Pledge');
-      const row = rowsMap.get(rowLabel) || {};
-      sumInto(row, bucket, r.pledge_amount || 0);
-      rowsMap.set(rowLabel, row);
-    }
-    const rows: PivotRow[] = Array.from(rowsMap.entries()).map(([rowLabel, columns]) => ({ rowLabel, columns }));
-    rows.sort((a, b) => a.rowLabel.localeCompare(b.rowLabel));
-    return { title: 'Pledges', rows };
-  };
 
   // (Optional) payments pivot can be added later using payments[] when needed
 
   const sections = React.useMemo(() => {
     const s: Array<{ key: string; title: string; rows: PivotRow[]; rowHeaderLabel?: string }> = [];
     if (selectedItems.includes('all_income')) {
-      const { rows } = buildIncomePivot(incomes, pivotLabels['all_income']);
+      const { rows } = buildIncomePivotExt(incomes, pivotLabels['all_income'], groupUnit, columnOrder);
       s.push({ key: 'all_income', title: pivotLabels['all_income'], rows });
     }
     if (selectedItems.includes('general_income')) {
-      const { rows } = buildIncomePivot(incomes, pivotLabels['general_income'], 'general_income');
+      const { rows } = buildIncomePivotExt(incomes, pivotLabels['general_income'], groupUnit, columnOrder, 'general_income');
       s.push({ key: 'general_income', title: pivotLabels['general_income'], rows });
     }
     if (selectedItems.includes('contributions')) {
-      const { rows } = buildIncomePivot(incomes, pivotLabels['contributions'], 'contribution');
+      const { rows } = buildIncomePivotExt(incomes, pivotLabels['contributions'], groupUnit, columnOrder, 'contribution');
       s.push({ key: 'contributions', title: pivotLabels['contributions'], rows });
     }
     if (selectedItems.includes('donations')) {
-      const { rows } = buildIncomePivot(incomes, pivotLabels['donations'], 'donation');
+      const { rows } = buildIncomePivotExt(incomes, pivotLabels['donations'], groupUnit, columnOrder, 'donation');
       s.push({ key: 'donations', title: pivotLabels['donations'], rows });
     }
     if (selectedItems.includes('pledge_payments')) {
-      const { rows } = buildIncomePivot(incomes, pivotLabels['pledge_payments'], 'pledge_payment');
+      const { rows } = buildIncomePivotExt(incomes, pivotLabels['pledge_payments'], groupUnit, columnOrder, 'pledge_payment');
       s.push({ key: 'pledge_payments', title: pivotLabels['pledge_payments'], rows });
     }
     if (selectedItems.includes('expenses')) {
-      const { rows } = buildExpensesPivot(expenses);
+      const { rows } = buildExpensesPivotExt(expenses, groupUnit, columnOrder, expenseGrouping, categoryLabelMap);
       s.push({ 
         key: 'expenses', 
         title: pivotLabels['expenses'], 
@@ -222,7 +170,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
       });
     }
     if (selectedItems.includes('pledges')) {
-      const { rows } = buildPledgesPivot(pledges);
+      const { rows } = buildPledgesPivotExt(pledges, groupUnit, columnOrder);
       s.push({ key: 'pledges', title: pivotLabels['pledges'], rows });
     }
     return s;
@@ -243,21 +191,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
     return b?.name as string | undefined;
   }, [filters.branch_id_filter, allBranches]);
 
-  const sheetFromPivot = (title: string, rows: PivotRow[]) => {
-    const header = ['Item', ...columnOrder.map((k) => columnLabels[k] || k), 'Total'];
-    const aoa: (string | number)[][] = [header];
-    for (const r of rows) {
-      const total = columnOrder.reduce((sum, k) => sum + (r.columns[k] || 0), 0);
-      aoa.push([
-        r.rowLabel,
-        ...columnOrder.map((k) => (r.columns[k] || 0)),
-        total,
-      ]);
-    }
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    // Add sheet title in A1 with a simple merge if needed (optional)
-    return { title, ws };
-  };
+  
 
   const exportWorkbook = (format: 'excel' | 'csv' | 'pdf' | 'print') => {
     const safeTitle = reportTitle;
@@ -266,149 +200,18 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
       return;
     }
     if (format === 'excel') {
-      const wb = XLSX.utils.book_new();
+      let wb: any;
       if (layout === 'pivot') {
-        sections.forEach((sec) => {
-          const { title: t, ws } = sheetFromPivot(sec.title, sec.rows);
-          XLSX.utils.book_append_sheet(wb, ws, t.slice(0, 30));
-        });
+        wb = buildPivotWorkbook(sections.map((s) => ({ title: s.title, rows: s.rows })), columnOrder, columnLabels);
       } else if (layout === 'list') {
-        const pushIncomeSheet = (title: string, src: IncomeResponseRow[]) => {
-          const header = ['Date', 'Item/Occasion', 'Category', 'Amount', 'Method', 'Source', 'Receipt', 'Cheque Number', 'Notes'];
-          const rows: (string | number)[][] = [header];
-          src.forEach((r) => {
-            rows.push([
-              r.date || r.created_at || '',
-              r.occasion_name || r.description || r.category || '',
-              r.category || '',
-              r.amount || 0,
-              r.payment_method || '',
-              r.contributor_name || '',
-              r.receipt_number || '',
-              r.check_number || '',
-              r.notes || '',
-            ]);
-          });
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 30));
-        };
-
-        const pushExpenseSheet = (title: string, src: ExpenseRecord[]) => {
-          if (expenseGrouping === 'category') {
-            const header = ['Category', 'Amount'];
-            const rows: (string | number)[][] = [header];
-            const { items } = expenseSections(src, 'category');
-            items.forEach((item) => {
-              rows.push([item.label, item.amount]);
-            });
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 30));
-          } else {
-            const header = ['Date', 'Item', 'Amount', 'Method', 'Vendor', 'Receipt', 'Cheque Number', 'Notes'];
-            const rows: (string | number)[][] = [header];
-            src.forEach((r) => {
-              rows.push([
-                r.date || r.created_at || '',
-                r.description || r.purpose || '',
-                r.amount || 0,
-                r.payment_method || '',
-                r.vendor || '',
-                r.receipt_number || '',
-                r.check_number || '',
-                r.notes || '',
-              ]);
-            });
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 30));
-          }
-        };
-
-        // Pledge payments are part of incomes in this generator; use Income rows above
-
-        if (selectedItems.includes('all_income')) pushIncomeSheet(pivotLabels['all_income'], incomes);
-        if (selectedItems.includes('general_income')) pushIncomeSheet(pivotLabels['general_income'], incomes.filter((r) => r.income_type === 'general_income'));
-        if (selectedItems.includes('contributions')) pushIncomeSheet(pivotLabels['contributions'], incomes.filter((r) => r.income_type === 'contribution'));
-        if (selectedItems.includes('donations')) pushIncomeSheet(pivotLabels['donations'], incomes.filter((r) => r.income_type === 'donation'));
-        if (selectedItems.includes('pledge_payments')) pushIncomeSheet(pivotLabels['pledge_payments'], incomes.filter((r) => r.income_type === 'pledge_payment'));
-        if (selectedItems.includes('expenses')) pushExpenseSheet(pivotLabels['expenses'], expenses);
-        if (selectedItems.includes('pledges')) {
-          const header = ['Pledge Type', 'Campaign', 'Source', 'Amount', 'Start Date', 'End Date', 'Amount Paid', 'Outstanding'];
-          const rows: (string | number)[][] = [header];
-          pledges.forEach((p) => {
-            const source = p.member_name || p.group_name || p.tag_item_name || p.source || (p.source_type === 'church' ? 'Church' : '') || '';
-            rows.push([
-              p.pledge_type || 'Pledge',
-              p.campaign_name || '',
-              source,
-              p.pledge_amount || 0,
-              p.start_date || '',
-              p.end_date || '',
-              p.amount_paid || 0,
-              p.amount_remaining ?? Math.max(0, (p.pledge_amount || 0) - (p.amount_paid || 0)),
-            ]);
-          });
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws, pivotLabels['pledges'].slice(0, 30));
-        }
+        wb = buildListWorkbook(incomes, expenses, pledges, selectedItems, expenseGrouping, pivotLabels);
       } else if (layout === 'template') {
-        // Minimal sheets per template style
         if (templateStyle === 'income_statement') {
-          const header = ['Section', 'Item', 'Amount'];
-          const rows: (string | number)[][] = [header];
-          // Build from current incomes/expenses
-          const gen = incomes.filter((r) => r.income_type === 'general_income');
-          const other = incomes.filter((r) => r.income_type !== 'general_income');
-          const sumBy = (arr: typeof incomes) => {
-            const m = new Map<string, number>();
-            arr.forEach((r) => m.set(r.category || 'Unknown', (m.get(r.category || 'Unknown') || 0) + (r.amount || 0)));
-            return Array.from(m.entries());
-          };
-          sumBy(gen).forEach(([label, amt]) => rows.push([incomeLabels.revenue, label, amt]));
-          rows.push([incomeLabels.revenue, incomeLabels.total_revenue, gen.reduce((s, r) => s + (r.amount || 0), 0)]);
-          sumBy(other).forEach(([label, amt]) => rows.push([incomeLabels.other_income, label, amt]));
-          rows.push([incomeLabels.other_income, incomeLabels.total_other_income, other.reduce((s, r) => s + (r.amount || 0), 0)]);
-          const expMap = new Map<string, number>();
-          expenses.forEach((r) => {
-            const key = expenseGrouping === 'category' ? (r.category || 'Unspecified') : (r.purpose || 'Unspecified');
-            expMap.set(key, (expMap.get(key) || 0) + (r.amount || 0));
-          });
-          Array.from(expMap.entries()).forEach(([label, amt]) => rows.push([incomeLabels.expenditure, label, amt]));
-          rows.push([incomeLabels.expenditure, incomeLabels.total_expenditure, expenses.reduce((s, r) => s + (r.amount || 0), 0)]);
-          const totalIncome = incomes.reduce((s, r) => s + (r.amount || 0), 0);
-          const totalExpense = expenses.reduce((s, r) => s + (r.amount || 0), 0);
-          rows.push([incomeLabels.summary, incomeLabels.total_income, totalIncome]);
-          rows.push([incomeLabels.summary, incomeLabels.profit, totalIncome - totalExpense]);
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws, (incomeLabels.title || 'Income Statement').slice(0, 30));
+          wb = buildIncomeStatementWorkbook(incomes, expenses, incomeLabels as any, groupUnit, columnOrder, columnLabels, expenseGrouping);
         } else if (templateStyle === 'pledges_summary') {
-          const header = ['Metric', 'Amount'];
-          const rows: (string | number)[][] = [header];
-          const totalPledged = pledges.reduce((s, r) => s + (r.pledge_amount || 0), 0);
-          const totalPaid = pledges.reduce((s, r) => s + (r.amount_paid || 0), 0);
-          const totalRemaining = pledges.reduce((s, r) => s + (r.amount_remaining ?? Math.max(0, (r.pledge_amount || 0) - (r.amount_paid || 0))), 0);
-          rows.push([pledgesLabels.total_pledged, totalPledged]);
-          rows.push([pledgesLabels.total_paid, totalPaid]);
-          rows.push([pledgesLabels.outstanding, totalRemaining]);
-          const m = new Map<string, number>();
-          pledges.forEach((p) => m.set(p.pledge_type || 'Pledge', (m.get(p.pledge_type || 'Pledge') || 0) + (p.pledge_amount || 0)));
-          rows.push(['', '']);
-          rows.push([pledgesLabels.by_pledge_type, 'Amount']);
-          Array.from(m.entries()).forEach(([label, amt]) => rows.push([label, amt]));
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws, (pledgesLabels.title || 'Pledges Summary').slice(0, 30));
-        } else if (templateStyle === 'donations_breakdown') {
-          const header = [donationsLabels.categories || 'Category', 'Amount'];
-          const rows: (string | number)[][] = [header];
-          incomes
-            .filter((r) => r.income_type === 'contribution' || r.income_type === 'donation')
-            .reduce((m, r) => {
-              const key = r.category || 'Unknown';
-              m.set(key, (m.get(key) || 0) + (r.amount || 0));
-              return m;
-            }, new Map<string, number>())
-            .forEach((amt, label) => rows.push([label, amt]));
-          const ws = XLSX.utils.aoa_to_sheet(rows);
-          XLSX.utils.book_append_sheet(wb, ws, (donationsLabels.title || 'Contributions & Donations').slice(0, 30));
+          wb = buildPledgesSummaryWorkbook(pledges, pledgesLabels as any);
+        } else {
+          wb = buildDonationsBreakdownWorkbook(incomes, donationsLabels as any);
         }
       }
       XLSX.writeFile(wb, `${safeTitle}.xlsx`);
@@ -417,16 +220,29 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
     if (format === 'csv') {
       // Combine sections or template into CSV
       const lines: string[] = [];
+      const pmLabel = (v?: string) => {
+        if (!v) return '';
+        const f = paymentMethodOptions.find((p) => p.value === v);
+        return f?.label || String(v).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+      };
       if (layout === 'pivot') {
         for (const sec of sections) {
           lines.push(`# ${sec.title}`);
           const header = ['Item', ...columnOrder.map((k) => columnLabels[k] || k), 'Total'];
           lines.push(header.join(','));
+          const colTotals = columnOrder.map(() => 0);
           for (const r of sec.rows) {
             const total = columnOrder.reduce((sum, k) => sum + (r.columns[k] || 0), 0);
-            const row = [r.rowLabel, ...columnOrder.map((k) => String(r.columns[k] || 0)), String(total)].join(',');
+            const values = columnOrder.map((k, idx) => {
+              const v = r.columns[k] || 0;
+              colTotals[idx] += v;
+              return String(v);
+            });
+            const row = [r.rowLabel, ...values, String(total)].join(',');
             lines.push(row);
           }
+          const grandTotal = colTotals.reduce((s, n) => s + n, 0);
+          lines.push(['Total', ...colTotals.map((n) => String(n)), String(grandTotal)].join(','));
           lines.push('');
         }
       } else if (layout === 'list') {
@@ -439,7 +255,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
               r.occasion_name || r.description || r.category || '',
               r.category || '',
               String(r.amount || 0),
-              r.payment_method || '',
+              pmLabel(r.payment_method) || '',
               r.contributor_name || '',
               r.receipt_number || '',
               r.check_number || '',
@@ -464,7 +280,7 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
                 r.date || r.created_at || '',
                 r.description || r.purpose || '',
                 String(r.amount || 0),
-                r.payment_method || '',
+                pmLabel(r.payment_method) || '',
                 r.vendor || '',
                 r.receipt_number || '',
                 r.check_number || '',
@@ -575,11 +391,19 @@ export const FinanceReportGenerator: React.FC<FinanceReportGeneratorProps> = ({
         sections.forEach((sec, idx) => {
           if (idx > 0) { addLine(''); }
           addLine(`${sec.title} (${rangeLabel})`);
-          addLine(['Item', ...columnOrder.map((k) => columnLabels[k] || k), 'Total'].join(' | '));
-          sec.rows.slice(0, 80).forEach((r) => {
-            const total = columnOrder.reduce((sum, k) => sum + (r.columns[k] || 0), 0);
-            const values = columnOrder.map((k) => String(r.columns[k] || 0));
-            addLine([r.rowLabel, ...values, String(total)].join(' | '));
+          const LIMIT = 7;
+          const chunks: string[][] = [];
+          for (let i = 0; i < columnOrder.length; i += LIMIT) {
+            chunks.push(columnOrder.slice(i, i + LIMIT));
+          }
+          (chunks.length <= 1 ? [columnOrder] : chunks).forEach((chunk, cidx) => {
+            if (cidx > 0) addLine('');
+            addLine(['Item', ...chunk.map((k) => columnLabels[k] || k), 'Total'].join(' | '));
+            sec.rows.slice(0, 80).forEach((r) => {
+              const total = columnOrder.reduce((sum, k) => sum + (r.columns[k] || 0), 0);
+              const values = chunk.map((k) => String(r.columns[k] || 0));
+              addLine([r.rowLabel, ...values, String(total)].join(' | '));
+            });
           });
         });
         doc.save(`${safeTitle}.pdf`);

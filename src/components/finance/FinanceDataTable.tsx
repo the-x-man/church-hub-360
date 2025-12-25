@@ -31,6 +31,7 @@ import { format } from 'date-fns';
 import { formatDateFilterLabel } from '@/utils/finance/dateRange';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import type { DateFilter } from '@/types/finance';
+import { paymentMethodOptions } from '@/components/finance/constants';
 
 // Helper functions for formatting
 const formatCurrency = (amount: number) => {
@@ -180,6 +181,18 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
     if (key.includes('amount') || key.includes('_amount')) {
       const num = Number(value) || 0;
       return num;
+    }
+    if (
+      key === 'method' ||
+      key === 'payment_method' ||
+      key === 'paymentMethod'
+    ) {
+      const label =
+        typeof value === 'string'
+          ? paymentMethodOptions.find((p) => p.value === value)?.label
+          : undefined;
+      if (label) return label;
+      if (typeof value === 'string') return humanizeUnderscore(value);
     }
     if (
       key.includes('date') ||
@@ -396,10 +409,7 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
           </div>
         </div>
       )}
-      <div
-        ref={tableRef}
-        className="print-wrapper max-h-[70vh] overflow-y-auto"
-      >
+      <div ref={tableRef} className="print-wrapper w-full">
         {/* Inline print CSS to enforce landscape and remove scrollbars when printing */}
         <style>{printPageStyle}</style>
         {/* Print-only header (optional) */}
@@ -466,10 +476,13 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                         </TableCell>
                       ))}
                       {actions.length > 0 && (
-                        <TableCell className='print:hidden'>
+                        <TableCell className="print:hidden">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 print:hidden">
+                              <Button
+                                variant="ghost"
+                                className="h-8 w-8 p-0 print:hidden"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -555,7 +568,7 @@ export const FinanceDataTable: React.FC<FinanceDataTableProps> = ({
                             </TableCell>
                           ))}
                           {actions.length > 0 && (
-                            <TableCell className='print:hidden'>
+                            <TableCell className="print:hidden">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button

@@ -6,6 +6,7 @@ import type {
   ExpenseRecord,
   PledgePayment,
 } from '@/types/finance';
+import { paymentMethodOptions } from '@/components/finance/constants';
 
 interface SectionProps<T> {
   title: string;
@@ -31,6 +32,17 @@ function formatCurrency(amount?: number) {
   }
 }
 
+function paymentMethodLabel(v?: string) {
+  if (!v) return '';
+  const f = paymentMethodOptions.find((p) => p.value === v);
+  return (
+    f?.label ||
+    String(v)
+      .replace(/_/g, ' ')
+      .replace(/^\w/, (c) => c.toUpperCase())
+  );
+}
+
 export function IncomeDetailListSection({
   title,
   data,
@@ -44,7 +56,7 @@ export function IncomeDetailListSection({
       humanizeIncomeType(r.income_type),
     category: r.category || humanizeIncomeType(r.income_type),
     amount: r.amount,
-    method: r.payment_method || '',
+    method: paymentMethodLabel(r.payment_method) || '',
     source: r.contributor_name || '',
     receipt: r.receipt_number || '',
     check_number: r.check_number || '',
@@ -54,7 +66,7 @@ export function IncomeDetailListSection({
   return (
     <section className="space-y-2">
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-      <div className="max-h-[500px] overflow-auto print:max-h-full">
+      <div className="max-h-[500px] overflow-x-auto overflow-y-auto print:max-h-full print:overflow-visible p-1">
         <FinanceDataTable
           columns={[
             {
@@ -105,7 +117,7 @@ export function ExpensesDetailListSection({
     return (
       <section className="space-y-2">
         <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-        <div className="max-h-[500px] overflow-auto print:max-h-full">
+        <div className="max-h-[500px] overflow-x-auto overflow-y-auto print:max-h-full print:overflow-visible">
           <FinanceDataTable
             columns={[
               { key: 'item', label: 'Category' },
@@ -129,7 +141,7 @@ export function ExpensesDetailListSection({
     date: r.date || r.created_at,
     item: r.description || r.purpose || '',
     amount: r.amount,
-    method: r.payment_method || '',
+    method: paymentMethodLabel(r.payment_method) || '',
     vendor: r.vendor || '',
     receipt: r.receipt_number || '',
     check_number: r.check_number || '',
@@ -139,7 +151,7 @@ export function ExpensesDetailListSection({
   return (
     <section className="space-y-2">
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-      <div className="max-h-[500px] overflow-auto print:max-h-full">
+      <div className="max-h-[500px] overflow-x-auto overflow-y-auto print:max-h-full print:overflow-visible">
         <FinanceDataTable
           columns={[
             {
@@ -184,7 +196,7 @@ export function PledgePaymentsDetailListSection({
     date: r.payment_date || r.created_at,
     pledge: (r as any).pledge_label || '',
     amount: r.amount,
-    method: r.payment_method || '',
+    method: paymentMethodLabel(r.payment_method) || '',
     source: (r as any).contributor_name || '',
     check_number: r.check_number || '',
     recordedBy: r.created_by_user
@@ -198,7 +210,7 @@ export function PledgePaymentsDetailListSection({
   return (
     <section className="space-y-2">
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-      <div className="max-h-[500px] overflow-auto print:max-h-full">
+      <div className="max-h-[500px] overflow-x-auto overflow-y-auto print:max-h-full print:overflow-visible">
         <FinanceDataTable
           columns={[
             {

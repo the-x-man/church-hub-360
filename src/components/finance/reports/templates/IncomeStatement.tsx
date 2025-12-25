@@ -229,11 +229,7 @@ export function IncomeStatement({
       {/* By Period (optional) */}
       {periodColumns && (
         <section className="my-8">
-          {/* Hide scrollbars on the period table container (consistent with FinanceDataTable/Members export) */}
-          <style>{`
-            [data-slot="period-table-container"]::-webkit-scrollbar { display: none !important; }
-            [data-slot="period-table-container"] { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-          `}</style>
+         
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">
               <EditableLabel
@@ -244,7 +240,7 @@ export function IncomeStatement({
               />
             </h3>
           </div>
-          <div className="mt-3 overflow-x-auto" data-slot="period-table-container">
+          <div className="mt-3 overflow-x-auto block print:hidden" data-slot="table-container">
             <table className="min-w-full table-fixed border-collapse">
               <thead>
                 <tr className="bg-muted">
@@ -308,6 +304,72 @@ export function IncomeStatement({
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div className="hidden print:block space-y-2">
+            {(() => {
+              const LIMIT = 7;
+              const chunks: string[][] = [];
+              for (let i = 0; i < periodColumns.columnOrder.length; i += LIMIT) {
+                chunks.push(periodColumns.columnOrder.slice(i, i + LIMIT));
+              }
+              const revenueTotal = formatCurrency(periodColumns.columnOrder.reduce((s, k) => s + (periodColumns.revenueCols[k] || 0), 0));
+              const otherTotal = formatCurrency(periodColumns.columnOrder.reduce((s, k) => s + (periodColumns.otherIncomeCols[k] || 0), 0));
+              const expenseTotal = formatCurrency(periodColumns.columnOrder.reduce((s, k) => s + (periodColumns.expenseCols[k] || 0), 0));
+              const totalIncomeTotal = formatCurrency(periodColumns.columnOrder.reduce((s, k) => s + (periodColumns.totalIncomeCols[k] || 0), 0));
+              const profitTotal = formatCurrency(periodColumns.columnOrder.reduce((s, k) => s + (periodColumns.profitCols[k] || 0), 0));
+              return (chunks.length <= 1 ? [periodColumns.columnOrder] : chunks).map((chunk, idx) => (
+                <div key={idx} className="rounded-md border">
+                  <table className="min-w-full table-fixed border-collapse">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="text-left text-xs font-medium px-2 py-2 w-40">Metric</th>
+                        {chunk.map((k) => (
+                          <th key={k} className="text-right text-xs font-medium px-2 py-2 whitespace-nowrap">{periodColumns.columnLabels[k]}</th>
+                        ))}
+                        <th className="text-right text-xs font-medium px-2 py-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-t">
+                        <td className="px-2 py-2 text-sm">{labels.revenue}</td>
+                        {chunk.map((k) => (
+                          <td key={k} className="px-2 py-2 text-sm text-right">{formatCurrency(periodColumns.revenueCols[k] || 0)}</td>
+                        ))}
+                        <td className="px-2 py-2 text-sm text-right font-semibold">{revenueTotal}</td>
+                      </tr>
+                      <tr className="border-t">
+                        <td className="px-2 py-2 text-sm">{labels.other_income}</td>
+                        {chunk.map((k) => (
+                          <td key={k} className="px-2 py-2 text-sm text-right">{formatCurrency(periodColumns.otherIncomeCols[k] || 0)}</td>
+                        ))}
+                        <td className="px-2 py-2 text-sm text-right font-semibold">{otherTotal}</td>
+                      </tr>
+                      <tr className="border-t">
+                        <td className="px-2 py-2 text-sm">{labels.expenditure}</td>
+                        {chunk.map((k) => (
+                          <td key={k} className="px-2 py-2 text-sm text-right">{formatCurrency(periodColumns.expenseCols[k] || 0)}</td>
+                        ))}
+                        <td className="px-2 py-2 text-sm text-right font-semibold">{expenseTotal}</td>
+                      </tr>
+                      <tr className="border-t">
+                        <td className="px-2 py-2 text-sm">{labels.total_income}</td>
+                        {chunk.map((k) => (
+                          <td key={k} className="px-2 py-2 text-sm text-right">{formatCurrency(periodColumns.totalIncomeCols[k] || 0)}</td>
+                        ))}
+                        <td className="px-2 py-2 text-sm text-right font-semibold">{totalIncomeTotal}</td>
+                      </tr>
+                      <tr className="border-t">
+                        <td className="px-2 py-2 text-sm">{labels.profit}</td>
+                        {chunk.map((k) => (
+                          <td key={k} className="px-2 py-2 text-sm text-right">{formatCurrency(periodColumns.profitCols[k] || 0)}</td>
+                        ))}
+                        <td className="px-2 py-2 text-sm text-right font-semibold">{profitTotal}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ));
+            })()}
           </div>
         </section>
       )}
